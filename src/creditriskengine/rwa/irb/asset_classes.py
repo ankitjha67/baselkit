@@ -13,7 +13,6 @@ from creditriskengine.core.types import (
     IRBAssetClass,
     IRBCorporateSubClass,
     IRBRetailSubClass,
-    IRBSpecialisedLendingType,
     SAExposureClass,
 )
 

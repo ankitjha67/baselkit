@@ -14,7 +14,7 @@ import logging
 import math
 
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 
@@ -240,10 +240,13 @@ def vasicek_single_factor_pd(
 
 # ── Sklearn-compatible Estimator ──────────────────────────────────
 
-from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.base import (  # type: ignore[import-untyped]  # noqa: E402
+    BaseEstimator,
+    ClassifierMixin,
+)
 
 
-class ScorecardBuilder(BaseEstimator, ClassifierMixin):
+class ScorecardBuilder(BaseEstimator, ClassifierMixin):  # type: ignore[misc]
     """Sklearn-compatible PD scorecard builder.
 
     Implements fit/predict interface for logistic regression-based PD models.
@@ -267,15 +270,15 @@ class ScorecardBuilder(BaseEstimator, ClassifierMixin):
         # Fitted attributes (set in fit())
         self.intercept_: float | None = None
         self.coefficients_: np.ndarray | None = None
-        self.master_scale_: list[dict] | None = None
+        self.master_scale_: list[dict[str, float]] | None = None
         self.is_fitted_: bool = False
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "ScorecardBuilder":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "ScorecardBuilder":  # noqa: N803
         """Fit logistic regression and build master scale.
 
         Uses sklearn LogisticRegression internally.
         """
-        from sklearn.linear_model import LogisticRegression
+        from sklearn.linear_model import LogisticRegression  # type: ignore[import-untyped]
 
         lr = LogisticRegression(penalty=None, solver="lbfgs", max_iter=1000)
         lr.fit(X, y)
@@ -284,9 +287,10 @@ class ScorecardBuilder(BaseEstimator, ClassifierMixin):
         self.is_fitted_ = True
         return self
 
-    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:  # noqa: N803
         """Predict PD (probability of default) for each observation."""
         assert self.is_fitted_, "Call fit() first"
+        assert self.coefficients_ is not None and self.intercept_ is not None
         scores = logistic_score(self.coefficients_, X, self.intercept_)
         # Handle both 1D single-sample and 2D cases
         if scores.ndim == 0:
@@ -294,14 +298,15 @@ class ScorecardBuilder(BaseEstimator, ClassifierMixin):
         pds = score_to_pd(scores)
         return np.column_stack([1 - pds, pds])
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray) -> np.ndarray:  # noqa: N803
         """Predict default (1) or non-default (0)."""
         proba = self.predict_proba(X)
         return (proba[:, 1] >= 0.5).astype(int)
 
-    def score_points(self, X: np.ndarray) -> np.ndarray:
+    def score_points(self, X: np.ndarray) -> np.ndarray:  # noqa: N803
         """Convert to scorecard points."""
         assert self.is_fitted_, "Call fit() first"
+        assert self.coefficients_ is not None and self.intercept_ is not None
         scores = logistic_score(self.coefficients_, X, self.intercept_)
         if scores.ndim == 0:
             scores = np.array([float(scores)])

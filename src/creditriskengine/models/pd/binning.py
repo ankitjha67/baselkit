@@ -291,7 +291,7 @@ def monotonic_binning(
             break
 
         # Merge bin at violation_idx with its neighbour (pick the smaller bin)
-        if violation_idx < len(woe) - 1:
+        if violation_idx < len(woe) - 1:  # noqa: SIM108
             # Remove the edge between violation_idx and violation_idx+1
             merge_edge_pos = violation_idx
         else:
@@ -327,7 +327,7 @@ def optimal_binning(
     Returns:
         BinResult with optimal, monotonic WoE bins.
     """
-    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.tree import DecisionTreeClassifier  # type: ignore[import-untyped]
 
     values = np.asarray(values, dtype=np.float64)
     target = np.asarray(target, dtype=np.int64)
@@ -411,10 +411,13 @@ def apply_woe_transform(
 
 # ── Sklearn-compatible Transformer ────────────────────────────────
 
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import (  # type: ignore[import-untyped]  # noqa: E402
+    BaseEstimator,
+    TransformerMixin,
+)
 
 
-class WoEBinningTransformer(BaseEstimator, TransformerMixin):
+class WoEBinningTransformer(BaseEstimator, TransformerMixin):  # type: ignore[misc]
     """Sklearn-compatible WoE binning transformer.
 
     Fits WoE bins on training data and transforms features to WoE values.
@@ -437,12 +440,12 @@ class WoEBinningTransformer(BaseEstimator, TransformerMixin):
         self.bin_results_: list[BinResult] | None = None
         self.feature_ivs_: dict[str, float] | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "WoEBinningTransformer":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "WoEBinningTransformer":  # noqa: N803
         """Fit WoE bins for each feature column."""
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float64)  # noqa: N806
         y = np.asarray(y, dtype=np.int64)
         if X.ndim == 1:
-            X = X.reshape(-1, 1)
+            X = X.reshape(-1, 1)  # noqa: N806
         self.bin_results_ = []
         self.feature_ivs_ = {}
         for j in range(X.shape[1]):
@@ -459,12 +462,12 @@ class WoEBinningTransformer(BaseEstimator, TransformerMixin):
             self.feature_ivs_[name] = result.iv
         return self
 
-    def transform(self, X: np.ndarray) -> np.ndarray:
+    def transform(self, X: np.ndarray) -> np.ndarray:  # noqa: N803
         """Transform features to WoE values."""
         assert self.bin_results_ is not None, "Call fit() first"
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float64)  # noqa: N806
         if X.ndim == 1:
-            X = X.reshape(-1, 1)
+            X = X.reshape(-1, 1)  # noqa: N806
         result = np.zeros_like(X)
         for j, br in enumerate(self.bin_results_):
             result[:, j] = apply_woe_transform(X[:, j], br)

@@ -36,10 +36,10 @@ class TestSovereignRiskWeight:
             (CreditQualityStep.UNRATED, 100.0),
         ],
     )
-    def test_sovereign_rw_by_cqs(self, cqs, expected):
+    def test_sovereign_rw_by_cqs(self, cqs: CreditQualityStep, expected: float) -> None:
         assert get_sovereign_risk_weight(cqs) == expected
 
-    def test_domestic_own_currency_is_zero(self):
+    def test_domestic_own_currency_is_zero(self) -> None:
         assert get_sovereign_risk_weight(
             CreditQualityStep.CQS_3, is_domestic_own_currency=True
         ) == 0.0
@@ -58,21 +58,21 @@ class TestBankRiskWeight:
             (CreditQualityStep.UNRATED, 50.0),
         ],
     )
-    def test_bank_ecra(self, cqs, expected):
+    def test_bank_ecra(self, cqs: CreditQualityStep, expected: float) -> None:
         assert get_bank_risk_weight(cqs=cqs) == expected
 
     @pytest.mark.parametrize(
         "grade,expected",
         [("A", 40.0), ("B", 75.0), ("C", 150.0)],
     )
-    def test_bank_scra(self, grade, expected):
+    def test_bank_scra(self, grade: str, expected: float) -> None:
         assert get_bank_risk_weight(scra_grade=grade) == expected
 
-    def test_scra_invalid_raises(self):
+    def test_scra_invalid_raises(self) -> None:
         with pytest.raises(ValueError, match="Invalid SCRA grade"):
             get_bank_risk_weight(scra_grade="D")
 
-    def test_unrated_default(self):
+    def test_unrated_default(self) -> None:
         assert get_bank_risk_weight() == 50.0
 
     @pytest.mark.parametrize(
@@ -85,7 +85,7 @@ class TestBankRiskWeight:
             (CreditQualityStep.CQS_6, 150.0),
         ],
     )
-    def test_bank_ecra_short_term(self, cqs, expected):
+    def test_bank_ecra_short_term(self, cqs: CreditQualityStep, expected: float) -> None:
         assert get_bank_risk_weight(cqs=cqs, is_short_term=True) == expected
 
 
@@ -103,10 +103,10 @@ class TestCorporateRiskWeight:
             (CreditQualityStep.UNRATED, 100.0),
         ],
     )
-    def test_corporate_rw_by_cqs(self, cqs, expected):
+    def test_corporate_rw_by_cqs(self, cqs: CreditQualityStep, expected: float) -> None:
         assert get_corporate_risk_weight(cqs) == expected
 
-    def test_uk_unrated_investment_grade(self):
+    def test_uk_unrated_investment_grade(self) -> None:
         rw = get_corporate_risk_weight(
             CreditQualityStep.UNRATED,
             jurisdiction=Jurisdiction.UK,
@@ -114,7 +114,7 @@ class TestCorporateRiskWeight:
         )
         assert rw == 65.0
 
-    def test_eu_sme_supporting_factor(self):
+    def test_eu_sme_supporting_factor(self) -> None:
         base = get_corporate_risk_weight(CreditQualityStep.UNRATED)
         sme = get_corporate_risk_weight(
             CreditQualityStep.UNRATED,
@@ -139,15 +139,15 @@ class TestResidentialRealEstate:
             (1.10, 70.0),
         ],
     )
-    def test_whole_loan_rw(self, ltv, expected):
+    def test_whole_loan_rw(self, ltv: float, expected: float) -> None:
         assert get_residential_re_risk_weight(ltv) == expected
 
-    def test_cashflow_dependent_higher_rw(self):
+    def test_cashflow_dependent_higher_rw(self) -> None:
         rw_normal = get_residential_re_risk_weight(0.55)
         rw_cf = get_residential_re_risk_weight(0.55, is_cashflow_dependent=True)
         assert rw_cf > rw_normal
 
-    def test_india_rbi_treatment(self):
+    def test_india_rbi_treatment(self) -> None:
         assert get_residential_re_risk_weight(0.75, Jurisdiction.INDIA) == 20.0
         assert get_residential_re_risk_weight(0.85, Jurisdiction.INDIA) == 35.0
 
@@ -161,99 +161,99 @@ class TestResidentialRealEstate:
             (1.00, 50.0),   # At boundary → 0.90-1.00 band
         ],
     )
-    def test_ltv_boundary_values(self, ltv, expected):
+    def test_ltv_boundary_values(self, ltv: float, expected: float) -> None:
         assert get_residential_re_risk_weight(ltv) == expected
 
 
 class TestCommercialRealEstate:
     """BCBS CRE20.87-20.98."""
 
-    def test_not_cashflow_low_ltv(self):
+    def test_not_cashflow_low_ltv(self) -> None:
         rw = get_commercial_re_risk_weight(0.50, counterparty_rw=100.0)
         assert rw == 60.0
 
-    def test_not_cashflow_mid_ltv(self):
+    def test_not_cashflow_mid_ltv(self) -> None:
         assert get_commercial_re_risk_weight(0.70, counterparty_rw=100.0) == 75.0
 
-    def test_not_cashflow_high_ltv_returns_counterparty(self):
+    def test_not_cashflow_high_ltv_returns_counterparty(self) -> None:
         assert get_commercial_re_risk_weight(0.90, counterparty_rw=120.0) == 120.0
 
-    def test_adc_is_150(self):
+    def test_adc_is_150(self) -> None:
         assert get_commercial_re_risk_weight(1.0, is_adc=True) == 150.0
 
-    def test_adc_presold_is_100(self):
+    def test_adc_presold_is_100(self) -> None:
         assert get_commercial_re_risk_weight(
             1.0, is_adc=True, is_presold_residential=True
         ) == 100.0
 
 
 class TestDefaultedExposures:
-    def test_high_provisions(self):
+    def test_high_provisions(self) -> None:
         assert get_defaulted_risk_weight(0.25) == 100.0
 
-    def test_low_provisions(self):
+    def test_low_provisions(self) -> None:
         assert get_defaulted_risk_weight(0.10) == 150.0
 
-    def test_rre_secured_always_100(self):
+    def test_rre_secured_always_100(self) -> None:
         # CRE20.101: RRE-secured defaults always get 100% regardless of provisions
         assert get_defaulted_risk_weight(0.05, is_rre_secured=True) == 100.0
         assert get_defaulted_risk_weight(0.25, is_rre_secured=True) == 100.0
 
 
 class TestRetail:
-    def test_regulatory_retail(self):
+    def test_regulatory_retail(self) -> None:
         assert get_retail_risk_weight(True) == 75.0
 
-    def test_non_regulatory_retail(self):
+    def test_non_regulatory_retail(self) -> None:
         assert get_retail_risk_weight(False) == 100.0
 
 
 class TestEquity:
-    def test_listed(self):
+    def test_listed(self) -> None:
         assert get_equity_risk_weight(is_listed=True) == 250.0
 
-    def test_speculative(self):
+    def test_speculative(self) -> None:
         assert get_equity_risk_weight(is_speculative=True) == 400.0
 
 
 class TestSubordinatedDebt:
-    def test_subordinated(self):
+    def test_subordinated(self) -> None:
         assert get_subordinated_debt_risk_weight() == 150.0
 
 
 class TestAssignSaRiskWeight:
     """Integration tests for the master dispatcher."""
 
-    def test_sovereign_dispatch(self):
+    def test_sovereign_dispatch(self) -> None:
         rw = assign_sa_risk_weight(
             SAExposureClass.SOVEREIGN, CreditQualityStep.CQS_1
         )
         assert rw == 0.0
 
-    def test_corporate_dispatch(self):
+    def test_corporate_dispatch(self) -> None:
         rw = assign_sa_risk_weight(
             SAExposureClass.CORPORATE, CreditQualityStep.CQS_2
         )
         assert rw == 50.0
 
-    def test_residential_requires_ltv(self):
+    def test_residential_requires_ltv(self) -> None:
         with pytest.raises(ValueError, match="LTV required"):
             assign_sa_risk_weight(SAExposureClass.RESIDENTIAL_MORTGAGE)
 
-    def test_residential_with_ltv(self):
+    def test_residential_with_ltv(self) -> None:
         rw = assign_sa_risk_weight(
             SAExposureClass.RESIDENTIAL_MORTGAGE,
             ltv=0.65,
         )
         assert rw == 30.0
 
-    def test_mdb_is_zero(self):
+    def test_mdb_is_zero(self) -> None:
         assert assign_sa_risk_weight(SAExposureClass.MDB) == 0.0
 
-    def test_other_is_100(self):
+    def test_other_is_100(self) -> None:
         assert assign_sa_risk_weight(SAExposureClass.OTHER) == 100.0
 
-    def test_pse_uses_bank_table(self):
+    def test_pse_uses_bank_table(self) -> None:
         # PSEs use bank risk weight table per CRE20.10 Option A
         rw = assign_sa_risk_weight(SAExposureClass.PSE, CreditQualityStep.CQS_1)
         assert rw == get_bank_risk_weight(cqs=CreditQualityStep.CQS_1)

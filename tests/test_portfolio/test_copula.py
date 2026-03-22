@@ -13,21 +13,21 @@ from creditriskengine.portfolio.copula import (
 
 
 class TestSingleFactorSimulation:
-    def test_shape(self):
+    def test_shape(self) -> None:
         pds = np.array([0.02, 0.03, 0.01])
         lgds = np.array([0.45, 0.40, 0.50])
         eads = np.array([100.0, 200.0, 150.0])
         losses = simulate_single_factor(pds, lgds, eads, rho=0.15, n_simulations=1000, seed=42)
         assert losses.shape == (1000,)
 
-    def test_losses_non_negative(self):
+    def test_losses_non_negative(self) -> None:
         pds = np.array([0.02, 0.03])
         lgds = np.array([0.45, 0.40])
         eads = np.array([100.0, 200.0])
         losses = simulate_single_factor(pds, lgds, eads, rho=0.15, n_simulations=1000, seed=42)
         assert np.all(losses >= 0)
 
-    def test_mean_near_expected_loss(self):
+    def test_mean_near_expected_loss(self) -> None:
         n = 50
         pds = np.full(n, 0.02)
         lgds = np.full(n, 0.45)
@@ -36,7 +36,7 @@ class TestSingleFactorSimulation:
         el = np.sum(pds * lgds * eads)
         assert np.mean(losses) == pytest.approx(el, rel=0.1)
 
-    def test_invalid_rho_raises(self):
+    def test_invalid_rho_raises(self) -> None:
         pds = np.array([0.02])
         lgds = np.array([0.45])
         eads = np.array([100.0])
@@ -45,7 +45,7 @@ class TestSingleFactorSimulation:
 
 
 class TestMultiFactorSimulation:
-    def test_shape(self):
+    def test_shape(self) -> None:
         pds = np.array([0.02, 0.03])
         lgds = np.array([0.45, 0.40])
         eads = np.array([100.0, 200.0])
@@ -55,14 +55,14 @@ class TestMultiFactorSimulation:
 
 
 class TestCreditVaR:
-    def test_exceeds_mean(self):
+    def test_exceeds_mean(self) -> None:
         losses = np.array([1.0, 2.0, 3.0, 4.0, 100.0])
         var = credit_var(losses, 0.99)
         assert var >= np.mean(losses)
 
 
 class TestExpectedShortfall:
-    def test_exceeds_var(self):
+    def test_exceeds_var(self) -> None:
         rng = np.random.default_rng(42)
         losses = rng.exponential(10.0, 10_000)
         var = credit_var(losses, 0.99)
@@ -71,7 +71,7 @@ class TestExpectedShortfall:
 
 
 class TestLossDistributionStats:
-    def test_keys(self):
+    def test_keys(self) -> None:
         losses = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         result = loss_distribution_stats(losses, total_ead=100.0)
         assert "mean_loss" in result

@@ -13,13 +13,13 @@ from creditriskengine.ecl.cecl.qualitative import (
 
 
 class TestCECLPDLGD:
-    def test_basic(self):
+    def test_basic(self) -> None:
         pds = np.array([0.02, 0.02, 0.02])
         ecl = cecl_pd_lgd(pds, lgds=0.45, eads=1000.0)
         # 3 * 0.02 * 0.45 * 1000 = 27.0 (no discounting)
         assert ecl == pytest.approx(27.0)
 
-    def test_with_discounting(self):
+    def test_with_discounting(self) -> None:
         pds = np.array([0.02, 0.02])
         ecl_no_disc = cecl_pd_lgd(pds, 0.45, 1000.0, discount_rate=0.0)
         ecl_disc = cecl_pd_lgd(pds, 0.45, 1000.0, discount_rate=0.05)
@@ -27,11 +27,11 @@ class TestCECLPDLGD:
 
 
 class TestCECLLossRate:
-    def test_basic(self):
+    def test_basic(self) -> None:
         ecl = cecl_loss_rate(ead=1000.0, historical_loss_rate=0.01, remaining_life_years=3.0)
         assert ecl == pytest.approx(30.0)
 
-    def test_with_adjustments(self):
+    def test_with_adjustments(self) -> None:
         ecl = cecl_loss_rate(
             ead=1000.0,
             historical_loss_rate=0.01,
@@ -41,23 +41,26 @@ class TestCECLLossRate:
         )
         assert ecl == pytest.approx(1000.0 * 0.017 * 2.0)
 
-    def test_floor_at_zero(self):
+    def test_floor_at_zero(self) -> None:
         ecl = cecl_loss_rate(ead=1000.0, historical_loss_rate=0.01, qualitative_adjustment=-0.05)
         assert ecl == pytest.approx(0.0)
 
 
 class TestWARMMethod:
-    def test_basic(self):
+    def test_basic(self) -> None:
         ecl = warm_method(ead=1000.0, historical_loss_rate=0.01, remaining_life_years=3.0)
         assert ecl == pytest.approx(30.0)
 
-    def test_with_q_factor(self):
-        ecl = warm_method(ead=1000.0, historical_loss_rate=0.01, remaining_life_years=3.0, qualitative_factor=0.5)
+    def test_with_q_factor(self) -> None:
+        ecl = warm_method(
+            ead=1000.0, historical_loss_rate=0.01,
+            remaining_life_years=3.0, qualitative_factor=0.5,
+        )
         assert ecl == pytest.approx(1000.0 * 0.015 * 3.0)
 
 
 class TestVintageAnalysis:
-    def test_basic(self):
+    def test_basic(self) -> None:
         # 2 vintages, 3 ages; vintage 0 is at age 1, vintage 1 at age 0
         matrix = np.array([
             [0.01, 0.03, 0.0],
@@ -69,7 +72,7 @@ class TestVintageAnalysis:
         # Actually: np.max(matrix[:, -1]) = 0.0
         assert ecl == pytest.approx(0.0)
 
-    def test_with_ultimate_losses(self):
+    def test_with_ultimate_losses(self) -> None:
         matrix = np.array([
             [0.01, 0.03, 0.05],
             [0.02, 0.0, 0.0],
@@ -84,7 +87,7 @@ class TestVintageAnalysis:
 
 
 class TestDCFMethod:
-    def test_basic(self):
+    def test_basic(self) -> None:
         contractual = np.array([100.0, 100.0, 100.0])
         expected = np.array([95.0, 90.0, 85.0])
         ecl = dcf_method(contractual, expected, discount_rate=0.05)
@@ -95,25 +98,25 @@ class TestDCFMethod:
         expected_ecl = float(np.sum((contractual - expected) * dfs))
         assert ecl == pytest.approx(expected_ecl)
 
-    def test_no_losses(self):
+    def test_no_losses(self) -> None:
         cf = np.array([100.0, 100.0])
         assert dcf_method(cf, cf, discount_rate=0.05) == pytest.approx(0.0)
 
 
 class TestQualitativeFactors:
-    def test_total_adjustment(self):
+    def test_total_adjustment(self) -> None:
         factors = [
             QualitativeFactor(name="econ", adjustment_bps=25),
             QualitativeFactor(name="portfolio", adjustment_bps=-10),
         ]
         assert total_q_factor_adjustment(factors) == pytest.approx(15 / 10_000)
 
-    def test_apply_q_factors(self):
+    def test_apply_q_factors(self) -> None:
         factors = [QualitativeFactor(name="econ", adjustment_bps=50)]
         adjusted = apply_q_factors(0.01, factors)
         assert adjusted == pytest.approx(0.01 + 50 / 10_000)
 
-    def test_apply_q_factors_floor(self):
+    def test_apply_q_factors_floor(self) -> None:
         factors = [QualitativeFactor(name="negative", adjustment_bps=-200)]
         adjusted = apply_q_factors(0.01, factors, floor=0.005)
         assert adjusted == pytest.approx(0.005)

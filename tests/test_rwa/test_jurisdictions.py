@@ -5,6 +5,8 @@ BCBS framework, verifying that each national implementation produces
 the correct risk weights per its own regulatory text.
 """
 
+from datetime import date
+
 import pytest
 
 from creditriskengine.core.types import (
@@ -12,15 +14,13 @@ from creditriskengine.core.types import (
     Jurisdiction,
     SAExposureClass,
 )
+from creditriskengine.rwa.output_floor import get_output_floor_pct
 from creditriskengine.rwa.standardized.credit_risk_sa import (
     assign_sa_risk_weight,
     get_corporate_risk_weight,
     get_residential_re_risk_weight,
     get_sovereign_risk_weight,
 )
-from creditriskengine.rwa.output_floor import get_output_floor_pct
-
-from datetime import date
 
 
 class TestSovereignRiskWeights:

@@ -193,7 +193,8 @@ class AdvancedIRBCalculator(BaseRWACalculator):
         self._validate_inputs(exposure)
 
         # Step 1-2: PD floor
-        pd = max(exposure.pd, PD_FLOOR)  # type: ignore[arg-type]
+        assert exposure.pd is not None, "PD must not be None"
+        pd = max(exposure.pd, PD_FLOOR)
 
         # Defaulted exposures
         if exposure.is_defaulted or pd >= 1.0:
@@ -208,8 +209,9 @@ class AdvancedIRBCalculator(BaseRWACalculator):
             if exposure.collaterals
             else None
         )
+        assert exposure.lgd is not None, "LGD must not be None"
         lgd = apply_lgd_floor(
-            lgd=exposure.lgd,  # type: ignore[arg-type]
+            lgd=exposure.lgd,
             asset_class=asset_class,
             retail_subclass=exposure.irb_retail_subclass,
             collateral_type=primary_collateral,

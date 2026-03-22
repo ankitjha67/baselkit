@@ -13,46 +13,46 @@ from creditriskengine.ecl.ifrs9.ecl_calc import (
 
 
 class TestDiscountFactors:
-    def test_zero_eir(self):
+    def test_zero_eir(self) -> None:
         dfs = discount_factors(0.0, 5)
         np.testing.assert_allclose(dfs, np.ones(5))
 
-    def test_positive_eir(self):
+    def test_positive_eir(self) -> None:
         dfs = discount_factors(0.05, 3)
         expected = np.array([1 / 1.05, 1 / 1.05**2, 1 / 1.05**3])
         np.testing.assert_allclose(dfs, expected, rtol=1e-10)
 
-    def test_decreasing(self):
+    def test_decreasing(self) -> None:
         dfs = discount_factors(0.10, 10)
         assert all(dfs[i] > dfs[i + 1] for i in range(len(dfs) - 1))
 
 
 class TestECL12Month:
-    def test_basic(self):
+    def test_basic(self) -> None:
         ecl = ecl_12_month(pd_12m=0.02, lgd=0.45, ead=1000.0)
         assert ecl == pytest.approx(9.0, rel=1e-6)
 
-    def test_with_discounting(self):
+    def test_with_discounting(self) -> None:
         ecl_no_disc = ecl_12_month(pd_12m=0.02, lgd=0.45, ead=1000.0, eir=0.0)
         ecl_disc = ecl_12_month(pd_12m=0.02, lgd=0.45, ead=1000.0, eir=0.05)
         assert ecl_disc < ecl_no_disc
 
-    def test_zero_pd(self):
+    def test_zero_pd(self) -> None:
         assert ecl_12_month(0.0, 0.45, 1000.0) == 0.0
 
-    def test_full_default(self):
+    def test_full_default(self) -> None:
         ecl = ecl_12_month(1.0, 0.45, 1000.0)
         assert ecl == pytest.approx(450.0)
 
 
 class TestECLLifetime:
-    def test_basic(self):
+    def test_basic(self) -> None:
         marginal_pds = np.array([0.02, 0.03, 0.04])
         ecl = ecl_lifetime(marginal_pds, lgds=0.45, eads=1000.0)
         expected = sum(pd * 0.45 * 1000.0 for pd in marginal_pds)
         assert ecl == pytest.approx(expected, rel=1e-6)
 
-    def test_with_term_structure(self):
+    def test_with_term_structure(self) -> None:
         marginal_pds = np.array([0.02, 0.03])
         lgds = np.array([0.45, 0.40])
         eads = np.array([1000.0, 950.0])
@@ -61,7 +61,7 @@ class TestECLLifetime:
         expected = 0.02 * 0.45 * 1000.0 / 1.05 + 0.03 * 0.40 * 950.0 / 1.05**2
         assert ecl == pytest.approx(expected, rel=1e-6)
 
-    def test_discounting_reduces_ecl(self):
+    def test_discounting_reduces_ecl(self) -> None:
         marginal_pds = np.array([0.02, 0.03, 0.04, 0.05])
         ecl_no_disc = ecl_lifetime(marginal_pds, 0.45, 1000.0, eir=0.0)
         ecl_disc = ecl_lifetime(marginal_pds, 0.45, 1000.0, eir=0.05)
@@ -69,7 +69,7 @@ class TestECLLifetime:
 
 
 class TestCalculateECL:
-    def test_stage1_uses_12m(self):
+    def test_stage1_uses_12m(self) -> None:
         ecl = calculate_ecl(
             stage=IFRS9Stage.STAGE_1,
             pd_12m=0.02,
@@ -78,7 +78,7 @@ class TestCalculateECL:
         )
         assert ecl == pytest.approx(9.0, rel=1e-6)
 
-    def test_stage2_requires_marginal_pds(self):
+    def test_stage2_requires_marginal_pds(self) -> None:
         with pytest.raises(ValueError, match="marginal_pds required"):
             calculate_ecl(
                 stage=IFRS9Stage.STAGE_2,
@@ -87,7 +87,7 @@ class TestCalculateECL:
                 ead=1000.0,
             )
 
-    def test_stage2_lifetime(self):
+    def test_stage2_lifetime(self) -> None:
         marginal_pds = np.array([0.02, 0.03, 0.04])
         ecl = calculate_ecl(
             stage=IFRS9Stage.STAGE_2,
@@ -99,7 +99,7 @@ class TestCalculateECL:
         expected = sum(pd * 0.45 * 1000.0 for pd in marginal_pds)
         assert ecl == pytest.approx(expected, rel=1e-6)
 
-    def test_stage3_lifetime(self):
+    def test_stage3_lifetime(self) -> None:
         marginal_pds = np.array([0.50, 0.30, 0.20])
         ecl = calculate_ecl(
             stage=IFRS9Stage.STAGE_3,

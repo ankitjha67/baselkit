@@ -13,6 +13,7 @@ References:
 import logging
 
 import numpy as np
+from sklearn.base import BaseEstimator, RegressorMixin  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 
@@ -142,10 +143,9 @@ def ead_term_structure(
 
 # ── Sklearn-compatible Estimator ──────────────────────────────────
 
-from sklearn.base import BaseEstimator, RegressorMixin
 
 
-class EADModel(BaseEstimator, RegressorMixin):
+class EADModel(BaseEstimator, RegressorMixin):  # type: ignore[misc]
     """Sklearn-compatible EAD model.
 
     Wraps EAD/CCF estimation with fit/predict interface.
@@ -165,10 +165,10 @@ class EADModel(BaseEstimator, RegressorMixin):
         self.mean_ccf_: float | None = None
         self.is_fitted_: bool = False
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "EADModel":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "EADModel":  # noqa: N803
         """Fit EAD model. X = [drawn, undrawn], y = realized EAD."""
         y = np.asarray(y, dtype=np.float64)
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float64)  # noqa: N806
         # Estimate mean CCF from data
         if X.shape[1] >= 2:
             undrawn = X[:, 1]
@@ -184,10 +184,10 @@ class EADModel(BaseEstimator, RegressorMixin):
         self.is_fitted_ = True
         return self
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray) -> np.ndarray:  # noqa: N803
         """Predict EAD. X columns: [drawn, undrawn]."""
         assert self.is_fitted_, "Call fit() first"
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float64)  # noqa: N806
         if self.ccf_method == "supervisory":
             ccf = get_supervisory_ccf(self.facility_type)
         else:

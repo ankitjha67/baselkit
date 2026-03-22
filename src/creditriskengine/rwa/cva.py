@@ -25,10 +25,10 @@ where:
 - beta = supervisory parameter = 0.25
 """
 
-import math
 import logging
+import math
 from dataclasses import dataclass
-from typing import Final, Optional
+from typing import Final
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class CVACounterparty:
     credit_spread: float
     maturity_years: float = 2.5
     sector: str = "corporate_ig"
-    rating: Optional[int] = None
+    rating: int | None = None
     is_exempt: bool = False
 
 
@@ -377,10 +377,7 @@ def sa_cva_capital(
         variance = 0.0
         for i in range(n):
             for j in range(n):
-                if i == j:
-                    rho_ij = 1.0
-                else:
-                    rho_ij = _SA_CVA_RHO_SAME_SECTOR
+                rho_ij = 1.0 if i == j else _SA_CVA_RHO_SAME_SECTOR
                 variance += rho_ij * ws_list[i] * ws_list[j]
         bucket_charges[bucket_key] = math.sqrt(max(variance, 0.0))
 
@@ -389,10 +386,7 @@ def sa_cva_capital(
     total_variance = 0.0
     for i, bk_i in enumerate(bucket_keys):
         for j, bk_j in enumerate(bucket_keys):
-            if i == j:
-                gamma = 1.0
-            else:
-                gamma = _SA_CVA_GAMMA
+            gamma = 1.0 if i == j else _SA_CVA_GAMMA
             total_variance += gamma * bucket_charges[bk_i] * bucket_charges[bk_j]
 
     k_sa_cva = math.sqrt(max(total_variance, 0.0))

@@ -679,7 +679,7 @@ class RBIStressTest:
         base_pds: np.ndarray,
         base_lgds: np.ndarray,
         base_eads: np.ndarray,
-    ) -> dict[str, float]:
+    ) -> dict[str, float | str]:
         """Apply credit quality deterioration stress.
 
         Simulates NPA migration per RBI's macro stress testing framework.

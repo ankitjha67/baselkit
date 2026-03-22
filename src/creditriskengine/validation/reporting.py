@@ -249,7 +249,7 @@ def export_validation_json(
     }
 
     # Sanitise numpy types that are not JSON-serialisable
-    def _default(obj: Any) -> Any:
+    def _default(obj: Any) -> Any:  # noqa: ANN401
         try:
             import numpy as np
 

@@ -13,54 +13,54 @@ from creditriskengine.rwa.irb.slotting import (
 class TestSlottingRiskWeight:
     """CRE34.2 Table 1: non-HVCRE standard risk weights."""
 
-    def test_strong_70(self):
+    def test_strong_70(self) -> None:
         assert slotting_risk_weight(SlottingCategory.STRONG) == 70.0
 
-    def test_good_90(self):
+    def test_good_90(self) -> None:
         assert slotting_risk_weight(SlottingCategory.GOOD) == 90.0
 
-    def test_satisfactory_115(self):
+    def test_satisfactory_115(self) -> None:
         assert slotting_risk_weight(SlottingCategory.SATISFACTORY) == 115.0
 
-    def test_weak_250(self):
+    def test_weak_250(self) -> None:
         assert slotting_risk_weight(SlottingCategory.WEAK) == 250.0
 
-    def test_default_0(self):
+    def test_default_0(self) -> None:
         assert slotting_risk_weight(SlottingCategory.DEFAULT) == 0.0
 
 
 class TestSlottingRiskWeightHVCRE:
     """CRE34.3 Table 2: HVCRE risk weights."""
 
-    def test_hvcre_strong_95(self):
+    def test_hvcre_strong_95(self) -> None:
         rw = slotting_risk_weight(
             SlottingCategory.STRONG,
             sl_type=IRBSpecialisedLendingType.HIGH_VOLATILITY_CRE,
         )
         assert rw == 95.0
 
-    def test_hvcre_good_120(self):
+    def test_hvcre_good_120(self) -> None:
         rw = slotting_risk_weight(
             SlottingCategory.GOOD,
             sl_type=IRBSpecialisedLendingType.HIGH_VOLATILITY_CRE,
         )
         assert rw == 120.0
 
-    def test_hvcre_satisfactory_140(self):
+    def test_hvcre_satisfactory_140(self) -> None:
         rw = slotting_risk_weight(
             SlottingCategory.SATISFACTORY,
             sl_type=IRBSpecialisedLendingType.HIGH_VOLATILITY_CRE,
         )
         assert rw == 140.0
 
-    def test_hvcre_weak_250(self):
+    def test_hvcre_weak_250(self) -> None:
         rw = slotting_risk_weight(
             SlottingCategory.WEAK,
             sl_type=IRBSpecialisedLendingType.HIGH_VOLATILITY_CRE,
         )
         assert rw == 250.0
 
-    def test_hvcre_default_0(self):
+    def test_hvcre_default_0(self) -> None:
         rw = slotting_risk_weight(
             SlottingCategory.DEFAULT,
             sl_type=IRBSpecialisedLendingType.HIGH_VOLATILITY_CRE,
@@ -71,19 +71,19 @@ class TestSlottingRiskWeightHVCRE:
 class TestSlottingPreferential:
     """CRE34.4: national discretion preferential weights."""
 
-    def test_preferential_strong_50(self):
+    def test_preferential_strong_50(self) -> None:
         rw = slotting_risk_weight(SlottingCategory.STRONG, use_preferential=True)
         assert rw == 50.0
 
-    def test_preferential_good_70(self):
+    def test_preferential_good_70(self) -> None:
         rw = slotting_risk_weight(SlottingCategory.GOOD, use_preferential=True)
         assert rw == 70.0
 
-    def test_preferential_satisfactory_unchanged_115(self):
+    def test_preferential_satisfactory_unchanged_115(self) -> None:
         rw = slotting_risk_weight(SlottingCategory.SATISFACTORY, use_preferential=True)
         assert rw == 115.0
 
-    def test_preferential_hvcre_strong_70(self):
+    def test_preferential_hvcre_strong_70(self) -> None:
         rw = slotting_risk_weight(
             SlottingCategory.STRONG,
             sl_type=IRBSpecialisedLendingType.HIGH_VOLATILITY_CRE,
@@ -91,7 +91,7 @@ class TestSlottingPreferential:
         )
         assert rw == 70.0
 
-    def test_preferential_hvcre_good_95(self):
+    def test_preferential_hvcre_good_95(self) -> None:
         rw = slotting_risk_weight(
             SlottingCategory.GOOD,
             sl_type=IRBSpecialisedLendingType.HIGH_VOLATILITY_CRE,
@@ -103,7 +103,7 @@ class TestSlottingPreferential:
 class TestAssignSlottingCategory:
     """Conservative aggregation: worst dimension wins."""
 
-    def test_all_strong(self):
+    def test_all_strong(self) -> None:
         result = assign_slotting_category(
             financial_strength="strong",
             political_and_legal="strong",
@@ -113,7 +113,7 @@ class TestAssignSlottingCategory:
         )
         assert result == SlottingCategory.STRONG
 
-    def test_one_weak_all_others_strong(self):
+    def test_one_weak_all_others_strong(self) -> None:
         result = assign_slotting_category(
             financial_strength="strong",
             political_and_legal="strong",
@@ -123,7 +123,7 @@ class TestAssignSlottingCategory:
         )
         assert result == SlottingCategory.WEAK
 
-    def test_mixed_good_satisfactory(self):
+    def test_mixed_good_satisfactory(self) -> None:
         result = assign_slotting_category(
             financial_strength="good",
             political_and_legal="satisfactory",
@@ -133,7 +133,7 @@ class TestAssignSlottingCategory:
         )
         assert result == SlottingCategory.SATISFACTORY
 
-    def test_all_default(self):
+    def test_all_default(self) -> None:
         result = assign_slotting_category(
             financial_strength="default",
             political_and_legal="default",
@@ -143,7 +143,7 @@ class TestAssignSlottingCategory:
         )
         assert result == SlottingCategory.DEFAULT
 
-    def test_case_insensitive(self):
+    def test_case_insensitive(self) -> None:
         result = assign_slotting_category(
             financial_strength="Strong",
             political_and_legal="STRONG",
@@ -153,7 +153,7 @@ class TestAssignSlottingCategory:
         )
         assert result == SlottingCategory.STRONG
 
-    def test_invalid_rating_raises(self):
+    def test_invalid_rating_raises(self) -> None:
         with pytest.raises(ValueError, match="Invalid slotting rating"):
             assign_slotting_category(
                 financial_strength="excellent",
@@ -163,7 +163,7 @@ class TestAssignSlottingCategory:
                 sponsor_strength="strong",
             )
 
-    def test_non_hvcre_type_uses_standard_table(self):
+    def test_non_hvcre_type_uses_standard_table(self) -> None:
         rw = slotting_risk_weight(
             SlottingCategory.STRONG,
             sl_type=IRBSpecialisedLendingType.PROJECT_FINANCE,

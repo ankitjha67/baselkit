@@ -8,13 +8,10 @@ Implements:
 Hierarchy: SEC-IRBA > SEC-ERBA > SEC-SA (CRE40.4)
 """
 
-import math
 import logging
+import math
 from dataclasses import dataclass
-from typing import Final, Optional
-
-import numpy as np
-from scipy.stats import norm
+from typing import Final
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +39,7 @@ class SecuritisationTranche:
     attachment_point: float
     detachment_point: float
     notional: float
-    external_rating: Optional[int] = None
+    external_rating: int | None = None
     is_senior: bool = False
     is_resecuritisation: bool = False
     maturity_years: float = 2.5
@@ -196,10 +193,7 @@ def _compute_p_parameter(
     Returns:
         Supervisory parameter p.
     """
-    if is_senior:
-        p = _P_SENIOR_WHOLESALE
-    else:
-        p = _P_NON_SENIOR_WHOLESALE
+    p = _P_SENIOR_WHOLESALE if is_senior else _P_NON_SENIOR_WHOLESALE
 
     # Granularity adjustment — CRE41.3 footnote
     if n_effective > 0:

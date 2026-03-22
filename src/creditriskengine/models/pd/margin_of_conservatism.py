@@ -20,12 +20,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 
 
-class MoCCategory(str, Enum):
+class MoCCategory(str, Enum):  # noqa: UP042
     """MoC adjustment categories per ECB Guide."""
 
     ESTIMATION_ERROR = "A"

@@ -5,7 +5,7 @@ Reference: BCBS WP14 (May 2005), EBA GL/2017/16.
 """
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -164,7 +164,11 @@ def pd_backtest_full(
 
     # Overall traffic light is the worst across grades
     _tl_order = {"green": 0, "yellow": 1, "red": 2}
-    overall_tl = max(traffic_light_colours, key=lambda c: _tl_order.get(c, 0)) if traffic_light_colours else "green"
+    overall_tl = (
+        max(traffic_light_colours, key=lambda c: _tl_order.get(c, 0))
+        if traffic_light_colours
+        else "green"
+    )
 
     # Derive human-readable assessment
     n_red = sum(1 for c in traffic_light_colours if c == "red")

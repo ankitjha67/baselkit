@@ -5,7 +5,7 @@ Reference: SR 11-7, ECB Guide to Internal Models.
 """
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -169,15 +169,13 @@ def multi_model_benchmark(
         for name in model_names:
             val = models[name].get(metric)
             row[name] = val
-            if val is not None:
-                if best_val is None:
-                    best_val = val
-                    best_name = name
-                elif (higher_better and val > best_val) or (
-                    not higher_better and val < best_val
-                ):
-                    best_val = val
-                    best_name = name
+            if val is not None and (
+                best_val is None
+                or (higher_better and val > best_val)
+                or (not higher_better and val < best_val)
+            ):
+                best_val = val
+                best_name = name
 
         best_per_metric[metric] = best_name
         wins[best_name] = wins.get(best_name, 0) + 1

@@ -2,7 +2,7 @@
 
 import pytest
 
-from creditriskengine.core.exposure import Collateral, Exposure
+from creditriskengine.core.exposure import Exposure
 from creditriskengine.core.types import (
     CollateralType,
     CreditRiskApproach,
@@ -17,7 +17,7 @@ from creditriskengine.rwa.irb.advanced import (
 )
 
 
-def _make_exposure(**overrides) -> Exposure:
+def _make_exposure(**overrides: object) -> Exposure:
     """Helper to create a minimal A-IRB exposure."""
     defaults = dict(
         exposure_id="EXP-A001",
@@ -38,41 +38,41 @@ def _make_exposure(**overrides) -> Exposure:
 class TestApplyLGDFloor:
     """CRE32.23-32.25: LGD floors by asset class and collateral type."""
 
-    def test_corporate_unsecured_floor_25pct(self):
+    def test_corporate_unsecured_floor_25pct(self) -> None:
         result = apply_lgd_floor(0.10, "corporate")
         assert result == pytest.approx(0.25, abs=1e-6)
 
-    def test_corporate_unsecured_no_floor_needed(self):
+    def test_corporate_unsecured_no_floor_needed(self) -> None:
         result = apply_lgd_floor(0.40, "corporate")
         assert result == pytest.approx(0.40, abs=1e-6)
 
-    def test_corporate_secured_financial_0pct(self):
+    def test_corporate_secured_financial_0pct(self) -> None:
         result = apply_lgd_floor(0.0, "corporate", collateral_type=CollateralType.CASH)
         assert result == pytest.approx(0.0, abs=1e-6)
 
-    def test_corporate_secured_receivables_10pct(self):
+    def test_corporate_secured_receivables_10pct(self) -> None:
         result = apply_lgd_floor(0.05, "corporate", collateral_type=CollateralType.RECEIVABLES)
         assert result == pytest.approx(0.10, abs=1e-6)
 
-    def test_corporate_secured_rre_10pct(self):
+    def test_corporate_secured_rre_10pct(self) -> None:
         result = apply_lgd_floor(
             0.05, "corporate", collateral_type=CollateralType.RESIDENTIAL_REAL_ESTATE
         )
         assert result == pytest.approx(0.10, abs=1e-6)
 
-    def test_corporate_secured_other_physical_15pct(self):
+    def test_corporate_secured_other_physical_15pct(self) -> None:
         result = apply_lgd_floor(0.10, "corporate", collateral_type=CollateralType.OTHER_PHYSICAL)
         assert result == pytest.approx(0.15, abs=1e-6)
 
-    def test_sovereign_unsecured_floor(self):
+    def test_sovereign_unsecured_floor(self) -> None:
         result = apply_lgd_floor(0.10, "sovereign")
         assert result == pytest.approx(0.25, abs=1e-6)
 
-    def test_bank_unsecured_floor(self):
+    def test_bank_unsecured_floor(self) -> None:
         result = apply_lgd_floor(0.10, "bank")
         assert result == pytest.approx(0.25, abs=1e-6)
 
-    def test_retail_mortgage_floor_5pct(self):
+    def test_retail_mortgage_floor_5pct(self) -> None:
         result = apply_lgd_floor(
             0.03,
             "residential_mortgage",
@@ -80,19 +80,22 @@ class TestApplyLGDFloor:
         )
         assert result == pytest.approx(0.05, abs=1e-6)
 
-    def test_qrre_floor_50pct(self):
+    def test_qrre_floor_50pct(self) -> None:
         result = apply_lgd_floor(0.30, "qrre", retail_subclass=IRBRetailSubClass.QRRE)
         assert result == pytest.approx(0.50, abs=1e-6)
 
-    def test_other_retail_floor_25pct(self):
-        result = apply_lgd_floor(0.10, "other_retail", retail_subclass=IRBRetailSubClass.OTHER_RETAIL)
+    def test_other_retail_floor_25pct(self) -> None:
+        result = apply_lgd_floor(
+            0.10, "other_retail",
+            retail_subclass=IRBRetailSubClass.OTHER_RETAIL,
+        )
         assert result == pytest.approx(0.25, abs=1e-6)
 
-    def test_sme_retail_floor_25pct(self):
+    def test_sme_retail_floor_25pct(self) -> None:
         result = apply_lgd_floor(0.10, "other_retail", retail_subclass=IRBRetailSubClass.SME_RETAIL)
         assert result == pytest.approx(0.25, abs=1e-6)
 
-    def test_unknown_asset_class_conservative_fallback(self):
+    def test_unknown_asset_class_conservative_fallback(self) -> None:
         result = apply_lgd_floor(0.10, "unknown_class")
         assert result == pytest.approx(0.25, abs=1e-6)
 
@@ -100,26 +103,26 @@ class TestApplyLGDFloor:
 class TestApplyCCFFloor:
     """CRE32.33: 50% CCF floor."""
 
-    def test_ccf_below_floor(self):
+    def test_ccf_below_floor(self) -> None:
         assert apply_ccf_floor(0.30) == pytest.approx(0.50, abs=1e-6)
 
-    def test_ccf_at_floor(self):
+    def test_ccf_at_floor(self) -> None:
         assert apply_ccf_floor(0.50) == pytest.approx(0.50, abs=1e-6)
 
-    def test_ccf_above_floor(self):
+    def test_ccf_above_floor(self) -> None:
         assert apply_ccf_floor(0.80) == pytest.approx(0.80, abs=1e-6)
 
-    def test_ccf_zero(self):
+    def test_ccf_zero(self) -> None:
         assert apply_ccf_floor(0.0) == pytest.approx(0.50, abs=1e-6)
 
-    def test_ccf_one(self):
+    def test_ccf_one(self) -> None:
         assert apply_ccf_floor(1.0) == pytest.approx(1.0, abs=1e-6)
 
 
 class TestAdvancedIRBCalculator:
     """A-IRB end-to-end calculation."""
 
-    def test_basic_corporate(self):
+    def test_basic_corporate(self) -> None:
         calc = AdvancedIRBCalculator()
         exp = _make_exposure(pd=0.02, lgd=0.35, drawn_amount=1_000_000, undrawn_commitment=0)
         result = calc.calculate(exp)
@@ -130,39 +133,39 @@ class TestAdvancedIRBCalculator:
         assert result.rwa > 0
         assert result.capital_requirement == pytest.approx(result.rwa * 0.08, rel=1e-6)
 
-    def test_pd_floor_applied(self):
+    def test_pd_floor_applied(self) -> None:
         calc = AdvancedIRBCalculator()
         exp = _make_exposure(pd=0.0001, lgd=0.35, drawn_amount=1_000_000, undrawn_commitment=0)
         result = calc.calculate(exp)
         assert result.details["pd"] == pytest.approx(0.0003, abs=1e-6)
 
-    def test_lgd_floor_applied(self):
+    def test_lgd_floor_applied(self) -> None:
         calc = AdvancedIRBCalculator()
         exp = _make_exposure(pd=0.02, lgd=0.10, drawn_amount=1_000_000, undrawn_commitment=0)
         result = calc.calculate(exp)
         # Corporate unsecured floor is 25%
         assert result.details["lgd"] == pytest.approx(0.25, abs=1e-6)
 
-    def test_defaulted_exposure_zero_rw(self):
+    def test_defaulted_exposure_zero_rw(self) -> None:
         calc = AdvancedIRBCalculator()
         exp = _make_exposure(is_defaulted=True, pd=1.0, lgd=0.45)
         result = calc.calculate(exp)
         assert result.risk_weight == 0.0
         assert result.rwa == 0.0
 
-    def test_missing_pd_raises(self):
+    def test_missing_pd_raises(self) -> None:
         calc = AdvancedIRBCalculator()
         exp = _make_exposure(pd=None, lgd=0.35)
         with pytest.raises(ValueError, match="A-IRB requires"):
             calc.calculate(exp)
 
-    def test_missing_lgd_raises(self):
+    def test_missing_lgd_raises(self) -> None:
         calc = AdvancedIRBCalculator()
         exp = _make_exposure(pd=0.02, lgd=None)
         with pytest.raises(ValueError, match="A-IRB requires"):
             calc.calculate(exp)
 
-    def test_ead_model_used_when_provided(self):
+    def test_ead_model_used_when_provided(self) -> None:
         calc = AdvancedIRBCalculator()
         exp = _make_exposure(
             pd=0.02, lgd=0.35, ead_model=500_000, drawn_amount=800_000, undrawn_commitment=200_000
@@ -170,7 +173,7 @@ class TestAdvancedIRBCalculator:
         result = calc.calculate(exp)
         assert result.ead == pytest.approx(500_000, rel=1e-6)
 
-    def test_retail_mortgage_asset_class(self):
+    def test_retail_mortgage_asset_class(self) -> None:
         calc = AdvancedIRBCalculator()
         exp = _make_exposure(
             irb_asset_class=IRBAssetClass.RETAIL,

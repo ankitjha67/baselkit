@@ -13,7 +13,7 @@ referenced Basel Committee text.
 import logging
 import math
 
-from scipy.stats import norm
+from scipy.stats import norm  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 

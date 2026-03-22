@@ -17,7 +17,7 @@ import logging
 import math
 
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 

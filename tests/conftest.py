@@ -3,24 +3,15 @@
 import numpy as np
 import pytest
 
-from creditriskengine.core.types import (
-    CreditQualityStep,
-    CreditRiskApproach,
-    IFRS9Stage,
-    IRBAssetClass,
-    Jurisdiction,
-    SAExposureClass,
-)
-
 
 @pytest.fixture
-def rng():
+def rng() -> None:
     """Seeded random number generator for reproducible tests."""
     return np.random.default_rng(42)
 
 
 @pytest.fixture
-def sample_corporate_params():
+def sample_corporate_params() -> None:
     """Typical corporate IRB parameters."""
     return {
         "pd": 0.01,
@@ -32,7 +23,7 @@ def sample_corporate_params():
 
 
 @pytest.fixture
-def sample_retail_params():
+def sample_retail_params() -> None:
     """Typical retail IRB parameters."""
     return {
         "pd": 0.03,

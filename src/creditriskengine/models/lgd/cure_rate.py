@@ -77,7 +77,11 @@ def estimate_cure_rate(
             median_ttc = 0.0
 
         # Build monthly cure rate profile
-        max_month = int(np.ceil(np.max(time_in_default_months))) if len(time_in_default_months) > 0 else 0
+        max_month = (
+            int(np.ceil(np.max(time_in_default_months)))
+            if len(time_in_default_months) > 0
+            else 0
+        )
         max_month = max(max_month, 1)
         cure_rates_by_period = np.zeros(max_month, dtype=np.float64)
 

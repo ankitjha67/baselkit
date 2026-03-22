@@ -11,7 +11,7 @@ from creditriskengine.reporting.fr_y14 import (
 )
 
 
-def _sample_wholesale():
+def _sample_wholesale() -> list[dict[str, object]]:
     return [
         {
             "obligor_id": "OB-001",
@@ -38,7 +38,7 @@ def _sample_wholesale():
     ]
 
 
-def _sample_cre():
+def _sample_cre() -> list[dict[str, object]]:
     return [
         {
             "loan_id": "CRE-001",
@@ -60,34 +60,34 @@ def _sample_cre():
 class TestGenerateScheduleH1:
     """FR Y-14Q Schedule H.1 -- Wholesale Corporate."""
 
-    def test_returns_schedule(self):
+    def test_returns_schedule(self) -> None:
         sched = generate_schedule_h1(_sample_wholesale(), "2025-03-31", "Test BHC")
         assert isinstance(sched, FRY14Schedule)
         assert sched.schedule_id == "H.1"
 
-    def test_row_count(self):
+    def test_row_count(self) -> None:
         sched = generate_schedule_h1(_sample_wholesale(), "2025-03-31")
         assert len(sched.rows) == 2
 
-    def test_expected_loss_calculated(self):
+    def test_expected_loss_calculated(self) -> None:
         sched = generate_schedule_h1(_sample_wholesale(), "2025-03-31")
         row = sched.rows[0]
         # EL = PD * LGD * EAD = 0.02 * 0.40 * 4M = 32000
         assert row.expected_loss == pytest.approx(32_000, rel=1e-6)
 
-    def test_metadata_totals(self):
+    def test_metadata_totals(self) -> None:
         sched = generate_schedule_h1(_sample_wholesale(), "2025-03-31")
         assert sched.metadata["obligor_count"] == 2
         assert sched.metadata["total_ead"] == pytest.approx(6_000_000, rel=1e-6)
 
-    def test_exposure_weighted_pd(self):
+    def test_exposure_weighted_pd(self) -> None:
         sched = generate_schedule_h1(_sample_wholesale(), "2025-03-31")
         # (0.02*4M + 0.05*2M) / 6M = 0.18/6 = 0.03
         assert sched.metadata["exposure_weighted_pd"] == pytest.approx(
             (0.02 * 4e6 + 0.05 * 2e6) / 6e6, rel=1e-4
         )
 
-    def test_empty_input(self):
+    def test_empty_input(self) -> None:
         sched = generate_schedule_h1([], "2025-03-31")
         assert len(sched.rows) == 0
 
@@ -95,12 +95,12 @@ class TestGenerateScheduleH1:
 class TestGenerateScheduleH2:
     """FR Y-14Q Schedule H.2 -- CRE."""
 
-    def test_returns_schedule(self):
+    def test_returns_schedule(self) -> None:
         sched = generate_schedule_h2(_sample_cre(), "2025-03-31", "Test BHC")
         assert isinstance(sched, FRY14Schedule)
         assert sched.schedule_id == "H.2"
 
-    def test_ltv_auto_calculated(self):
+    def test_ltv_auto_calculated(self) -> None:
         data = [
             {
                 "loan_id": "CRE-002",
@@ -115,11 +115,11 @@ class TestGenerateScheduleH2:
         # LTV = utilized / appraised = 4M/8M = 0.5
         assert sched.rows[0].ltv_ratio == pytest.approx(0.5, rel=1e-6)
 
-    def test_property_type_breakdown(self):
+    def test_property_type_breakdown(self) -> None:
         sched = generate_schedule_h2(_sample_cre(), "2025-03-31")
         assert "Office" in sched.metadata["property_type_breakdown"]
 
-    def test_expected_loss(self):
+    def test_expected_loss(self) -> None:
         sched = generate_schedule_h2(_sample_cre(), "2025-03-31")
         # EL = 0.03 * 0.30 * 9M = 81000
         assert sched.rows[0].expected_loss == pytest.approx(81_000, rel=1e-6)
@@ -128,17 +128,17 @@ class TestGenerateScheduleH2:
 class TestGenerateLossSchedule:
     """FR Y-14Q Schedule B -- Projected Losses."""
 
-    def test_9_quarter_projection(self):
+    def test_9_quarter_projection(self) -> None:
         losses = {f"Q{(i % 4) + 1} 202{5 + i // 4}": 100_000.0 * (i + 1) for i in range(9)}
         sched = generate_loss_schedule(losses, "2025-03-31", "Test BHC")
         assert len(sched.rows) == 9
 
-    def test_padding_when_fewer_quarters(self):
+    def test_padding_when_fewer_quarters(self) -> None:
         losses = {"Q1 2025": 50_000, "Q2 2025": 60_000}
         sched = generate_loss_schedule(losses, "2025-03-31", horizon_quarters=9)
         assert len(sched.rows) == 9
 
-    def test_cumulative_loss_rate_increases(self):
+    def test_cumulative_loss_rate_increases(self) -> None:
         losses = {f"Q{i+1} 2025": 10_000.0 for i in range(4)}
         losses.update({f"Q{i+1} 2026": 10_000.0 for i in range(4)})
         losses["Q1 2027"] = 10_000.0
@@ -148,7 +148,7 @@ class TestGenerateLossSchedule:
         for i in range(1, len(rates)):
             assert rates[i] >= rates[i - 1] - 1e-10
 
-    def test_metadata_keys(self):
+    def test_metadata_keys(self) -> None:
         losses = {"Q1 2025": 50_000}
         sched = generate_loss_schedule(losses, "2025-03-31")
         assert "total_net_charge_offs" in sched.metadata
@@ -159,7 +159,7 @@ class TestGenerateLossSchedule:
 class TestScheduleToDict:
     """Serialization."""
 
-    def test_contains_required_keys(self):
+    def test_contains_required_keys(self) -> None:
         sched = generate_schedule_h1(_sample_wholesale(), "2025-03-31", "Bank X")
         d = schedule_to_dict(sched)
         assert "schedule_id" in d
@@ -167,12 +167,12 @@ class TestScheduleToDict:
         assert "row_count" in d
         assert d["row_count"] == 2
 
-    def test_rows_are_dicts(self):
+    def test_rows_are_dicts(self) -> None:
         sched = generate_schedule_h1(_sample_wholesale(), "2025-03-31")
         d = schedule_to_dict(sched)
         assert all(isinstance(r, dict) for r in d["rows"])
 
-    def test_bhc_name_preserved(self):
+    def test_bhc_name_preserved(self) -> None:
         sched = generate_schedule_h1(_sample_wholesale(), "2025-03-31", "Mega BHC")
         d = schedule_to_dict(sched)
         assert d["bhc_name"] == "Mega BHC"

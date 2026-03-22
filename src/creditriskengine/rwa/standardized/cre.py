@@ -146,10 +146,7 @@ def get_cre_risk_weight(
         )
 
     # BCBS base tables
-    if is_income_producing:
-        table = CRE_IPRE_RW
-    else:
-        table = CRE_NOT_CASHFLOW_RW
+    table = CRE_IPRE_RW if is_income_producing else CRE_NOT_CASHFLOW_RW
 
     rw = _lookup_ltv_table(table, ltv, counterparty_rw)
     logger.debug(
@@ -185,10 +182,7 @@ def get_cre_risk_weight_eu(
     Returns:
         Risk weight as percentage.
     """
-    if is_income_producing:
-        table = CRE_EU_IPRE_RW
-    else:
-        table = CRE_EU_NOT_CASHFLOW_RW
+    table = CRE_EU_IPRE_RW if is_income_producing else CRE_EU_NOT_CASHFLOW_RW
 
     rw = _lookup_ltv_table(table, ltv, counterparty_rw)
     logger.debug(

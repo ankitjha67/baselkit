@@ -13,32 +13,32 @@ from creditriskengine.validation.discrimination import (
 
 
 class TestAUROC:
-    def test_perfect_model(self):
+    def test_perfect_model(self) -> None:
         y_true = np.array([1, 1, 1, 0, 0, 0])
         y_score = np.array([0.9, 0.8, 0.7, 0.3, 0.2, 0.1])
         assert auroc(y_true, y_score) == pytest.approx(1.0, abs=1e-10)
 
-    def test_random_model(self):
+    def test_random_model(self) -> None:
         rng = np.random.default_rng(42)
         y_true = rng.integers(0, 2, size=10000)
         y_score = rng.random(10000)
         auc = auroc(y_true, y_score)
         assert 0.48 < auc < 0.52
 
-    def test_no_positives(self):
+    def test_no_positives(self) -> None:
         assert auroc(np.zeros(10), np.random.rand(10)) == 0.5
 
-    def test_no_negatives(self):
+    def test_no_negatives(self) -> None:
         assert auroc(np.ones(10), np.random.rand(10)) == 0.5
 
 
 class TestGiniCoefficient:
-    def test_perfect(self):
+    def test_perfect(self) -> None:
         y_true = np.array([1, 1, 0, 0])
         y_score = np.array([0.9, 0.8, 0.2, 0.1])
         assert gini_coefficient(y_true, y_score) == pytest.approx(1.0, abs=1e-10)
 
-    def test_relation_to_auroc(self):
+    def test_relation_to_auroc(self) -> None:
         rng = np.random.default_rng(123)
         y_true = rng.integers(0, 2, size=500)
         y_score = rng.random(500)
@@ -48,16 +48,16 @@ class TestGiniCoefficient:
 
 
 class TestKSStatistic:
-    def test_perfect_separation(self):
+    def test_perfect_separation(self) -> None:
         y_true = np.array([1, 1, 1, 0, 0, 0])
         y_score = np.array([0.9, 0.8, 0.7, 0.3, 0.2, 0.1])
         ks = ks_statistic(y_true, y_score)
         assert ks == pytest.approx(1.0, abs=0.01)
 
-    def test_no_data_returns_zero(self):
+    def test_no_data_returns_zero(self) -> None:
         assert ks_statistic(np.ones(5), np.random.rand(5)) == 0.0
 
-    def test_ks_in_unit_interval(self):
+    def test_ks_in_unit_interval(self) -> None:
         rng = np.random.default_rng(42)
         y_true = rng.integers(0, 2, size=200)
         y_score = rng.random(200)
@@ -66,24 +66,24 @@ class TestKSStatistic:
 
 
 class TestDivergence:
-    def test_zero_for_identical(self):
+    def test_zero_for_identical(self) -> None:
         y_true = np.array([1, 1, 0, 0])
         y_score = np.array([0.5, 0.5, 0.5, 0.5])
         assert divergence(y_true, y_score) == 0.0
 
-    def test_positive_for_separation(self):
+    def test_positive_for_separation(self) -> None:
         y_true = np.array([1, 1, 1, 0, 0, 0])
         y_score = np.array([0.9, 0.8, 0.7, 0.3, 0.2, 0.1])
         assert divergence(y_true, y_score) > 0.0
 
 
 class TestInformationValue:
-    def test_no_signal(self):
+    def test_no_signal(self) -> None:
         rng = np.random.default_rng(42)
         feature = rng.random(1000)
         target = rng.integers(0, 2, size=1000)
         iv = information_value(feature, target)
         assert iv < 0.1  # Should be near zero for random
 
-    def test_no_defaults_returns_zero(self):
+    def test_no_defaults_returns_zero(self) -> None:
         assert information_value(np.random.rand(100), np.zeros(100)) == 0.0

@@ -150,10 +150,10 @@ def apply_lgd_floor(
 
 # ── Sklearn-compatible Estimator ──────────────────────────────────
 
-from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.base import BaseEstimator, RegressorMixin  # type: ignore[import-untyped]  # noqa: E402
 
 
-class LGDModel(BaseEstimator, RegressorMixin):
+class LGDModel(BaseEstimator, RegressorMixin):  # type: ignore[misc]
     """Sklearn-compatible LGD model.
 
     Wraps workout LGD estimation with fit/predict interface.
@@ -179,7 +179,7 @@ class LGDModel(BaseEstimator, RegressorMixin):
         self.mean_lgd_: float | None = None
         self.is_fitted_: bool = False
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "LGDModel":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "LGDModel":  # noqa: N803
         """Fit LGD model. X = features, y = realized LGDs.
 
         Stores mean LGD for baseline predictions.
@@ -189,7 +189,7 @@ class LGDModel(BaseEstimator, RegressorMixin):
         self.is_fitted_ = True
         return self
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: np.ndarray) -> np.ndarray:  # noqa: N803
         """Predict LGD values. Returns mean LGD (baseline model).
 
         Override in subclasses for more sophisticated models.

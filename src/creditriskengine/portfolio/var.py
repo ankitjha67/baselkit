@@ -16,7 +16,7 @@ Regulatory context:
 import logging
 
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 
@@ -308,7 +308,7 @@ def component_var(
         portfolio_var,
         float(np.sum(result)),
     )
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 def expected_shortfall(

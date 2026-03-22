@@ -11,51 +11,51 @@ from creditriskengine.models.concentration.concentration import (
 
 
 class TestSingleNameConcentration:
-    def test_equal_exposures(self):
+    def test_equal_exposures(self) -> None:
         eads = np.full(100, 10.0)
         result = single_name_concentration(eads)
         assert result["hhi"] == pytest.approx(0.01)
         assert result["top_1_share"] == pytest.approx(0.01)
         assert result["n_obligors"] == 100
 
-    def test_single_exposure(self):
+    def test_single_exposure(self) -> None:
         result = single_name_concentration(np.array([1000.0]))
         assert result["hhi"] == pytest.approx(1.0)
         assert result["top_1_share"] == pytest.approx(1.0)
 
-    def test_concentrated(self):
+    def test_concentrated(self) -> None:
         eads = np.array([900.0, 50.0, 50.0])
         result = single_name_concentration(eads)
         assert result["hhi"] > 0.80
         assert result["top_1_share"] == pytest.approx(0.9)
 
-    def test_empty(self):
+    def test_empty(self) -> None:
         result = single_name_concentration(np.array([]))
         assert result["hhi"] == 0.0
         assert result["n_obligors"] == 0
 
 
 class TestSectorConcentration:
-    def test_single_sector(self):
+    def test_single_sector(self) -> None:
         eads = np.array([100.0, 200.0, 300.0])
         sectors = np.array(["A", "A", "A"])
         result = sector_concentration(eads, sectors)
         assert result["sector_hhi"] == pytest.approx(1.0)
 
-    def test_equal_sectors(self):
+    def test_equal_sectors(self) -> None:
         eads = np.array([100.0, 100.0, 100.0, 100.0])
         sectors = np.array(["A", "B", "C", "D"])
         result = sector_concentration(eads, sectors)
         assert result["sector_hhi"] == pytest.approx(0.25)
         assert result["sector_shares"]["A"] == pytest.approx(0.25)
 
-    def test_empty(self):
+    def test_empty(self) -> None:
         result = sector_concentration(np.array([]), np.array([]))
         assert result["sector_hhi"] == 0.0
 
 
 class TestGranularityAdjustment:
-    def test_diversified_portfolio(self):
+    def test_diversified_portfolio(self) -> None:
         n = 1000
         eads = np.full(n, 1.0)
         pds = np.full(n, 0.02)
@@ -64,7 +64,7 @@ class TestGranularityAdjustment:
         assert ga >= 0.0
         assert ga < 0.01  # small for diversified portfolio
 
-    def test_concentrated_portfolio(self):
+    def test_concentrated_portfolio(self) -> None:
         eads = np.array([990.0, 10.0])
         pds = np.array([0.02, 0.02])
         lgds = np.array([0.45, 0.45])
@@ -77,6 +77,6 @@ class TestGranularityAdjustment:
 
         assert ga_conc > ga_div
 
-    def test_zero_ead(self):
+    def test_zero_ead(self) -> None:
         ga = granularity_adjustment(np.array([]), np.array([]), np.array([]), rho=0.15)
         assert ga == 0.0

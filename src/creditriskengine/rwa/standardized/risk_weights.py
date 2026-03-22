@@ -86,7 +86,10 @@ class RiskWeightRegistry:
                     if cqs_val is not None:
                         parsed[cqs_val] = float(rw)
                     else:
-                        logger.debug("Skipping unrecognised CQS key '%s' in table '%s'", key, table_name)
+                        logger.debug(
+                            "Skipping unrecognised CQS key '%s' in table '%s'",
+                            key, table_name,
+                        )
                 self._rw_tables[table_name] = parsed
                 logger.debug("Loaded CQS table '%s' with %d entries", table_name, len(parsed))
 
@@ -118,7 +121,7 @@ class RiskWeightRegistry:
         self,
         exposure_class: SAExposureClass,
         cqs: CreditQualityStep | None = None,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401
     ) -> float:
         """Look up risk weight from registry.
 

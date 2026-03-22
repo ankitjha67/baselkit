@@ -5,18 +5,19 @@ import pytest
 
 from creditriskengine.models.pd.binning import (
     BinResult,
+    WoEBinningTransformer,
+    apply_woe_transform,
     calculate_iv,
     calculate_woe,
     equal_width_binning,
     monotonic_binning,
     optimal_binning,
     quantile_binning,
-    apply_woe_transform,
 )
 
 
 @pytest.fixture
-def binary_data():
+def binary_data() -> tuple[np.ndarray, np.ndarray]:
     """Synthetic binary classification data with signal."""
     rng = np.random.default_rng(42)
     n = 2000
@@ -66,14 +67,14 @@ class TestCalculateIV:
 class TestQuantileBinning:
     """Test equal-frequency binning."""
 
-    def test_basic(self, binary_data) -> None:
+    def test_basic(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
         values, target = binary_data
         result = quantile_binning(values, target, n_bins=5)
         assert isinstance(result, BinResult)
         assert len(result.woe_values) == 5
         assert result.iv > 0.0
 
-    def test_bin_counts_sum(self, binary_data) -> None:
+    def test_bin_counts_sum(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
         values, target = binary_data
         result = quantile_binning(values, target, n_bins=10)
         assert result.bin_counts.sum() == len(values)
@@ -82,14 +83,14 @@ class TestQuantileBinning:
 class TestMonotonicBinning:
     """Test monotonic WoE binning."""
 
-    def test_monotonic_woe(self, binary_data) -> None:
+    def test_monotonic_woe(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
         values, target = binary_data
         result = monotonic_binning(values, target, n_bins=10)
         # WoE should be monotonically increasing or decreasing
         diffs = np.diff(result.woe_values)
         assert np.all(diffs >= -1e-10) or np.all(diffs <= 1e-10)
 
-    def test_auto_direction(self, binary_data) -> None:
+    def test_auto_direction(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
         values, target = binary_data
         result = monotonic_binning(values, target, increasing=None)
         assert isinstance(result, BinResult)
@@ -98,14 +99,14 @@ class TestMonotonicBinning:
 class TestOptimalBinning:
     """Test decision tree-based optimal binning."""
 
-    def test_basic(self, binary_data) -> None:
+    def test_basic(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
         values, target = binary_data
         result = optimal_binning(values, target, max_bins=8)
         assert isinstance(result, BinResult)
         assert len(result.woe_values) <= 8
         assert result.iv > 0.0
 
-    def test_min_bin_pct(self, binary_data) -> None:
+    def test_min_bin_pct(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
         values, target = binary_data
         result = optimal_binning(values, target, max_bins=5, min_bin_pct=0.10)
         min_pct = result.bin_counts.min() / result.bin_counts.sum()
@@ -113,10 +114,53 @@ class TestOptimalBinning:
         assert min_pct >= 0.05
 
 
+class TestEqualWidthBinning:
+    """Test equal-width binning."""
+
+    def test_basic(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        result = equal_width_binning(values, target, n_bins=5)
+        assert isinstance(result, BinResult)
+        assert len(result.woe_values) == 5
+
+    def test_bin_edges_structure(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        result = equal_width_binning(values, target, n_bins=4)
+        assert result.bin_edges[0] == -np.inf
+        assert result.bin_edges[-1] == np.inf
+
+    def test_bin_counts_sum(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        result = equal_width_binning(values, target, n_bins=8)
+        assert result.bin_counts.sum() == len(values)
+
+
+class TestMonotonicBinningExtended:
+    """Additional tests for monotonic binning."""
+
+    def test_explicit_increasing(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        result = monotonic_binning(values, target, n_bins=5, increasing=True)
+        diffs = np.diff(result.woe_values)
+        assert np.all(diffs >= -1e-10)
+
+    def test_explicit_decreasing(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        # Negate values to flip the relationship
+        result = monotonic_binning(-values, target, n_bins=5, increasing=False)
+        diffs = np.diff(result.woe_values)
+        assert np.all(diffs <= 1e-10)
+
+    def test_feature_name_stored(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        result = monotonic_binning(values, target, feature_name="my_feature")
+        assert result.feature_name == "my_feature"
+
+
 class TestApplyWoETransform:
     """Test WoE transformation of new data."""
 
-    def test_transform_matches_bins(self, binary_data) -> None:
+    def test_transform_matches_bins(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
         values, target = binary_data
         result = quantile_binning(values, target, n_bins=5)
         transformed = apply_woe_transform(values, result)
@@ -124,3 +168,68 @@ class TestApplyWoETransform:
         # Each transformed value should be one of the WoE values
         unique_woe = np.unique(transformed)
         assert len(unique_woe) <= len(result.woe_values) + 1  # +1 for edge cases
+
+    def test_extreme_values(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        result = quantile_binning(values, target, n_bins=5)
+        extreme = np.array([-100.0, 100.0])
+        transformed = apply_woe_transform(extreme, result)
+        assert np.all(np.isfinite(transformed))
+
+
+class TestWoEBinningTransformer:
+    """Test sklearn-compatible transformer."""
+
+    def test_fit_transform(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        X = values.reshape(-1, 1)  # noqa: N806
+        transformer = WoEBinningTransformer(n_bins=5, method="quantile")
+        transformer.fit(X, target)
+        result = transformer.transform(X)
+        assert result.shape == X.shape
+
+    def test_1d_input(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        transformer = WoEBinningTransformer(n_bins=5, method="monotonic")
+        transformer.fit(values, target)
+        result = transformer.transform(values)
+        assert result.shape == (len(values), 1)
+
+    def test_feature_ivs_stored(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        X = values.reshape(-1, 1)  # noqa: N806
+        transformer = WoEBinningTransformer(n_bins=5)
+        transformer.fit(X, target)
+        assert transformer.feature_ivs_ is not None
+        assert "feature_0" in transformer.feature_ivs_
+        assert transformer.feature_ivs_["feature_0"] > 0.0
+
+    def test_multiple_features(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        X = np.column_stack([values, values * 2])  # noqa: N806
+        transformer = WoEBinningTransformer(n_bins=5)
+        transformer.fit(X, target)
+        result = transformer.transform(X)
+        assert result.shape == X.shape
+        assert len(transformer.bin_results_) == 2
+
+    def test_transform_before_fit_raises(self) -> None:
+        transformer = WoEBinningTransformer()
+        with pytest.raises(AssertionError):
+            transformer.transform(np.array([[1.0]]))
+
+    def test_optimal_method(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        X = values.reshape(-1, 1)  # noqa: N806
+        transformer = WoEBinningTransformer(n_bins=5, method="optimal")
+        transformer.fit(X, target)
+        result = transformer.transform(X)
+        assert result.shape == X.shape
+
+    def test_equal_width_method(self, binary_data: tuple[np.ndarray, np.ndarray]) -> None:
+        values, target = binary_data
+        X = values.reshape(-1, 1)  # noqa: N806
+        transformer = WoEBinningTransformer(n_bins=5, method="equal_width")
+        transformer.fit(X, target)
+        result = transformer.transform(X)
+        assert result.shape == X.shape
