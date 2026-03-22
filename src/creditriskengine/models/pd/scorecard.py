@@ -236,3 +236,74 @@ def vasicek_single_factor_pd(
     numerator = g_pd + math.sqrt(rho) * g_conf
     denominator = math.sqrt(1.0 - rho)
     return float(norm.cdf(numerator / denominator))
+
+
+# ── Sklearn-compatible Estimator ──────────────────────────────────
+
+from sklearn.base import BaseEstimator, ClassifierMixin
+
+
+class ScorecardBuilder(BaseEstimator, ClassifierMixin):
+    """Sklearn-compatible PD scorecard builder.
+
+    Implements fit/predict interface for logistic regression-based PD models.
+    Follows sklearn estimator patterns per project spec.
+
+    Parameters:
+        base_score: Base scorecard score (default 600).
+        pdo: Points to double the odds (default 20).
+        base_odds: Odds at base score (default 50).
+    """
+
+    def __init__(
+        self,
+        base_score: float = 600.0,
+        pdo: float = 20.0,
+        base_odds: float = 50.0,
+    ) -> None:
+        self.base_score = base_score
+        self.pdo = pdo
+        self.base_odds = base_odds
+        # Fitted attributes (set in fit())
+        self.intercept_: float | None = None
+        self.coefficients_: np.ndarray | None = None
+        self.master_scale_: list[dict] | None = None
+        self.is_fitted_: bool = False
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "ScorecardBuilder":
+        """Fit logistic regression and build master scale.
+
+        Uses sklearn LogisticRegression internally.
+        """
+        from sklearn.linear_model import LogisticRegression
+
+        lr = LogisticRegression(penalty=None, solver="lbfgs", max_iter=1000)
+        lr.fit(X, y)
+        self.intercept_ = float(lr.intercept_[0])
+        self.coefficients_ = lr.coef_[0].copy()
+        self.is_fitted_ = True
+        return self
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """Predict PD (probability of default) for each observation."""
+        assert self.is_fitted_, "Call fit() first"
+        scores = logistic_score(self.coefficients_, X, self.intercept_)
+        # Handle both 1D single-sample and 2D cases
+        if scores.ndim == 0:
+            scores = np.array([float(scores)])
+        pds = score_to_pd(scores)
+        return np.column_stack([1 - pds, pds])
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict default (1) or non-default (0)."""
+        proba = self.predict_proba(X)
+        return (proba[:, 1] >= 0.5).astype(int)
+
+    def score_points(self, X: np.ndarray) -> np.ndarray:
+        """Convert to scorecard points."""
+        assert self.is_fitted_, "Call fit() first"
+        scores = logistic_score(self.coefficients_, X, self.intercept_)
+        if scores.ndim == 0:
+            scores = np.array([float(scores)])
+        pds = score_to_pd(scores)
+        return pd_to_score(pds, self.base_score, self.base_odds, self.pdo)

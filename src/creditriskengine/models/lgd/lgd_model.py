@@ -146,3 +146,65 @@ def apply_lgd_floor(
     else:
         floor = LGD_FLOOR_SECURED_OTHER
     return max(lgd, floor)
+
+
+# ── Sklearn-compatible Estimator ──────────────────────────────────
+
+from sklearn.base import BaseEstimator, RegressorMixin
+
+
+class LGDModel(BaseEstimator, RegressorMixin):
+    """Sklearn-compatible LGD model.
+
+    Wraps workout LGD estimation with fit/predict interface.
+
+    Parameters:
+        method: LGD estimation method ('workout', 'downturn', 'regulatory').
+        downturn_method: Downturn LGD method ('additive', 'haircut', 'regulatory_formula').
+        downturn_add_on: Additive stress for downturn LGD.
+        collateral_type: For regulatory LGD floor application.
+    """
+
+    def __init__(
+        self,
+        method: str = "workout",
+        downturn_method: str = "regulatory_formula",
+        downturn_add_on: float = 0.10,
+        collateral_type: str = "unsecured",
+    ) -> None:
+        self.method = method
+        self.downturn_method = downturn_method
+        self.downturn_add_on = downturn_add_on
+        self.collateral_type = collateral_type
+        self.mean_lgd_: float | None = None
+        self.is_fitted_: bool = False
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "LGDModel":
+        """Fit LGD model. X = features, y = realized LGDs.
+
+        Stores mean LGD for baseline predictions.
+        """
+        y = np.asarray(y, dtype=np.float64)
+        self.mean_lgd_ = float(np.mean(y))
+        self.is_fitted_ = True
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict LGD values. Returns mean LGD (baseline model).
+
+        Override in subclasses for more sophisticated models.
+        """
+        assert self.is_fitted_, "Call fit() first"
+        n = X.shape[0] if hasattr(X, "shape") else len(X)
+        base = np.full(n, self.mean_lgd_)
+        if self.method == "downturn":
+            base = np.array([
+                downturn_lgd(lgd, self.downturn_add_on, self.downturn_method)
+                for lgd in base
+            ])
+        is_secured = self.collateral_type != "unsecured"
+        base = np.array([
+            apply_lgd_floor(lgd, is_secured, self.collateral_type)
+            for lgd in base
+        ])
+        return base

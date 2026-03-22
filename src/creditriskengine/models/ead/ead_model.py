@@ -138,3 +138,58 @@ def ead_term_structure(
         ead = remaining_drawn + ccf * undrawn_commitment
         eads[t] = max(ead, 0.0)
     return eads
+
+
+# ── Sklearn-compatible Estimator ──────────────────────────────────
+
+from sklearn.base import BaseEstimator, RegressorMixin
+
+
+class EADModel(BaseEstimator, RegressorMixin):
+    """Sklearn-compatible EAD model.
+
+    Wraps EAD/CCF estimation with fit/predict interface.
+
+    Parameters:
+        ccf_method: CCF estimation method ('supervisory', 'estimated').
+        facility_type: For supervisory CCF lookup.
+    """
+
+    def __init__(
+        self,
+        ccf_method: str = "supervisory",
+        facility_type: str = "committed_other",
+    ) -> None:
+        self.ccf_method = ccf_method
+        self.facility_type = facility_type
+        self.mean_ccf_: float | None = None
+        self.is_fitted_: bool = False
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "EADModel":
+        """Fit EAD model. X = [drawn, undrawn], y = realized EAD."""
+        y = np.asarray(y, dtype=np.float64)
+        X = np.asarray(X, dtype=np.float64)
+        # Estimate mean CCF from data
+        if X.shape[1] >= 2:
+            undrawn = X[:, 1]
+            drawn = X[:, 0]
+            mask = undrawn > 0
+            if mask.any():
+                ccfs = (y[mask] - drawn[mask]) / undrawn[mask]
+                self.mean_ccf_ = float(np.clip(np.mean(ccfs), 0, 1))
+            else:
+                self.mean_ccf_ = 0.75  # Default
+        else:
+            self.mean_ccf_ = 0.75
+        self.is_fitted_ = True
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict EAD. X columns: [drawn, undrawn]."""
+        assert self.is_fitted_, "Call fit() first"
+        X = np.asarray(X, dtype=np.float64)
+        if self.ccf_method == "supervisory":
+            ccf = get_supervisory_ccf(self.facility_type)
+        else:
+            ccf = self.mean_ccf_ or 0.75
+        return np.array([calculate_ead(row[0], row[1], ccf) for row in X])

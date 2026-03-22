@@ -407,3 +407,65 @@ def apply_woe_transform(
     # Clip to valid bin range
     bin_indices = np.clip(bin_indices, 0, len(bin_result.woe_values) - 1)
     return np.asarray(bin_result.woe_values[bin_indices], dtype=np.float64)
+
+
+# ── Sklearn-compatible Transformer ────────────────────────────────
+
+from sklearn.base import BaseEstimator, TransformerMixin
+
+
+class WoEBinningTransformer(BaseEstimator, TransformerMixin):
+    """Sklearn-compatible WoE binning transformer.
+
+    Fits WoE bins on training data and transforms features to WoE values.
+
+    Parameters:
+        n_bins: Number of initial bins.
+        method: Binning method ('quantile', 'equal_width', 'monotonic', 'optimal').
+        min_bin_pct: Minimum bin population percentage (for optimal).
+    """
+
+    def __init__(
+        self,
+        n_bins: int = 10,
+        method: str = "monotonic",
+        min_bin_pct: float = 0.05,
+    ) -> None:
+        self.n_bins = n_bins
+        self.method = method
+        self.min_bin_pct = min_bin_pct
+        self.bin_results_: list[BinResult] | None = None
+        self.feature_ivs_: dict[str, float] | None = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "WoEBinningTransformer":
+        """Fit WoE bins for each feature column."""
+        X = np.asarray(X, dtype=np.float64)
+        y = np.asarray(y, dtype=np.int64)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+        self.bin_results_ = []
+        self.feature_ivs_ = {}
+        for j in range(X.shape[1]):
+            name = f"feature_{j}"
+            if self.method == "monotonic":
+                result = monotonic_binning(X[:, j], y, self.n_bins, name)
+            elif self.method == "optimal":
+                result = optimal_binning(X[:, j], y, self.n_bins, self.min_bin_pct, name)
+            elif self.method == "equal_width":
+                result = equal_width_binning(X[:, j], y, self.n_bins, name)
+            else:
+                result = quantile_binning(X[:, j], y, self.n_bins, name)
+            self.bin_results_.append(result)
+            self.feature_ivs_[name] = result.iv
+        return self
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        """Transform features to WoE values."""
+        assert self.bin_results_ is not None, "Call fit() first"
+        X = np.asarray(X, dtype=np.float64)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+        result = np.zeros_like(X)
+        for j, br in enumerate(self.bin_results_):
+            result[:, j] = apply_woe_transform(X[:, j], br)
+        return result
