@@ -229,7 +229,7 @@ def irb_risk_weight(
                      'residential_mortgage', 'qrre', 'other_retail'
         maturity: Effective maturity in years (non-retail only)
         turnover_eur_millions: For SME firm-size correlation adjustment
-        is_qrre_transactor: Unused, retained for API compatibility
+        is_qrre_transactor: If True, apply 0.75× RW scalar per CRE31.9 fn 15
         ead: Exposure at Default (default 1.0)
 
     Returns:
@@ -267,6 +267,12 @@ def irb_risk_weight(
 
     # Step 4: Convert to risk weight
     rw = k * 12.5
+
+    # Step 5: QRRE transactor scalar (BCBS CRE31.9, footnote 15)
+    # Transactors are obligors who repay balances in full each month.
+    # They receive a 0.75× multiplier on the risk weight.
+    if asset_class == "qrre" and is_qrre_transactor:
+        rw *= 0.75
 
     logger.debug(
         "IRB RW: asset_class=%s pd=%.4f lgd=%.2f R=%.4f K=%.6f RW=%.2f%%",

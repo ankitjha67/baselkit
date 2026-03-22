@@ -35,27 +35,71 @@ credit_risk:
         sme_supporting_factor_eligible: true
       retail:
         regulatory_retail: 0.75
-        residential_mortgage_lte_80: 0.20
-        residential_mortgage_gt_80_lte_90: 0.25
-        residential_mortgage_gt_90_lte_100: 0.30
-      sme:
-        sme_supporting_factor_threshold_eur: 2500000
-        sme_supporting_factor_below: 0.7619
-        sme_supporting_factor_above: 0.85
-        infrastructure_supporting_factor: 0.75
+
+      # Residential RE — whole-loan approach (CRR3 Art. 125)
+      # NOT dependent on cashflows from property — Table 12 equivalent
+      residential_re:
+        not_dependent_on_cashflows:
+          - {ltv_lower: 0.00, ltv_upper: 0.50, risk_weight: 0.20}
+          - {ltv_lower: 0.50, ltv_upper: 0.60, risk_weight: 0.25}
+          - {ltv_lower: 0.60, ltv_upper: 0.70, risk_weight: 0.30}
+          - {ltv_lower: 0.70, ltv_upper: 0.80, risk_weight: 0.35}
+          - {ltv_lower: 0.80, ltv_upper: 0.90, risk_weight: 0.40}
+          - {ltv_lower: 0.90, ltv_upper: 1.00, risk_weight: 0.50}
+          - {ltv_lower: 1.00, ltv_upper: 999.0, risk_weight: 0.70}
+        # Dependent on cashflows (income-producing) — Table 13 equivalent
+        dependent_on_cashflows:
+          - {ltv_lower: 0.00, ltv_upper: 0.50, risk_weight: 0.30}
+          - {ltv_lower: 0.50, ltv_upper: 0.60, risk_weight: 0.35}
+          - {ltv_lower: 0.60, ltv_upper: 0.70, risk_weight: 0.45}
+          - {ltv_lower: 0.70, ltv_upper: 0.80, risk_weight: 0.50}
+          - {ltv_lower: 0.80, ltv_upper: 0.90, risk_weight: 0.60}
+          - {ltv_lower: 0.90, ltv_upper: 1.00, risk_weight: 0.75}
+          - {ltv_lower: 1.00, ltv_upper: 999.0, risk_weight: 1.05}
+
+      # Commercial RE (CRR3 Art. 126)
+      commercial_re:
+        not_dependent_on_cashflows:
+          # LTV <= 60%: min(60%, counterparty_rw)
+          - {ltv_lower: 0.00, ltv_upper: 0.60, risk_weight: 0.60, note: "min(60%, counterparty_rw)"}
+          - {ltv_lower: 0.60, ltv_upper: 0.80, risk_weight: 0.75}
+          # LTV > 80%: counterparty risk weight applies
+          - {ltv_lower: 0.80, ltv_upper: 999.0, risk_weight: null, note: "counterparty_rw"}
+        dependent_on_cashflows:
+          - {ltv_lower: 0.00, ltv_upper: 0.60, risk_weight: 0.70}
+          - {ltv_lower: 0.60, ltv_upper: 0.80, risk_weight: 0.90}
+          - {ltv_lower: 0.80, ltv_upper: 999.0, risk_weight: 1.10}
+        land_adc: 1.50
+        land_adc_presold_residential: 1.00
+
+    sme:
+      sme_supporting_factor_threshold_eur: 2500000
+      sme_supporting_factor_below: 0.7619  # Art. 501(1): RW × 0.7619 for first EUR 2.5M
+      sme_supporting_factor_above: 0.85    # Art. 501(2): RW × 0.85 for remainder
+    infrastructure:
+      infrastructure_supporting_factor: 0.75  # Art. 501a
+
   irb_approach:
-    pd_floor_bps: 5
+    # PD floor per CRE32.13 — 3 basis points (0.03%)
+    pd_floor_bps: 3
     lgd_floors:
+      # A-IRB LGD floors per CRE32.25 / CRR3 Art. 161(4)
       senior_unsecured: 0.25
       subordinated: 0.50
+      secured_financial_collateral: 0.0
+      secured_receivables: 0.10
+      secured_residential_real_estate: 0.10
+      secured_commercial_real_estate: 0.10
+      secured_other_collateral: 0.15
     lgd_supervisory:
+      # F-IRB supervisory LGD values per CRE32.22-32.24 / CRR3 Art. 161(1)
       senior_unsecured: 0.45
       subordinated: 0.75
       secured_financial_collateral: 0.0
-      secured_receivables: 0.20
-      secured_commercial_real_estate: 0.20
-      secured_residential_real_estate: 0.20
-      secured_other_collateral: 0.25
+      secured_receivables: 0.10
+      secured_commercial_real_estate: 0.10
+      secured_residential_real_estate: 0.10
+      secured_other_collateral: 0.15
     maturity_default_years: 2.5
     maturity_min_years: 1.0
     maturity_max_years: 5.0
@@ -72,10 +116,13 @@ credit_risk:
         rho_max: 0.16
     scaling_factor: 1.06
     airb_restrictions:
-      - large_corporates_revenue_above_500m_eur
-      - financial_institutions
+      excluded_classes:
+        - large_corporates_revenue_above_500m_eur
+        - financial_institutions
+      revenue_threshold_eur: 500000000
     firb_restrictions:
-      - equity_exposures
+      excluded_classes:
+        - equity_exposures
 
 output_floor:
   enabled: true

@@ -263,6 +263,87 @@ def get_residential_re_risk_weight(
     return table[-1][2]
 
 
+def uk_pra_loan_splitting_rre(
+    loan_amount: float,
+    property_value: float,
+    counterparty_rw: float = 100.0,
+    is_cashflow_dependent: bool = False,
+) -> dict[str, float]:
+    """UK PRA loan-splitting for residential real estate (PS9/24).
+
+    The UK PRA diverges from the EU/BCBS whole-loan approach by splitting
+    each residential mortgage into two tranches:
+
+    - **Secured tranche**: The portion of the loan up to the LTV threshold
+      (55% of property value). This tranche receives the lower LTV-based
+      risk weight from the RRE table.
+    - **Unsecured tranche**: The remainder of the loan above the threshold.
+      This tranche receives the counterparty risk weight (typically 100%
+      for unrated corporates/retail).
+
+    The blended risk weight is the EAD-weighted average of both tranches.
+
+    Reference: PRA PS9/24, Chapter 4 (Real Estate).
+
+    Args:
+        loan_amount: Outstanding loan amount.
+        property_value: Current property value.
+        counterparty_rw: Risk weight for the unsecured tranche (default 100%).
+        is_cashflow_dependent: If True, use cashflow-dependent RRE table.
+
+    Returns:
+        Dict with:
+            - 'secured_amount': Amount in the secured tranche.
+            - 'unsecured_amount': Amount in the unsecured tranche.
+            - 'secured_rw': Risk weight for the secured tranche (%).
+            - 'unsecured_rw': Risk weight for the unsecured tranche (%).
+            - 'blended_rw': EAD-weighted blended risk weight (%).
+            - 'ltv': Loan-to-value ratio.
+    """
+    if property_value <= 0 or loan_amount <= 0:
+        return {
+            "secured_amount": 0.0,
+            "unsecured_amount": loan_amount,
+            "secured_rw": 0.0,
+            "unsecured_rw": counterparty_rw,
+            "blended_rw": counterparty_rw,
+            "ltv": 0.0,
+        }
+
+    ltv = loan_amount / property_value
+
+    # PRA splitting threshold: 55% of property value
+    split_threshold = 0.55 * property_value
+    secured_amount = min(loan_amount, split_threshold)
+    unsecured_amount = max(loan_amount - split_threshold, 0.0)
+
+    # Secured tranche risk weight based on the LTV of the secured portion
+    secured_ltv = secured_amount / property_value
+    table = RRE_CASHFLOW_DEPENDENT_RW if is_cashflow_dependent else RRE_WHOLE_LOAN_RW
+    secured_rw = table[0][2]  # default to first bucket
+    for ltv_lower, ltv_upper, rw in table:
+        if ltv_lower < secured_ltv <= ltv_upper:
+            secured_rw = rw
+            break
+
+    # Unsecured tranche gets counterparty risk weight
+    unsecured_rw = counterparty_rw
+
+    # Blended risk weight (loan_amount > 0 guaranteed by early return above)
+    blended_rw = (
+        secured_amount * secured_rw + unsecured_amount * unsecured_rw
+    ) / loan_amount
+
+    return {
+        "secured_amount": secured_amount,
+        "unsecured_amount": unsecured_amount,
+        "secured_rw": secured_rw,
+        "unsecured_rw": unsecured_rw,
+        "blended_rw": blended_rw,
+        "ltv": ltv,
+    }
+
+
 def get_commercial_re_risk_weight(
     ltv: float,
     counterparty_rw: float = 100.0,
@@ -395,6 +476,7 @@ def assign_sa_risk_weight(
     is_speculative: bool = False,
     is_regulatory_retail: bool = True,
     scra_grade: str | None = None,
+    is_short_term: bool = False,
     config: dict[str, Any] | None = None,
 ) -> float:
     """Assign SA risk weight based on exposure class and parameters.
@@ -420,6 +502,7 @@ def assign_sa_risk_weight(
         is_speculative: For speculative equity.
         is_regulatory_retail: For retail qualification.
         scra_grade: SCRA grade for banks (A/B/C).
+        is_short_term: For short-term bank claims (CRE20.17).
         config: Optional jurisdiction config dict.
 
     Returns:
@@ -429,7 +512,9 @@ def assign_sa_risk_weight(
         return get_sovereign_risk_weight(cqs, jurisdiction, is_domestic_own_currency)
 
     if exposure_class in (SAExposureClass.BANK, SAExposureClass.SECURITIES_FIRM):
-        return get_bank_risk_weight(cqs, jurisdiction, scra_grade)
+        # When SCRA grade is provided, use SCRA path (cqs=None)
+        bank_cqs = None if scra_grade is not None else cqs
+        return get_bank_risk_weight(bank_cqs, jurisdiction, scra_grade, is_short_term)
 
     if exposure_class in (SAExposureClass.CORPORATE, SAExposureClass.CORPORATE_SME):
         is_sme_flag = is_sme or exposure_class == SAExposureClass.CORPORATE_SME

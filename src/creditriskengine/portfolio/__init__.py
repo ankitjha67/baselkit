@@ -7,6 +7,7 @@ economic capital, Credit VaR, and stress testing frameworks.
 from creditriskengine.portfolio.copula import simulate_single_factor
 from creditriskengine.portfolio.economic_capital import ec_single_factor
 from creditriskengine.portfolio.stress_testing import (
+    BoEACSStressTest,
     CCARScenario,
     EBAStressTest,
     MacroScenario,
@@ -32,6 +33,7 @@ __all__ = [
     "expected_shortfall",
     "MacroScenario",
     "EBAStressTest",
+    "BoEACSStressTest",
     "CCARScenario",
     "apply_pd_stress",
 ]

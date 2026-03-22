@@ -41,19 +41,26 @@ credit_risk:
       infrastructure:
         supporting_factor_eligible: false  # PRA does NOT adopt infrastructure supporting factor
         note: "UK PRA diverges from EU — no SME or infrastructure supporting factors"
+    residential_re:
+      approach: loan_splitting  # UK PRA diverges from EU/BCBS whole-loan approach
+      loan_splitting:
+        threshold_ltv: 0.55  # Secured tranche up to 55% of property value
+        secured_tranche_rw_table: rre_whole_loan  # LTV-based from standard table
+        unsecured_tranche_rw: counterparty_rw  # Counterparty risk weight applies
   irb_approach:
     pd_floor_bps: 5
     lgd_floors:
       senior_unsecured: 0.25
       subordinated: 0.50
     lgd_supervisory:
+      # F-IRB supervisory LGD values per CRE32.22-32.24
       senior_unsecured: 0.45
       subordinated: 0.75
       secured_financial_collateral: 0.0
-      secured_receivables: 0.20
-      secured_commercial_real_estate: 0.20
-      secured_residential_real_estate: 0.20
-      secured_other_collateral: 0.25
+      secured_receivables: 0.10
+      secured_commercial_real_estate: 0.10
+      secured_residential_real_estate: 0.10
+      secured_other_collateral: 0.15
     maturity_default_years: 2.5
     maturity_min_years: 1.0
     maturity_max_years: 5.0

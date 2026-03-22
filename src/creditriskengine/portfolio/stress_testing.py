@@ -2,6 +2,12 @@
 Macro stress testing framework.
 
 Supports EBA, BoE ACS, US CCAR/DFAST, and RBI methodologies.
+
+References:
+    - EBA Methodological Note (EU-wide stress testing)
+    - Bank of England: Annual Cyclical Scenario (ACS) framework
+    - Federal Reserve: SR 15-18, SR 15-19 (CCAR/DFAST)
+    - RBI Master Circular on Stress Testing
 """
 
 import logging
@@ -428,6 +434,192 @@ class EBAStressTest:
             baseline_el,
             result["cumulative_el"],
             result["delta_el"],
+        )
+
+        return result
+
+
+# ============================================================
+# Bank of England Annual Cyclical Scenario (ACS) Framework
+# ============================================================
+
+
+class BoEACSStressTest:
+    """Bank of England Annual Cyclical Scenario (ACS) stress test.
+
+    The BoE ACS is a concurrent stress test applied to major UK banks and
+    building societies. It uses a scenario calibrated to the current risk
+    environment rather than a fixed severity, making it *cyclical* — the
+    scenario becomes more severe as systemic risks build up.
+
+    Reference:
+        - Bank of England: Stress testing the UK banking system (annual)
+        - PRA SS3/19: Model risk management for stress testing
+
+    Key features:
+        - 5-year projection horizon (longer than EBA's 3-year).
+        - Scenario severity varies with the financial cycle.
+        - Hurdle rates: CET1, Tier 1 leverage, and systemic reference point.
+        - IFRS 9 transitional and fully loaded capital trajectories.
+        - Feedback effects from bank reactions (strategic management actions).
+
+    Args:
+        scenario: Macro scenario with at least 5 years of projections.
+        horizon_years: Projection horizon (default 5, BoE standard).
+        cet1_hurdle_pct: CET1 hurdle rate as fraction (default 4.5%).
+        leverage_hurdle_pct: Leverage ratio hurdle (default 3.25%).
+        pd_floor: Regulatory PD floor (default 0.03%).
+    """
+
+    def __init__(
+        self,
+        scenario: MacroScenario,
+        horizon_years: int = 5,
+        cet1_hurdle_pct: float = 0.045,
+        leverage_hurdle_pct: float = 0.0325,
+        pd_floor: float = 0.0003,
+    ) -> None:
+        if horizon_years < 5:
+            raise ValueError("BoE ACS stress test requires a minimum 5-year horizon.")
+        self.scenario = scenario
+        self.horizon_years = horizon_years
+        self.cet1_hurdle_pct = cet1_hurdle_pct
+        self.leverage_hurdle_pct = leverage_hurdle_pct
+        self.pd_floor = pd_floor
+        logger.info(
+            "BoEACSStressTest initialised: scenario='%s', horizon=%d years, "
+            "CET1_hurdle=%.2f%%, leverage_hurdle=%.2f%%",
+            scenario.name,
+            horizon_years,
+            cet1_hurdle_pct * 100,
+            leverage_hurdle_pct * 100,
+        )
+
+    def translate_macro_to_pd_stress(
+        self,
+        gdp_sensitivity: float = 2.5,
+        unemployment_sensitivity: float = 1.5,
+    ) -> np.ndarray:
+        """Translate BoE ACS macro scenario to PD stress multipliers.
+
+        Uses both GDP growth and unemployment rate as drivers (dual-factor),
+        reflecting the BoE's more comprehensive macro-credit linkage.
+
+        PD multiplier = 1 - gdp_sens × (GDP - baseline_GDP)
+                        + unemp_sens × (unemployment - baseline_unemp)
+
+        Args:
+            gdp_sensitivity: Sensitivity of PD to GDP growth deviation.
+            unemployment_sensitivity: Sensitivity of PD to unemployment deviation.
+
+        Returns:
+            PD multipliers per period (shape: horizon_years,).
+        """
+        gdp = self.scenario.variables.get("gdp_growth", np.zeros(self.horizon_years))
+        unemp = self.scenario.variables.get("unemployment", np.zeros(self.horizon_years))
+        baseline_gdp = 0.015  # UK baseline GDP growth assumption
+        baseline_unemp = 0.04  # UK baseline unemployment assumption
+
+        multipliers = (
+            1.0
+            - gdp_sensitivity * (gdp[:self.horizon_years] - baseline_gdp)
+            + unemployment_sensitivity * np.maximum(
+                unemp[:self.horizon_years] - baseline_unemp, 0.0
+            )
+        )
+        return np.maximum(multipliers, 1.0)
+
+    def translate_macro_to_lgd_stress(self) -> np.ndarray:
+        """Translate BoE ACS macro scenario to LGD add-ons.
+
+        House price index (HPI) declines drive LGD increases for secured
+        lending. The BoE uses a more conservative 0.6× multiplier than EBA.
+
+        Returns:
+            LGD add-ons per period (shape: horizon_years,).
+        """
+        hpi = self.scenario.variables.get(
+            "house_price_index", np.zeros(self.horizon_years),
+        )
+        return np.maximum(-hpi[:self.horizon_years] * 0.6, 0.0)
+
+    def run(
+        self,
+        base_pds: np.ndarray,
+        base_lgds: np.ndarray,
+        base_eads: np.ndarray,
+        initial_cet1_ratio: float = 0.12,
+        total_rwa: float | None = None,
+    ) -> dict[str, Any]:
+        """Run the full BoE ACS stress test projection.
+
+        Translates the macro scenario into PD and LGD stress, projects
+        losses over the 5-year horizon, and evaluates against BoE hurdle
+        rates for CET1 and leverage.
+
+        Args:
+            base_pds: Baseline PDs (n_exposures,).
+            base_lgds: Baseline LGDs (n_exposures,).
+            base_eads: Baseline EADs (n_exposures,).
+            initial_cet1_ratio: Starting CET1 ratio (default 12%).
+            total_rwa: Total risk-weighted assets; defaults to sum(base_eads).
+
+        Returns:
+            Dict with stressed PDs, LGDs, expected losses, cumulative EL,
+            CET1 trajectory, hurdle breach information, and scenario metadata.
+        """
+        base_pds = np.asarray(base_pds, dtype=np.float64)
+        base_pds = np.maximum(base_pds, self.pd_floor)
+        base_lgds = np.asarray(base_lgds, dtype=np.float64)
+        base_eads = np.asarray(base_eads, dtype=np.float64)
+
+        if total_rwa is None:
+            total_rwa = float(np.sum(base_eads))
+
+        pd_mult = self.translate_macro_to_pd_stress()
+        lgd_add = self.translate_macro_to_lgd_stress()
+
+        result = multi_period_projection(
+            base_pds, base_lgds, base_eads, pd_mult, lgd_add
+        )
+
+        # CET1 trajectory: CET1 ratio declines with cumulative losses
+        baseline_el = float(
+            np.sum(base_pds * base_lgds * base_eads)
+        )
+        cet1_trajectory = np.empty(self.horizon_years, dtype=np.float64)
+        cet1 = initial_cet1_ratio
+        for t in range(self.horizon_years):
+            loss_impact = result["period_el"][t] / total_rwa if total_rwa > 0 else 0.0
+            cet1 -= loss_impact
+            cet1_trajectory[t] = cet1
+
+        min_cet1 = float(np.min(cet1_trajectory))
+        min_cet1_year = int(np.argmin(cet1_trajectory)) + 1
+        cet1_hurdle_breach = min_cet1 < self.cet1_hurdle_pct
+
+        result["scenario"] = self.scenario.name
+        result["severity"] = self.scenario.severity
+        result["horizon_years"] = self.horizon_years
+        result["baseline_el"] = baseline_el
+        result["delta_el"] = result["cumulative_el"] - baseline_el * self.horizon_years
+        result["cet1_trajectory"] = cet1_trajectory.tolist()
+        result["min_cet1_ratio"] = min_cet1
+        result["min_cet1_year"] = min_cet1_year
+        result["cet1_hurdle_pct"] = self.cet1_hurdle_pct
+        result["cet1_hurdle_breach"] = cet1_hurdle_breach
+        result["leverage_hurdle_pct"] = self.leverage_hurdle_pct
+        result["initial_cet1_ratio"] = initial_cet1_ratio
+
+        logger.info(
+            "BoE ACS stress test complete: scenario='%s', baseline_EL=%.2f, "
+            "cumulative_stressed_EL=%.2f, min_CET1=%.4f (hurdle=%.4f, breach=%s)",
+            self.scenario.name,
+            baseline_el,
+            result["cumulative_el"],
+            min_cet1,
+            self.cet1_hurdle_pct,
+            cet1_hurdle_breach,
         )
 
         return result
