@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Documentation: {{ model_name }}</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #333;
+    line-height: 1.6;
+}
+h1 {
+    color: #1a1a2e;
+    border-bottom: 2px solid #16213e;
+    padding-bottom: 10px;
+}
+h2 {
+    color: #16213e;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+    margin-top: 30px;
+}
+h3 {
+    color: #0f3460;
+    margin-top: 20px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0 20px 0;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+}
+th {
+    background-color: #16213e;
+    color: white;
+    font-weight: 600;
+}
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+tr:hover {
+    background-color: #f1f1f1;
+}
+.metric-good { color: #28a745; font-weight: bold; }
+.metric-warning { color: #fd7e14; font-weight: bold; }
+.metric-bad { color: #dc3545; font-weight: bold; }
+.rag-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    color: white;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+.rag-green { background-color: #28a745; }
+.rag-yellow { background-color: #fd7e14; }
+.rag-red { background-color: #dc3545; }
+.section-box {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 10px 0;
+}
+.finding-item {
+    background-color: #fff3cd;
+    border-left: 4px solid #fd7e14;
+    padding: 8px 12px;
+    margin: 5px 0;
+}
+.limitation-item {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+    padding: 8px 12px;
+    margin: 5px 0;
+}
+.header-meta {
+    color: #666;
+    font-size: 0.9em;
+}
+</style>
+</head>
+<body>
+
+<h1>Model Documentation: {{ model_name }}</h1>
+
+<div class="section-box">
+<table>
+    <tr><th style="width:200px;">Field</th><th>Value</th></tr>
+    <tr><td>Model ID</td><td>{{ model_id }}</td></tr>
+    <tr><td>Model Type</td><td>{{ model_type }}</td></tr>
+    <tr><td>Version</td><td>{{ version }}</td></tr>
+    <tr><td>Owner</td><td>{{ model_owner if model_owner else 'N/A' }}</td></tr>
+    <tr><td>Effective Date</td><td>{{ effective_date }}</td></tr>
+    <tr>
+        <td>Overall RAG</td>
+        <td><span class="rag-badge rag-{{ overall_rag }}">{{ overall_rag | upper }}</span></td>
+    </tr>
+</table>
+</div>
+
+<!-- Section 1: Intended Use -->
+<h2>1. Intended Use</h2>
+
+<table>
+    <tr><th style="width:200px;">Aspect</th><th>Description</th></tr>
+    <tr><td>Purpose</td><td>{{ purpose if purpose else 'Not documented' }}</td></tr>
+    <tr><td>Scope</td><td>{{ scope if scope else 'Not documented' }}</td></tr>
+    <tr><td>Regulatory Use</td><td>{{ regulatory_use if regulatory_use else 'Not documented' }}</td></tr>
+</table>
+
+<!-- Section 2: Methodology -->
+<h2>2. Methodology</h2>
+
+<div class="section-box">
+{% if methodology %}
+<p>{{ methodology }}</p>
+{% else %}
+<p><em>No methodology description provided.</em></p>
+{% endif %}
+</div>
+
+<!-- Section 3: Data -->
+<h2>3. Data</h2>
+
+<table>
+    <tr><th style="width:200px;">Attribute</th><th>Value</th></tr>
+    <tr><td>Data Description</td><td>{{ data_description if data_description else 'Not documented' }}</td></tr>
+    <tr><td>Sample Period</td><td>{{ sample_period if sample_period else 'Not documented' }}</td></tr>
+    <tr><td>Sample Size</td><td>{{ '{:,}'.format(sample_size) if sample_size else 'Not documented' }}</td></tr>
+</table>
+
+<!-- Section 4: Performance Metrics -->
+<h2>4. Performance Metrics</h2>
+
+<!-- 4.1 Discrimination -->
+<h3>4.1 Discrimination
+    <span class="rag-badge rag-{{ disc_rag }}">{{ disc_rag | upper }}</span>
+</h3>
+
+{% if discrimination_metrics %}
+<table>
+    <tr><th>Metric</th><th>Value</th></tr>
+    {% for key, value in discrimination_metrics.items() %}
+    <tr>
+        <td>{{ key }}</td>
+        <td>
+            {% if key == 'gini' %}
+                {% if value >= 0.40 %}
+                <span class="metric-good">{{ '%.4f' % value }}</span>
+                {% elif value >= 0.25 %}
+                <span class="metric-warning">{{ '%.4f' % value }}</span>
+                {% else %}
+                <span class="metric-bad">{{ '%.4f' % value }}</span>
+                {% endif %}
+            {% elif key == 'auroc' %}
+                {% if value >= 0.70 %}
+                <span class="metric-good">{{ '%.4f' % value }}</span>
+                {% elif value >= 0.625 %}
+                <span class="metric-warning">{{ '%.4f' % value }}</span>
+                {% else %}
+                <span class="metric-bad">{{ '%.4f' % value }}</span>
+                {% endif %}
+            {% else %}
+                {{ '%.4f' % value }}
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p><em>No discrimination metrics available.</em></p>
+{% endif %}
+
+<!-- 4.2 Calibration -->
+<h3>4.2 Calibration
+    <span class="rag-badge rag-{{ cal_rag }}">{{ cal_rag | upper }}</span>
+</h3>
+
+{% if calibration_metrics %}
+<table>
+    <tr><th>Metric</th><th>Value</th></tr>
+    {% for key, value in calibration_metrics.items() %}
+    <tr>
+        <td>{{ key }}</td>
+        <td>
+            {% if key == 'p_value' %}
+                {% if value >= 0.05 %}
+                <span class="metric-good">{{ '%.4f' % value }}</span>
+                {% elif value >= 0.01 %}
+                <span class="metric-warning">{{ '%.4f' % value }}</span>
+                {% else %}
+                <span class="metric-bad">{{ '%.4f' % value }}</span>
+                {% endif %}
+            {% else %}
+                {{ '%.4f' % value }}
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p><em>No calibration metrics available.</em></p>
+{% endif %}
+
+<!-- 4.3 Stability -->
+<h3>4.3 Stability
+    <span class="rag-badge rag-{{ stab_rag }}">{{ stab_rag | upper }}</span>
+</h3>
+
+{% if stability_metrics %}
+<table>
+    <tr><th>Metric</th><th>Value</th></tr>
+    {% for key, value in stability_metrics.items() %}
+    <tr>
+        <td>{{ key }}</td>
+        <td>
+            {% if key == 'psi' %}
+                {% if value < 0.10 %}
+                <span class="metric-good">{{ '%.4f' % value }}</span>
+                {% elif value < 0.25 %}
+                <span class="metric-warning">{{ '%.4f' % value }}</span>
+                {% else %}
+                <span class="metric-bad">{{ '%.4f' % value }}</span>
+                {% endif %}
+            {% else %}
+                {{ '%.4f' % value }}
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p><em>No stability metrics available.</em></p>
+{% endif %}
+
+<!-- Section 5: Validation -->
+<h2>5. Validation</h2>
+
+<table>
+    <tr><th style="width:200px;">Field</th><th>Value</th></tr>
+    <tr>
+        <td>Validation Status</td>
+        <td>
+            {% if validation_status == 'approved' %}
+            <span class="metric-good">{{ validation_status | upper }}</span>
+            {% elif validation_status == 'conditional' %}
+            <span class="metric-warning">{{ validation_status | upper }}</span>
+            {% elif validation_status == 'rejected' %}
+            <span class="metric-bad">{{ validation_status | upper }}</span>
+            {% else %}
+            {{ validation_status | upper }}
+            {% endif %}
+        </td>
+    </tr>
+    <tr><td>Validation Date</td><td>{{ validation_date }}</td></tr>
+</table>
+
+{% if findings %}
+<h3>Findings</h3>
+{% for finding in findings %}
+<div class="finding-item">
+    <strong>Finding {{ loop.index }}:</strong> {{ finding }}
+</div>
+{% endfor %}
+{% else %}
+<p><em>No findings recorded.</em></p>
+{% endif %}
+
+<!-- Section 6: Limitations -->
+<h2>6. Limitations</h2>
+
+{% if limitations %}
+{% for limitation in limitations %}
+<div class="limitation-item">
+    <strong>{{ loop.index }}.</strong> {{ limitation }}
+</div>
+{% endfor %}
+{% else %}
+<p><em>No known limitations documented.</em></p>
+{% endif %}
+
+<hr>
+<p class="header-meta">
+    Generated for model {{ model_id }} v{{ version }}.
+    This document is produced in accordance with SR 11-7, ECB Guide to Internal Models, and PRA SS1/23.
+</p>
+
+</body>
+</html>

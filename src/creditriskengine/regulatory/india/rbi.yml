@@ -44,6 +44,10 @@ credit_risk:
           upto_30_lakh_inr: 0.35
           above_30_lakh_upto_75_lakh_inr: 0.35
           above_75_lakh_inr: 0.50
+      personal_loans:
+        consumer_credit: 1.25  # RBI Master Circular — 125% risk weight for personal loans
+        credit_card_receivables: 1.25  # Consumer credit category
+        note: "Higher RW per RBI for unsecured consumer lending"
       commercial_real_estate:
         cre_general: 1.00
         cre_residential_housing: 0.75

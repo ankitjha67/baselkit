@@ -32,14 +32,15 @@ credit_risk:
         bb_plus_to_b_minus: 1.00
         below_b_minus: 1.50
         unrated: 1.00
+        unrated_investment_grade: 0.65  # PS9/24, para 3.17 — UK-specific divergence
       retail:
         regulatory_retail: 0.75
         residential_mortgage_lte_80: 0.20
         residential_mortgage_gt_80_lte_90: 0.25
         residential_mortgage_gt_90_lte_100: 0.30
       infrastructure:
-        supporting_factor_eligible: true
-        supporting_factor: 0.75
+        supporting_factor_eligible: false  # PRA does NOT adopt infrastructure supporting factor
+        note: "UK PRA diverges from EU — no SME or infrastructure supporting factors"
   irb_approach:
     pd_floor_bps: 5
     lgd_floors:
