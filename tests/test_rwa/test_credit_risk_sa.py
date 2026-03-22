@@ -151,6 +151,19 @@ class TestResidentialRealEstate:
         assert get_residential_re_risk_weight(0.75, Jurisdiction.INDIA) == 20.0
         assert get_residential_re_risk_weight(0.85, Jurisdiction.INDIA) == 35.0
 
+    @pytest.mark.parametrize(
+        "ltv,expected",
+        [
+            (0.0, 20.0),    # LTV exactly 0 → lowest band
+            (0.50, 20.0),   # At boundary → stays in band
+            (0.60, 25.0),   # At boundary → next band
+            (0.80, 35.0),   # At boundary → 0.70-0.80 band
+            (1.00, 50.0),   # At boundary → 0.90-1.00 band
+        ],
+    )
+    def test_ltv_boundary_values(self, ltv, expected):
+        assert get_residential_re_risk_weight(ltv) == expected
+
 
 class TestCommercialRealEstate:
     """BCBS CRE20.87-20.98."""
