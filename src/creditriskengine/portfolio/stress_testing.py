@@ -439,23 +439,51 @@ class EBAStressTest:
 
 
 class CCARScenario:
-    """US CCAR/DFAST stress testing — 9-quarter projection.
+    """US CCAR/DFAST stress testing with 9-quarter projection horizon.
 
-    Reference: Federal Reserve Board CCAR/DFAST instructions.
+    Implements the Fed's Comprehensive Capital Analysis and Review framework.
+
+    Reference:
+        - Federal Reserve: SR 15-18, SR 15-19 (CCAR/DFAST instructions)
+        - 12 CFR 252 Subpart E (stress testing requirements)
 
     Key features:
-    - 9-quarter horizon (severely adverse, adverse, baseline)
-    - Pre-provision net revenue (PPNR) modeling hook
-    - Fed-provided scenarios
+        - 9-quarter projection horizon (Q1 through Q9).
+        - Baseline, adverse, and severely adverse scenarios.
+        - Pre-Provision Net Revenue (PPNR) hook for income projection.
+        - Capital adequacy assessment at each quarter.
+
+    Args:
+        scenario: MacroScenario used for the stress test.
+        horizon_quarters: Number of projection quarters (default 9).
+        ppnr_quarterly: Optional pre-provision net revenue per quarter (9,).
+            If not provided, PPNR is assumed to be zero each quarter.
     """
 
     def __init__(
         self,
         scenario: MacroScenario,
         horizon_quarters: int = 9,
+        ppnr_quarterly: np.ndarray | None = None,
     ) -> None:
         self.scenario = scenario
         self.horizon_quarters = horizon_quarters
+        self.ppnr_quarterly = (
+            np.asarray(ppnr_quarterly, dtype=np.float64)
+            if ppnr_quarterly is not None
+            else np.zeros(self.horizon_quarters)
+        )
+        if len(self.ppnr_quarterly) != self.horizon_quarters:
+            raise ValueError(
+                f"ppnr_quarterly must have exactly {self.horizon_quarters} elements."
+            )
+        logger.info(
+            "CCARScenario initialised: scenario='%s', quarters=%d, "
+            "cumulative_ppnr=%.2f",
+            scenario.name,
+            self.horizon_quarters,
+            float(np.sum(self.ppnr_quarterly)),
+        )
 
     def project_quarterly_losses(
         self,
@@ -463,34 +491,133 @@ class CCARScenario:
         base_lgds: np.ndarray,
         base_eads: np.ndarray,
         pd_quarterly_multipliers: np.ndarray | None = None,
-    ) -> dict[str, np.ndarray]:
-        """Project quarterly credit losses over CCAR horizon.
+        lgd_add_ons_quarterly: np.ndarray | None = None,
+    ) -> dict[str, Any]:
+        """Project quarterly credit losses over the CCAR horizon.
+
+        Quarterly PD is derived from annual PD:
+            PD_q = 1 - (1 - PD_annual)^(1/4)
+        The stress multiplier is then applied to the quarterly PD.
 
         Args:
-            base_pds: Annual PDs (annualized).
-            base_lgds: LGDs.
-            base_eads: EADs.
-            pd_quarterly_multipliers: Optional quarterly PD stress factors.
+            base_pds: Annual PDs (n_exposures,).
+            base_lgds: Baseline LGDs (n_exposures,).
+            base_eads: Baseline EADs (n_exposures,).
+            pd_quarterly_multipliers: Optional quarterly PD stress factors
+                (horizon_quarters,). Defaults to 1.0 each quarter.
+            lgd_add_ons_quarterly: Optional LGD add-ons per quarter
+                (horizon_quarters,). Defaults to 0.0.
 
         Returns:
-            Quarterly loss projections.
+            Dict with quarterly_losses matrix, per-quarter totals,
+            cumulative loss trajectory, and total loss.
         """
+        base_pds = np.asarray(base_pds, dtype=np.float64)
+        base_lgds = np.asarray(base_lgds, dtype=np.float64)
+        base_eads = np.asarray(base_eads, dtype=np.float64)
+
         if pd_quarterly_multipliers is None:
             pd_quarterly_multipliers = np.ones(self.horizon_quarters)
+        else:
+            pd_quarterly_multipliers = np.asarray(pd_quarterly_multipliers, dtype=np.float64)
 
-        quarterly_pds = base_pds / 4.0  # Simple annualization
+        if lgd_add_ons_quarterly is None:
+            lgd_add_ons_quarterly = np.zeros(self.horizon_quarters)
+        else:
+            lgd_add_ons_quarterly = np.asarray(lgd_add_ons_quarterly, dtype=np.float64)
+
+        # Convert annual PD to quarterly: PD_q = 1 - (1 - PD_annual)^(1/4)
+        quarterly_pds = 1.0 - np.power(np.maximum(1.0 - base_pds, 0.0), 0.25)
+
         n_q = self.horizon_quarters
         losses = np.zeros((n_q, len(base_pds)))
 
         for q in range(n_q):
-            mult = pd_quarterly_multipliers[q] if q < len(pd_quarterly_multipliers) else 1.0
-            stressed_q_pd = np.minimum(quarterly_pds * mult, 0.25)
-            losses[q] = stressed_q_pd * base_lgds * base_eads
+            mult = (
+                pd_quarterly_multipliers[q]
+                if q < len(pd_quarterly_multipliers)
+                else 1.0
+            )
+            stressed_q_pd = np.minimum(quarterly_pds * mult, 1.0)
+            stressed_lgd = np.clip(base_lgds + lgd_add_ons_quarterly[q], 0.0, 1.0)
+            losses[q] = stressed_q_pd * stressed_lgd * base_eads
+
+        quarterly_totals = losses.sum(axis=1)
 
         return {
             "quarterly_losses": losses,
-            "cumulative_loss": np.cumsum(losses.sum(axis=1)),
+            "quarterly_totals": quarterly_totals.tolist(),
+            "cumulative_loss": np.cumsum(quarterly_totals).tolist(),
             "total_loss": float(losses.sum()),
+        }
+
+    def run(
+        self,
+        base_pds: np.ndarray,
+        base_lgds: np.ndarray,
+        base_eads: np.ndarray,
+        pd_quarterly_multipliers: np.ndarray | None = None,
+        lgd_add_ons_quarterly: np.ndarray | None = None,
+        initial_capital: float = 0.0,
+    ) -> dict[str, Any]:
+        """Execute the full CCAR stress scenario with capital trajectory.
+
+        Combines credit loss projection with PPNR to compute net income
+        and a quarter-by-quarter capital adequacy trajectory.
+
+        Args:
+            base_pds: Annual baseline PDs (n_exposures,).
+            base_lgds: Baseline LGDs (n_exposures,).
+            base_eads: EAD array (n_exposures,).
+            pd_quarterly_multipliers: PD stress multipliers per quarter.
+            lgd_add_ons_quarterly: Optional LGD add-ons per quarter.
+            initial_capital: Starting capital buffer for capital trajectory.
+
+        Returns:
+            Dict with quarterly losses, PPNR, net income, capital trajectory,
+            minimum capital point, and summary statistics.
+        """
+        loss_result = self.project_quarterly_losses(
+            base_pds,
+            base_lgds,
+            base_eads,
+            pd_quarterly_multipliers,
+            lgd_add_ons_quarterly,
+        )
+
+        quarterly_totals = np.array(loss_result["quarterly_totals"])
+        net_income = self.ppnr_quarterly - quarterly_totals
+
+        capital_trajectory = np.empty(self.horizon_quarters, dtype=np.float64)
+        capital = initial_capital
+        for q in range(self.horizon_quarters):
+            capital += net_income[q]
+            capital_trajectory[q] = capital
+
+        min_capital = float(np.min(capital_trajectory))
+        min_capital_quarter = int(np.argmin(capital_trajectory)) + 1
+
+        logger.info(
+            "CCAR run complete: cumulative_loss=%.2f, min_capital=%.2f at Q%d",
+            loss_result["total_loss"],
+            min_capital,
+            min_capital_quarter,
+        )
+
+        return {
+            "scenario": self.scenario.name,
+            "horizon_quarters": self.horizon_quarters,
+            "quarterly_losses": loss_result["quarterly_totals"],
+            "ppnr_quarterly": self.ppnr_quarterly.tolist(),
+            "net_income_quarterly": net_income.tolist(),
+            "capital_trajectory": capital_trajectory.tolist(),
+            "cumulative_loss": loss_result["cumulative_loss"],
+            "total_loss": loss_result["total_loss"],
+            "cumulative_ppnr": float(np.sum(self.ppnr_quarterly)),
+            "min_capital": min_capital,
+            "min_capital_quarter": min_capital_quarter,
+            "initial_capital": initial_capital,
+            "final_capital": float(capital_trajectory[-1]),
         }
 
 
@@ -500,23 +627,52 @@ class CCARScenario:
 
 
 class RBIStressTest:
-    """RBI macro stress testing framework for Indian banks.
+    """RBI (Reserve Bank of India) stress testing with sensitivity analysis.
 
-    Reference: RBI Financial Stability Report methodology.
+    Implements the RBI's stress testing framework as outlined in the
+    RBI Master Circular on Stress Testing (DBOD.No.BP.BC.94/21.06.001)
+    and the Financial Stability Report methodology.
 
-    Sensitivity analysis for:
-    - Credit quality deterioration
-    - Interest rate shocks
-    - Liquidity stress
+    Key features:
+        - Severity-calibrated credit quality deterioration (NPA migration).
+        - Interest rate sensitivity analysis (EVE and NII impact).
+        - Liquidity sensitivity analysis (LCR impact from deposit outflows).
+        - Single-factor shock isolation for each risk driver.
+
+    Args:
+        severity: Stress severity level ('mild', 'moderate', or 'severe').
+        baseline_metrics: Optional dict with baseline values for sensitivity
+            analysis. Keys: 'npa_ratio', 'car', 'net_interest_income',
+            'total_advances'. If not provided, sensitivity methods that
+            require these will raise ValueError.
     """
 
-    def __init__(self, severity: str = "moderate") -> None:
+    def __init__(
+        self,
+        severity: str = "moderate",
+        baseline_metrics: dict[str, float] | None = None,
+    ) -> None:
         self.severity = severity
-        self._severity_map = {
+        self.baseline_metrics = baseline_metrics or {}
+        self._severity_map: dict[str, dict[str, float]] = {
             "mild": {"pd_mult": 1.5, "lgd_add": 0.05, "npa_shift_pct": 0.02},
             "moderate": {"pd_mult": 2.0, "lgd_add": 0.10, "npa_shift_pct": 0.05},
             "severe": {"pd_mult": 3.0, "lgd_add": 0.15, "npa_shift_pct": 0.10},
         }
+        logger.info(
+            "RBIStressTest initialised: severity='%s', baseline_metrics=%s",
+            severity,
+            list(self.baseline_metrics.keys()) if self.baseline_metrics else "none",
+        )
+
+    def _require_baseline(self, *keys: str) -> None:
+        """Validate that required baseline metrics are present."""
+        missing = set(keys) - set(self.baseline_metrics.keys())
+        if missing:
+            raise ValueError(
+                f"Missing required baseline_metrics for this analysis: {missing}. "
+                "Pass them in the RBIStressTest constructor."
+            )
 
     def credit_quality_stress(
         self,
@@ -527,7 +683,22 @@ class RBIStressTest:
         """Apply credit quality deterioration stress.
 
         Simulates NPA migration per RBI's macro stress testing framework.
+        PDs are multiplied by a severity-dependent factor and LGDs receive
+        an additive stress.
+
+        Args:
+            base_pds: Baseline PDs (n_exposures,).
+            base_lgds: Baseline LGDs (n_exposures,).
+            base_eads: Baseline EADs (n_exposures,).
+
+        Returns:
+            Dict with base EL, stressed EL, incremental provisions, and
+            severity label.
         """
+        base_pds = np.asarray(base_pds, dtype=np.float64)
+        base_lgds = np.asarray(base_lgds, dtype=np.float64)
+        base_eads = np.asarray(base_eads, dtype=np.float64)
+
         params = self._severity_map.get(self.severity, self._severity_map["moderate"])
         stressed_pds = np.minimum(base_pds * params["pd_mult"], 1.0)
         stressed_lgds = np.clip(base_lgds + params["lgd_add"], 0.0, 1.0)
@@ -535,9 +706,193 @@ class RBIStressTest:
         base_el = float((base_pds * base_lgds * base_eads).sum())
         stressed_el = float((stressed_pds * stressed_lgds * base_eads).sum())
 
+        logger.debug(
+            "Credit quality stress (%s): base_EL=%.2f, stressed_EL=%.2f",
+            self.severity,
+            base_el,
+            stressed_el,
+        )
+
         return {
             "base_el": base_el,
             "stressed_el": stressed_el,
             "incremental_provisions": stressed_el - base_el,
             "severity": self.severity,
+            "pd_multiplier": params["pd_mult"],
+            "lgd_add_on": params["lgd_add"],
+        }
+
+    def interest_rate_sensitivity(
+        self,
+        rate_shock_bps: float,
+        duration_gap: float,
+        total_assets: float,
+    ) -> dict[str, float]:
+        """Interest rate sensitivity analysis.
+
+        Estimates the impact of a parallel shift in interest rates on
+        net interest income (NII) and economic value of equity (EVE).
+
+        Impact on EVE: -Duration_gap x Delta_Rate x Total_Assets
+
+        Requires baseline_metrics with 'net_interest_income' and
+        'total_advances'.
+
+        Args:
+            rate_shock_bps: Interest rate shock in basis points (e.g. +200).
+            duration_gap: Duration gap (years) between assets and liabilities.
+            total_assets: Total asset value.
+
+        Returns:
+            Dict with EVE impact, NII impact, and stressed CAR estimate.
+        """
+        self._require_baseline("net_interest_income", "total_advances", "car")
+
+        rate_shock = rate_shock_bps / 10_000.0
+
+        # EVE impact
+        eve_impact = -duration_gap * rate_shock * total_assets
+
+        # NII impact: approximate as rate_shock x rate-sensitive advances
+        # (simplified: assume 60% of advances are rate-sensitive)
+        rate_sensitive_advances = self.baseline_metrics["total_advances"] * 0.6
+        nii_impact = rate_shock * rate_sensitive_advances
+        stressed_nii = self.baseline_metrics["net_interest_income"] + nii_impact
+
+        # CAR impact (simplified: EVE change relative to RWA proxy)
+        rwa_proxy = total_assets * 0.75
+        car_impact_pp = (eve_impact / rwa_proxy) * 100 if rwa_proxy > 0 else 0.0
+        stressed_car = self.baseline_metrics["car"] + car_impact_pp
+
+        logger.debug(
+            "IR sensitivity: shock=%+dbps, EVE_impact=%.2f, NII_impact=%.2f, "
+            "CAR %.2f -> %.2f",
+            rate_shock_bps,
+            eve_impact,
+            nii_impact,
+            self.baseline_metrics["car"],
+            stressed_car,
+        )
+
+        return {
+            "rate_shock_bps": rate_shock_bps,
+            "eve_impact": eve_impact,
+            "nii_impact": nii_impact,
+            "baseline_nii": self.baseline_metrics["net_interest_income"],
+            "stressed_nii": stressed_nii,
+            "baseline_car": self.baseline_metrics["car"],
+            "stressed_car": stressed_car,
+            "car_change_pp": car_impact_pp,
+        }
+
+    def credit_quality_sensitivity(
+        self,
+        npa_increase_pct: float,
+        provision_coverage_ratio: float = 0.70,
+    ) -> dict[str, float]:
+        """Credit quality sensitivity analysis via NPA ratio shift.
+
+        Models the impact of an increase in non-performing assets on
+        provisioning requirements and capital adequacy.
+
+        Requires baseline_metrics with 'npa_ratio', 'car', 'total_advances'.
+
+        Args:
+            npa_increase_pct: Percentage point increase in NPA ratio
+                (e.g. 2.0 means NPA ratio rises by 2 pp).
+            provision_coverage_ratio: Provisioning coverage ratio for
+                incremental NPAs (default 0.70).
+
+        Returns:
+            Dict with stressed NPA ratio, incremental provisions, and CAR impact.
+        """
+        self._require_baseline("npa_ratio", "car", "total_advances")
+
+        baseline_npa = self.baseline_metrics["npa_ratio"]
+        stressed_npa = baseline_npa + npa_increase_pct
+        total_advances = self.baseline_metrics["total_advances"]
+
+        incremental_npa_amount = (npa_increase_pct / 100.0) * total_advances
+        incremental_provisions = incremental_npa_amount * provision_coverage_ratio
+
+        # CAR impact: provisions reduce capital, RWA unchanged
+        rwa_proxy = total_advances * 0.75  # average risk weight 75%
+        car_reduction = (
+            (incremental_provisions / rwa_proxy) * 100 if rwa_proxy > 0 else 0.0
+        )
+        stressed_car = self.baseline_metrics["car"] - car_reduction
+
+        logger.debug(
+            "Credit quality sensitivity: NPA +%.1fpp, provisions=%.2f, "
+            "CAR %.2f -> %.2f",
+            npa_increase_pct,
+            incremental_provisions,
+            self.baseline_metrics["car"],
+            stressed_car,
+        )
+
+        return {
+            "baseline_npa_ratio": baseline_npa,
+            "stressed_npa_ratio": stressed_npa,
+            "npa_increase_pct": npa_increase_pct,
+            "incremental_npa_amount": incremental_npa_amount,
+            "incremental_provisions": incremental_provisions,
+            "provision_coverage_ratio": provision_coverage_ratio,
+            "baseline_car": self.baseline_metrics["car"],
+            "stressed_car": stressed_car,
+            "car_reduction_pp": car_reduction,
+        }
+
+    def liquidity_sensitivity(
+        self,
+        deposit_outflow_pct: float,
+        hqla: float,
+        total_deposits: float,
+        net_cash_outflows_30d: float,
+    ) -> dict[str, float]:
+        """Liquidity sensitivity analysis.
+
+        Estimates the impact of deposit outflows on the Liquidity Coverage
+        Ratio (LCR) as per Basel III / RBI guidelines.
+
+        LCR = HQLA / Net cash outflows over 30 days
+
+        Args:
+            deposit_outflow_pct: Assumed deposit run-off percentage.
+            hqla: High-quality liquid assets.
+            total_deposits: Total deposit base.
+            net_cash_outflows_30d: Baseline 30-day net cash outflows.
+
+        Returns:
+            Dict with baseline and stressed LCR, deposit outflow amount,
+            and whether the RBI minimum LCR (100%) is breached.
+        """
+        if net_cash_outflows_30d <= 0:
+            raise ValueError("net_cash_outflows_30d must be positive.")
+
+        deposit_outflow = (deposit_outflow_pct / 100.0) * total_deposits
+        stressed_outflows = net_cash_outflows_30d + deposit_outflow
+
+        baseline_lcr = (hqla / net_cash_outflows_30d) * 100.0
+        stressed_lcr = (
+            (hqla / stressed_outflows) * 100.0 if stressed_outflows > 0 else 0.0
+        )
+
+        # RBI minimum LCR requirement: 100%
+        lcr_breach = stressed_lcr < 100.0
+
+        logger.debug(
+            "Liquidity sensitivity: deposit_outflow=%.1f%%, LCR %.1f%% -> %.1f%%",
+            deposit_outflow_pct,
+            baseline_lcr,
+            stressed_lcr,
+        )
+
+        return {
+            "deposit_outflow_pct": deposit_outflow_pct,
+            "deposit_outflow_amount": deposit_outflow,
+            "baseline_lcr_pct": baseline_lcr,
+            "stressed_lcr_pct": stressed_lcr,
+            "lcr_breach": lcr_breach,
+            "rbi_min_lcr_pct": 100.0,
         }
