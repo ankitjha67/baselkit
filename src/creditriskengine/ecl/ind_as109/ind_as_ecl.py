@@ -13,12 +13,11 @@ This module wraps the IFRS 9 ECL functions with India-specific defaults.
 """
 
 import logging
-from typing import Optional
 
 import numpy as np
 
 from creditriskengine.core.types import IFRS9Stage
-from creditriskengine.ecl.ifrs9.ecl_calc import calculate_ecl, ecl_12_month, ecl_lifetime
+from creditriskengine.ecl.ifrs9.ecl_calc import calculate_ecl
 from creditriskengine.ecl.ifrs9.staging import assign_stage
 
 logger = logging.getLogger(__name__)
@@ -67,9 +66,9 @@ def calculate_ecl_ind_as(
     lgd: float,
     ead: float,
     eir: float = 0.0,
-    marginal_pds: Optional[np.ndarray] = None,
-    lgd_curve: Optional[np.ndarray] = None,
-    ead_curve: Optional[np.ndarray] = None,
+    marginal_pds: np.ndarray | None = None,
+    lgd_curve: np.ndarray | None = None,
+    ead_curve: np.ndarray | None = None,
 ) -> float:
     """Calculate ECL per Ind AS 109 (delegates to IFRS 9 calculation).
 

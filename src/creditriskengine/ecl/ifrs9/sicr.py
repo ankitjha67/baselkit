@@ -9,7 +9,6 @@ lifetime PD at origination. Uses a relative change threshold.
 """
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +50,7 @@ def assess_sicr(
 
     # Guard against zero origination PD
     if origination_lifetime_pd <= 0:
-        if current_lifetime_pd > absolute_threshold:
-            return True
-        return False
+        return current_lifetime_pd > absolute_threshold
 
     # Relative change test
     relative_change = current_lifetime_pd / origination_lifetime_pd

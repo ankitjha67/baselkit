@@ -34,6 +34,8 @@ def discount_factors(
     Returns:
         Array of discount factors for periods 1..T.
     """
+    if eir <= -1.0:
+        raise ValueError(f"EIR must be greater than -1, got {eir}")
     t = np.arange(1, periods + 1, dtype=np.float64)
     return 1.0 / (1.0 + eir) ** t
 

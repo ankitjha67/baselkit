@@ -7,7 +7,6 @@ Reference: BCBS WP14 (May 2005), EBA GL/2017/16.
 import logging
 
 import numpy as np
-from scipy import stats
 
 logger = logging.getLogger(__name__)
 

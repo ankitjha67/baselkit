@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -17,7 +17,7 @@ _REGULATORY_DIR = Path(__file__).parent.parent / "regulatory"
 
 def load_jurisdiction_config(
     jurisdiction: Jurisdiction,
-    config_dir: Optional[Path] = None,
+    config_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Load regulatory configuration YAML for a jurisdiction.
 
@@ -73,4 +73,4 @@ def load_jurisdiction_config(
         raise ConfigurationError(f"Empty config file: {config_path}")
 
     logger.debug("Loaded config for %s from %s", jurisdiction.value, config_path)
-    return data
+    return dict(data)

@@ -11,7 +11,6 @@ Regulatory context:
 """
 
 import logging
-from typing import Optional
 
 import numpy as np
 from scipy import stats

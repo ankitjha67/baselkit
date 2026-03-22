@@ -13,8 +13,6 @@ downside (15-25%), severe downside (5-10%).
 import logging
 from typing import NamedTuple
 
-import numpy as np
-
 logger = logging.getLogger(__name__)
 
 

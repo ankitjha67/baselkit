@@ -11,7 +11,6 @@ Phase-in schedules differ by jurisdiction.
 
 import logging
 from datetime import date
-from typing import Optional
 
 from creditriskengine.core.types import Jurisdiction
 
@@ -161,7 +160,7 @@ class OutputFloorCalculator:
         self,
         irb_rwa: float,
         sa_rwa: float,
-        pre_floor_irb_rwa: Optional[float] = None,
+        pre_floor_irb_rwa: float | None = None,
     ) -> dict[str, float]:
         """Apply the output floor.
 

@@ -5,10 +5,10 @@ All enums map directly to regulatory classifications from
 BCBS d424 (Basel III final reforms, December 2017).
 """
 
-from enum import Enum
+from enum import Enum, StrEnum
 
 
-class Jurisdiction(str, Enum):
+class Jurisdiction(StrEnum):
     """Supported regulatory jurisdictions."""
     BCBS = "bcbs"
     EU = "eu"
@@ -29,7 +29,7 @@ class Jurisdiction(str, Enum):
     MALAYSIA = "malaysia"
 
 
-class CreditRiskApproach(str, Enum):
+class CreditRiskApproach(StrEnum):
     """Credit risk capital calculation approach.
 
     Reference: BCBS d424, CRE20 (SA), CRE30-36 (IRB).
@@ -39,7 +39,7 @@ class CreditRiskApproach(str, Enum):
     AIRB = "advanced_irb"
 
 
-class IRBAssetClass(str, Enum):
+class IRBAssetClass(StrEnum):
     """IRB asset classes per BCBS CRE30.4."""
     CORPORATE = "corporate"
     SOVEREIGN = "sovereign"
@@ -48,14 +48,14 @@ class IRBAssetClass(str, Enum):
     EQUITY = "equity"
 
 
-class IRBCorporateSubClass(str, Enum):
+class IRBCorporateSubClass(StrEnum):
     """Corporate sub-classes per BCBS CRE30.5-30.9."""
     GENERAL_CORPORATE = "general_corporate"
     SME_CORPORATE = "sme_corporate"
     SPECIALISED_LENDING = "specialised_lending"
 
 
-class IRBSpecialisedLendingType(str, Enum):
+class IRBSpecialisedLendingType(StrEnum):
     """Specialised lending categories per BCBS CRE30.7."""
     PROJECT_FINANCE = "project_finance"
     OBJECT_FINANCE = "object_finance"
@@ -64,7 +64,7 @@ class IRBSpecialisedLendingType(str, Enum):
     HIGH_VOLATILITY_CRE = "hvcre"
 
 
-class IRBRetailSubClass(str, Enum):
+class IRBRetailSubClass(StrEnum):
     """Retail sub-classes per BCBS CRE30.11-30.15."""
     RESIDENTIAL_MORTGAGE = "residential_mortgage"
     QRRE = "qualifying_revolving_retail"
@@ -72,7 +72,7 @@ class IRBRetailSubClass(str, Enum):
     SME_RETAIL = "sme_retail"
 
 
-class SAExposureClass(str, Enum):
+class SAExposureClass(StrEnum):
     """Standardized approach exposure classes per BCBS CRE20."""
     SOVEREIGN = "sovereign"
     PSE = "public_sector_entity"
@@ -116,7 +116,7 @@ class IFRS9Stage(int, Enum):
     POCI = 4
 
 
-class DefaultDefinition(str, Enum):
+class DefaultDefinition(StrEnum):
     """Default definition frameworks."""
     BCBS = "bcbs_default"
     EBA = "eba_default"
@@ -126,7 +126,7 @@ class DefaultDefinition(str, Enum):
     MAS = "mas_default"
 
 
-class CollateralType(str, Enum):
+class CollateralType(StrEnum):
     """Eligible collateral types per BCBS CRE22."""
     CASH = "cash"
     GOLD = "gold"
@@ -142,7 +142,7 @@ class CollateralType(str, Enum):
     CREDIT_DERIVATIVE = "credit_derivative"
 
 
-class CRMApproach(str, Enum):
+class CRMApproach(StrEnum):
     """Credit risk mitigation approaches per BCBS CRE22."""
     SIMPLE = "simple"
     COMPREHENSIVE = "comprehensive"

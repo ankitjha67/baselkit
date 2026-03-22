@@ -5,7 +5,6 @@ Supports EBA, BoE ACS, US CCAR/DFAST, and RBI methodologies.
 """
 
 import logging
-from typing import Any
 
 import numpy as np
 

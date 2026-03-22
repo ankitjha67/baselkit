@@ -57,7 +57,9 @@ class TestECLLifetime:
         lgds = np.array([0.45, 0.40])
         eads = np.array([1000.0, 950.0])
         ecl = ecl_lifetime(marginal_pds, lgds, eads, eir=0.05)
-        assert ecl > 0.0
+        # Manual: 0.02*0.45*1000/1.05 + 0.03*0.40*950/1.05^2
+        expected = 0.02 * 0.45 * 1000.0 / 1.05 + 0.03 * 0.40 * 950.0 / 1.05**2
+        assert ecl == pytest.approx(expected, rel=1e-6)
 
     def test_discounting_reduces_ecl(self):
         marginal_pds = np.array([0.02, 0.03, 0.04, 0.05])
@@ -94,7 +96,8 @@ class TestCalculateECL:
             ead=1000.0,
             marginal_pds=marginal_pds,
         )
-        assert ecl > 0.0
+        expected = sum(pd * 0.45 * 1000.0 for pd in marginal_pds)
+        assert ecl == pytest.approx(expected, rel=1e-6)
 
     def test_stage3_lifetime(self):
         marginal_pds = np.array([0.50, 0.30, 0.20])
@@ -105,4 +108,5 @@ class TestCalculateECL:
             ead=500.0,
             marginal_pds=marginal_pds,
         )
-        assert ecl > 0.0
+        expected = sum(pd * 0.60 * 500.0 for pd in marginal_pds)
+        assert ecl == pytest.approx(expected, rel=1e-6)

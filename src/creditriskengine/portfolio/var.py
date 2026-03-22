@@ -6,7 +6,6 @@ Value-at-Risk calculations for credit portfolios.
 
 import logging
 
-import numpy as np
 from scipy.stats import norm
 
 logger = logging.getLogger(__name__)
@@ -29,7 +28,7 @@ def parametric_credit_var(
     Returns:
         Credit VaR.
     """
-    z = norm.ppf(confidence)
+    z = float(norm.ppf(confidence))
     return el + z * ul_std
 
 

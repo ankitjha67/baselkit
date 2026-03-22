@@ -30,7 +30,6 @@ dependencies = [
     "pyyaml>=6.0.1",
     "scikit-learn>=1.4.0",
     "statsmodels>=0.14.0",
-    "jinja2>=3.1.0",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +41,7 @@ dev = [
     "ruff>=0.3.0",
     "pre-commit>=3.6.0",
     "hypothesis>=6.98.0",
+    "types-PyYAML>=2024.1.0",
 ]
 docs = [
     "mkdocs>=1.5.0",

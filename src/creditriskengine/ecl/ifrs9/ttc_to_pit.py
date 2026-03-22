@@ -95,4 +95,4 @@ def estimate_z_factor(
     g_ttc = norm.ppf(max(min(long_run_pd, 0.9999), 0.0001))
     g_obs = norm.ppf(max(min(observed_default_rate, 0.9999), 0.0001))
 
-    return (g_ttc - math.sqrt(1.0 - rho) * g_obs) / math.sqrt(rho)
+    return float((g_ttc - math.sqrt(1.0 - rho) * g_obs) / math.sqrt(rho))

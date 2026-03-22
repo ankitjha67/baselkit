@@ -12,7 +12,6 @@ Regulatory context:
 """
 
 import logging
-from typing import Optional
 
 import numpy as np
 from scipy import stats
@@ -47,7 +46,7 @@ def auroc(y_true: np.ndarray, y_score: np.ndarray) -> float:
 
     # Mann-Whitney U: for each positive, count negatives ranked below it
     cum_neg = np.cumsum(1 - y_sorted)
-    auc = float(np.sum(cum_neg[y_sorted == 1])) / (n_pos * n_neg)
+    auc = float(np.sum(cum_neg[y_sorted == 1])) / float(n_pos * n_neg)
     return auc
 
 

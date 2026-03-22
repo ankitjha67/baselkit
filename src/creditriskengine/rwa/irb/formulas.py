@@ -12,7 +12,6 @@ referenced Basel Committee text.
 
 import logging
 import math
-from typing import Optional
 
 from scipy.stats import norm
 
@@ -186,6 +185,9 @@ def irb_capital_requirement_k(
     Returns:
         Capital requirement K as a fraction of EAD
     """
+    if not 0.0 < correlation < 1.0:
+        raise ValueError(f"Correlation must be in (0, 1), got {correlation}")
+
     pd_floored = max(pd, PD_FLOOR)
 
     g_pd = norm.ppf(pd_floored)
@@ -196,7 +198,7 @@ def irb_capital_requirement_k(
         + math.sqrt(correlation / (1.0 - correlation)) * g_999
     )
 
-    k = lgd * (conditional_pd - pd_floored)
+    k = lgd * (float(conditional_pd) - pd_floored)
     return max(k, 0.0)
 
 
@@ -205,7 +207,7 @@ def irb_risk_weight(
     lgd: float,
     asset_class: str,
     maturity: float = 2.5,
-    turnover_eur_millions: Optional[float] = None,
+    turnover_eur_millions: float | None = None,
     is_qrre_transactor: bool = False,
     ead: float = 1.0,
 ) -> float:
@@ -214,7 +216,6 @@ def irb_risk_weight(
     Formula (BCBS CRE31.4-31.10):
         RW = K * 12.5 * MA    (corporate/sovereign/bank)
         RW = K * 12.5          (retail)
-        RW = K * 12.5 * 0.75  (QRRE transactors, CRE31.9)
 
     The 12.5 multiplier converts K to risk weight because
     Capital = 8% * RWA = K * EAD, so RW = K * 12.5.
@@ -228,7 +229,7 @@ def irb_risk_weight(
                      'residential_mortgage', 'qrre', 'other_retail'
         maturity: Effective maturity in years (non-retail only)
         turnover_eur_millions: For SME firm-size correlation adjustment
-        is_qrre_transactor: If True, apply 0.75 scalar to QRRE RW
+        is_qrre_transactor: Unused, retained for API compatibility
         ead: Exposure at Default (default 1.0)
 
     Returns:
@@ -266,10 +267,6 @@ def irb_risk_weight(
 
     # Step 4: Convert to risk weight
     rw = k * 12.5
-
-    # Step 5: QRRE transactor scalar
-    if asset_class == "qrre" and is_qrre_transactor:
-        rw *= 0.75
 
     logger.debug(
         "IRB RW: asset_class=%s pd=%.4f lgd=%.2f R=%.4f K=%.6f RW=%.2f%%",

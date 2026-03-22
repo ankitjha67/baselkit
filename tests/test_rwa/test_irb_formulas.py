@@ -141,12 +141,13 @@ class TestIRBRiskWeight:
         rw = irb_risk_weight(pd=0.01, lgd=0.20, asset_class="residential_mortgage")
         assert rw > 0.0
 
-    def test_qrre_transactor_scalar(self):
+    def test_qrre_transactor_no_scalar(self):
+        # QRRE transactor scalar was removed in Basel III d424
         rw = irb_risk_weight(pd=0.02, lgd=0.80, asset_class="qrre")
         rw_trans = irb_risk_weight(
             pd=0.02, lgd=0.80, asset_class="qrre", is_qrre_transactor=True
         )
-        assert rw_trans == pytest.approx(rw * 0.75, rel=1e-6)
+        assert rw_trans == pytest.approx(rw, rel=1e-6)
 
     def test_defaulted_returns_zero(self):
         assert irb_risk_weight(pd=1.0, lgd=0.45, asset_class="corporate") == 0.0

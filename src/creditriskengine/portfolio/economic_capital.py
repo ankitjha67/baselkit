@@ -13,10 +13,6 @@ from creditriskengine.portfolio.copula import (
     expected_shortfall,
     simulate_single_factor,
 )
-from creditriskengine.portfolio.vasicek import (
-    economic_capital_asrf,
-    expected_loss,
-)
 
 logger = logging.getLogger(__name__)
 

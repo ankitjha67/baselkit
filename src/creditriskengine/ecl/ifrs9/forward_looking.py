@@ -8,7 +8,6 @@ PD/LGD adjustments based on forward-looking indicators.
 """
 
 import logging
-from typing import Optional
 
 import numpy as np
 
@@ -59,4 +58,4 @@ def apply_macro_overlay(
         Adjusted PD term structure.
     """
     adjusted = base_pds * adjustment_factors[:len(base_pds)]
-    return np.clip(adjusted, floor, cap)
+    return np.asarray(np.clip(adjusted, floor, cap))

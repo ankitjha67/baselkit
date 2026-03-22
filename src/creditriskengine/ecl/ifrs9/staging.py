@@ -10,7 +10,6 @@ POCI: Purchased or originated credit-impaired
 """
 
 import logging
-from typing import Optional
 
 from creditriskengine.core.types import IFRS9Stage
 
@@ -70,7 +69,7 @@ def stage_allocation_summary(
         Dict with count and ead totals per stage.
     """
     summary: dict[str, dict[str, float]] = {}
-    for stage, ead in zip(stages, eads):
+    for stage, ead in zip(stages, eads, strict=False):
         key = stage.name
         if key not in summary:
             summary[key] = {"count": 0.0, "ead": 0.0}

@@ -6,7 +6,7 @@ Supports jurisdiction-specific overrides via YAML config.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from creditriskengine.core.types import (
     CreditQualityStep,
@@ -41,6 +41,17 @@ BANK_ECRA_RW: dict[int, float] = {
     CreditQualityStep.CQS_5: 100.0,
     CreditQualityStep.CQS_6: 150.0,
     CreditQualityStep.UNRATED: 50.0,
+}
+
+# Banks (ECRA) short-term claims — CRE20.17, Table 5
+BANK_ECRA_SHORT_TERM_RW: dict[int, float] = {
+    CreditQualityStep.CQS_1: 20.0,
+    CreditQualityStep.CQS_2: 20.0,
+    CreditQualityStep.CQS_3: 20.0,
+    CreditQualityStep.CQS_4: 50.0,
+    CreditQualityStep.CQS_5: 50.0,
+    CreditQualityStep.CQS_6: 150.0,
+    CreditQualityStep.UNRATED: 20.0,
 }
 
 # Banks (SCRA) — CRE20.19-20.21 (for jurisdictions not using external ratings)
@@ -138,9 +149,9 @@ def get_sovereign_risk_weight(
 
 
 def get_bank_risk_weight(
-    cqs: Optional[CreditQualityStep] = None,
+    cqs: CreditQualityStep | None = None,
     jurisdiction: Jurisdiction = Jurisdiction.BCBS,
-    scra_grade: Optional[str] = None,
+    scra_grade: str | None = None,
     is_short_term: bool = False,
 ) -> float:
     """Risk weight for bank exposures.
@@ -160,6 +171,8 @@ def get_bank_risk_weight(
         Risk weight as percentage.
     """
     if cqs is not None:
+        if is_short_term:
+            return BANK_ECRA_SHORT_TERM_RW.get(cqs.value, 20.0)
         return BANK_ECRA_RW.get(cqs.value, 50.0)
     if scra_grade is not None:
         rw = BANK_SCRA_RW.get(scra_grade.upper())
@@ -173,7 +186,7 @@ def get_bank_risk_weight(
 def get_corporate_risk_weight(
     cqs: CreditQualityStep,
     jurisdiction: Jurisdiction = Jurisdiction.BCBS,
-    is_investment_grade: Optional[bool] = None,
+    is_investment_grade: bool | None = None,
     is_sme: bool = False,
 ) -> float:
     """Risk weight for corporate exposures.
@@ -308,6 +321,9 @@ def get_defaulted_risk_weight(
     Returns:
         Risk weight as percentage.
     """
+    # CRE20.101: RRE-secured defaulted exposures always get 100%
+    if is_rre_secured:
+        return 100.0
     if specific_provisions_pct >= 0.20:
         return 100.0
     return 150.0
@@ -364,9 +380,9 @@ def assign_sa_risk_weight(
     exposure_class: SAExposureClass,
     cqs: CreditQualityStep = CreditQualityStep.UNRATED,
     jurisdiction: Jurisdiction = Jurisdiction.BCBS,
-    ltv: Optional[float] = None,
+    ltv: float | None = None,
     counterparty_rw: float = 100.0,
-    is_investment_grade: Optional[bool] = None,
+    is_investment_grade: bool | None = None,
     is_sme: bool = False,
     is_cashflow_dependent: bool = False,
     is_income_producing: bool = False,
@@ -378,8 +394,8 @@ def assign_sa_risk_weight(
     is_listed: bool = True,
     is_speculative: bool = False,
     is_regulatory_retail: bool = True,
-    scra_grade: Optional[str] = None,
-    config: Optional[dict[str, Any]] = None,
+    scra_grade: str | None = None,
+    config: dict[str, Any] | None = None,
 ) -> float:
     """Assign SA risk weight based on exposure class and parameters.
 
@@ -454,8 +470,8 @@ def assign_sa_risk_weight(
         return get_subordinated_debt_risk_weight()
 
     if exposure_class == SAExposureClass.PSE:
-        # PSEs: use sovereign table shifted by one CQS (simplified)
-        return get_sovereign_risk_weight(cqs, jurisdiction, is_domestic_own_currency)
+        # PSEs Option A: use bank risk weight table per CRE20.10
+        return get_bank_risk_weight(cqs, jurisdiction, scra_grade)
 
     if exposure_class == SAExposureClass.MDB:
         # Qualifying MDBs: 0%; others: per bank table

@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -43,7 +43,7 @@ def get_config_path(jurisdiction: Jurisdiction) -> Path:
 
 def load_config(
     jurisdiction: Jurisdiction,
-    config_dir: Optional[Path] = None,
+    config_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Load and return regulatory config for a jurisdiction.
 
@@ -69,4 +69,4 @@ def load_config(
         raise ConfigurationError(f"Empty config: {path}")
 
     logger.debug("Loaded regulatory config: %s", path)
-    return data
+    return dict(data)

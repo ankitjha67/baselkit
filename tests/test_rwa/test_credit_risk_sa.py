@@ -75,6 +75,19 @@ class TestBankRiskWeight:
     def test_unrated_default(self):
         assert get_bank_risk_weight() == 50.0
 
+    @pytest.mark.parametrize(
+        "cqs,expected",
+        [
+            (CreditQualityStep.CQS_1, 20.0),
+            (CreditQualityStep.CQS_2, 20.0),
+            (CreditQualityStep.CQS_3, 20.0),
+            (CreditQualityStep.CQS_4, 50.0),
+            (CreditQualityStep.CQS_6, 150.0),
+        ],
+    )
+    def test_bank_ecra_short_term(self, cqs, expected):
+        assert get_bank_risk_weight(cqs=cqs, is_short_term=True) == expected
+
 
 class TestCorporateRiskWeight:
     """BCBS CRE20.28-20.32."""
@@ -168,6 +181,11 @@ class TestDefaultedExposures:
     def test_low_provisions(self):
         assert get_defaulted_risk_weight(0.10) == 150.0
 
+    def test_rre_secured_always_100(self):
+        # CRE20.101: RRE-secured defaults always get 100% regardless of provisions
+        assert get_defaulted_risk_weight(0.05, is_rre_secured=True) == 100.0
+        assert get_defaulted_risk_weight(0.25, is_rre_secured=True) == 100.0
+
 
 class TestRetail:
     def test_regulatory_retail(self):
@@ -221,3 +239,8 @@ class TestAssignSaRiskWeight:
 
     def test_other_is_100(self):
         assert assign_sa_risk_weight(SAExposureClass.OTHER) == 100.0
+
+    def test_pse_uses_bank_table(self):
+        # PSEs use bank risk weight table per CRE20.10 Option A
+        rw = assign_sa_risk_weight(SAExposureClass.PSE, CreditQualityStep.CQS_1)
+        assert rw == get_bank_risk_weight(cqs=CreditQualityStep.CQS_1)

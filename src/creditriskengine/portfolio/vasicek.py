@@ -44,6 +44,8 @@ def vasicek_conditional_default_rate(
         return 0.0
     if pd >= 1.0:
         return 1.0
+    if not 0.0 < rho < 1.0:
+        raise ValueError(f"rho must be in (0, 1), got {rho}")
 
     g_pd = norm.ppf(pd)
     conditional = norm.cdf(
@@ -72,6 +74,9 @@ def vasicek_loss_quantile(
     Returns:
         Loss quantile (fraction of portfolio).
     """
+    if not 0.0 < rho < 1.0:
+        raise ValueError(f"rho must be in (0, 1), got {rho}")
+
     g_pd = norm.ppf(max(min(pd, 0.9999), 0.0001))
     g_q = norm.ppf(confidence)
 

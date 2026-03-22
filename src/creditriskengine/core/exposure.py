@@ -6,7 +6,6 @@ regulatory capital calculation under both SA and IRB approaches.
 """
 
 from datetime import date
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -28,10 +27,10 @@ class Collateral(BaseModel):
     collateral_type: CollateralType
     value: float = Field(ge=0, description="Current market/appraised value")
     currency: str = Field(default="USD", max_length=3)
-    haircut: Optional[float] = Field(
+    haircut: float | None = Field(
         default=None, ge=0, le=1, description="Supervisory or own-estimate haircut"
     )
-    ltv: Optional[float] = Field(default=None, ge=0, description="Loan-to-value ratio at origination")
+    ltv: float | None = Field(default=None, ge=0, description="Loan-to-value ratio at origination")
 
 
 class Exposure(BaseModel):
@@ -53,48 +52,48 @@ class Exposure(BaseModel):
     # ---- Classification ----
     jurisdiction: Jurisdiction
     approach: CreditRiskApproach
-    sa_exposure_class: Optional[SAExposureClass] = None
-    irb_asset_class: Optional[IRBAssetClass] = None
-    irb_corporate_subclass: Optional[IRBCorporateSubClass] = None
-    irb_retail_subclass: Optional[IRBRetailSubClass] = None
+    sa_exposure_class: SAExposureClass | None = None
+    irb_asset_class: IRBAssetClass | None = None
+    irb_corporate_subclass: IRBCorporateSubClass | None = None
+    irb_retail_subclass: IRBRetailSubClass | None = None
 
     # ---- SA Parameters ----
-    credit_quality_step: Optional[CreditQualityStep] = None
-    is_investment_grade: Optional[bool] = None
+    credit_quality_step: CreditQualityStep | None = None
+    is_investment_grade: bool | None = None
 
     # ---- IRB Parameters ----
-    pd: Optional[float] = Field(default=None, ge=0, le=1, description="Probability of Default")
-    lgd: Optional[float] = Field(default=None, ge=0, le=1, description="Loss Given Default")
-    ead_model: Optional[float] = Field(default=None, ge=0, description="EAD from internal model")
-    maturity_years: Optional[float] = Field(
+    pd: float | None = Field(default=None, ge=0, le=1, description="Probability of Default")
+    lgd: float | None = Field(default=None, ge=0, le=1, description="Loss Given Default")
+    ead_model: float | None = Field(default=None, ge=0, description="EAD from internal model")
+    maturity_years: float | None = Field(
         default=None, ge=0, le=30, description="Effective residual maturity M in years"
     )
-    turnover_eur_millions: Optional[float] = Field(
+    turnover_eur_millions: float | None = Field(
         default=None, ge=0, description="Annual turnover for SME firm-size adjustment"
     )
 
     # ---- Collateral and CRM ----
     collaterals: list[Collateral] = Field(default_factory=list)
     is_guaranteed: bool = False
-    guarantor_risk_weight: Optional[float] = None
+    guarantor_risk_weight: float | None = None
 
     # ---- Real Estate ----
-    property_value: Optional[float] = Field(default=None, ge=0)
-    ltv_ratio: Optional[float] = Field(default=None, ge=0)
+    property_value: float | None = Field(default=None, ge=0)
+    ltv_ratio: float | None = Field(default=None, ge=0)
     is_income_producing: bool = False
     is_materially_dependent_on_cashflows: bool = False
 
     # ---- IFRS 9 / ECL ----
-    ifrs9_stage: Optional[IFRS9Stage] = None
+    ifrs9_stage: IFRS9Stage | None = None
     days_past_due: int = Field(default=0, ge=0)
-    origination_date: Optional[date] = None
-    maturity_date: Optional[date] = None
-    origination_pd: Optional[float] = Field(
+    origination_date: date | None = None
+    maturity_date: date | None = None
+    origination_pd: float | None = Field(
         default=None, ge=0, le=1, description="12-month PD at origination"
     )
-    current_pd: Optional[float] = Field(default=None, ge=0, le=1, description="Current 12-month PD")
+    current_pd: float | None = Field(default=None, ge=0, le=1, description="Current 12-month PD")
     is_credit_impaired: bool = False
-    effective_interest_rate: Optional[float] = Field(
+    effective_interest_rate: float | None = Field(
         default=None, ge=0, description="EIR for ECL discounting"
     )
 
@@ -105,6 +104,6 @@ class Exposure(BaseModel):
 
     @field_validator("pd")
     @classmethod
-    def pd_floor_check(cls, v: Optional[float]) -> Optional[float]:
+    def pd_floor_check(cls, v: float | None) -> float | None:
         """Basel III PD floor is 0.03% (3 bps) for non-defaulted per CRE32.13."""
         return v

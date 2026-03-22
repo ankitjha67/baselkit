@@ -6,7 +6,6 @@ loss simulation.
 """
 
 import logging
-from typing import Optional
 
 import numpy as np
 from scipy.stats import norm
@@ -20,7 +19,7 @@ def simulate_single_factor(
     eads: np.ndarray,
     rho: float,
     n_simulations: int = 10_000,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     antithetic: bool = True,
 ) -> np.ndarray:
     """Single-factor Gaussian copula Monte Carlo simulation.
@@ -46,6 +45,9 @@ def simulate_single_factor(
     Returns:
         Array of portfolio losses (n_simulations,).
     """
+    if not 0.0 < rho < 1.0:
+        raise ValueError(f"rho must be in (0, 1), got {rho}")
+
     rng = np.random.default_rng(seed)
     n_obligors = len(pds)
 
@@ -75,7 +77,7 @@ def simulate_single_factor(
     losses = defaults * lgds[np.newaxis, :] * eads[np.newaxis, :]
     portfolio_losses = np.sum(losses, axis=1)
 
-    return portfolio_losses
+    return np.asarray(portfolio_losses)
 
 
 def simulate_multi_factor(
@@ -84,7 +86,7 @@ def simulate_multi_factor(
     eads: np.ndarray,
     factor_loadings: np.ndarray,
     n_simulations: int = 10_000,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> np.ndarray:
     """Multi-factor Gaussian copula simulation with sector correlations.
 
@@ -125,7 +127,7 @@ def simulate_multi_factor(
     defaults = asset_returns < thresholds[np.newaxis, :]
     losses = defaults * lgds[np.newaxis, :] * eads[np.newaxis, :]
 
-    return np.sum(losses, axis=1)
+    return np.asarray(np.sum(losses, axis=1))
 
 
 def credit_var(

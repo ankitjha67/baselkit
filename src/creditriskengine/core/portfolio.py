@@ -1,8 +1,8 @@
 """Portfolio container for credit exposures."""
 
-from typing import Iterator, Optional
+from collections.abc import Iterator
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from creditriskengine.core.exposure import Exposure
 from creditriskengine.core.types import CreditRiskApproach, Jurisdiction
@@ -14,9 +14,11 @@ class Portfolio(BaseModel):
     Provides iteration, filtering, and aggregation over exposures.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     name: str = "Unnamed Portfolio"
-    jurisdiction: Optional[Jurisdiction] = None
-    approach: Optional[CreditRiskApproach] = None
+    jurisdiction: Jurisdiction | None = None
+    approach: CreditRiskApproach | None = None
     exposures: list[Exposure] = Field(default_factory=list)
 
     def add_exposure(self, exposure: Exposure) -> None:
@@ -30,7 +32,7 @@ class Portfolio(BaseModel):
     def __len__(self) -> int:
         return len(self.exposures)
 
-    def __iter__(self) -> Iterator[Exposure]:
+    def __iter__(self) -> Iterator[Exposure]:  # type: ignore[override]
         return iter(self.exposures)
 
     def filter_by_approach(self, approach: CreditRiskApproach) -> list[Exposure]:
