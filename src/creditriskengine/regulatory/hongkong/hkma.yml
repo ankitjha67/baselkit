@@ -1,1 +1,121 @@
 # Hong Kong HKMA - Hong Kong Monetary Authority
+# Banking (Capital) Rules implementation of Basel III
+
+jurisdiction: Hong Kong
+regulator: Hong Kong Monetary Authority (HKMA)
+framework: Basel III Final Reforms
+effective_date: "2025-01-01"
+document_reference: Banking (Capital) Rules, amended 2024
+
+credit_risk:
+  approaches_permitted: [SA, FIRB, AIRB]
+  standardised_approach:
+    risk_weights:
+      sovereigns:
+        aaa_to_aa_minus: 0.0
+        a_plus_to_a_minus: 0.20
+        bbb_plus_to_bbb_minus: 0.50
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+        hksar_government_hkd: 0.0
+        china_sovereign_cny: 0.0  # special treatment
+      banks:
+        grade_a: 0.20
+        grade_b: 0.30
+        grade_c: 0.50
+        grade_d: 1.00
+        grade_e: 1.50
+      corporates:
+        aaa_to_aa_minus: 0.20
+        a_plus_to_a_minus: 0.50
+        bbb_plus_to_bbb_minus: 0.75
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+      retail:
+        regulatory_retail: 0.75
+        residential_mortgage_lte_70_ltv: 0.20
+        residential_mortgage_gt_70_lte_80_ltv: 0.25
+        residential_mortgage_gt_80_lte_90_ltv: 0.30
+      real_estate:
+        hk_residential_property:
+          completed_lte_70_ltv: 0.15
+          completed_gt_70_lte_80_ltv: 0.25
+          under_construction: 0.30
+        hk_commercial_property:
+          completed_lte_60_ltv: 0.60
+          completed_gt_60_ltv: 1.00
+  irb_approach:
+    pd_floor_bps: 3
+    lgd_floors:
+      senior_unsecured: 0.25
+      subordinated: 0.50
+    lgd_supervisory:
+      senior_unsecured: 0.45
+      subordinated: 0.75
+    maturity_default_years: 2.5
+    maturity_min_years: 1.0
+    maturity_max_years: 5.0
+    asset_correlation:
+      corporate:
+        rho_min: 0.12
+        rho_max: 0.24
+      retail_mortgage:
+        rho: 0.15
+      retail_revolving:
+        rho: 0.04
+    scaling_factor: 1.06
+
+output_floor:
+  enabled: true
+  final_pct: 0.725
+  phase_in_start: "2025-01-01"
+  phase_in:
+    "2025-01-01": 0.50
+    "2026-01-01": 0.55
+    "2027-01-01": 0.60
+    "2028-01-01": 0.65
+    "2029-01-01": 0.70
+    "2030-01-01": 0.725
+
+default_definition:
+  dpd_threshold: 90
+  unlikeliness_to_pay: true
+  materiality_threshold_absolute_hkd: 1000
+  materiality_threshold_relative: 0.01
+  cure_period_months: 3
+
+capital_requirements:
+  minimum_cet1_pct: 0.045
+  minimum_tier1_pct: 0.06
+  minimum_total_capital_pct: 0.08
+  capital_conservation_buffer_pct: 0.025
+  countercyclical_buffer:
+    jurisdictional_reciprocity: true
+    current_hk_rate_pct: 0.01
+    max_pct: 0.025
+  higher_loss_absorbency:
+    enabled: true
+    dsib: true
+    dsib_range:
+      min: 0.01
+      max: 0.035
+
+leverage_ratio:
+  minimum_pct: 0.03
+
+cva_risk:
+  approaches: [BA-CVA, SA-CVA]
+  exemptions:
+    - sovereigns
+    - central_banks
+    - multilateral_development_banks
+
+reporting:
+  frequency: quarterly
+  currency: HKD
+  hkma_returns:
+    - MA(BS)3
+    - MA(BS)1
+    - MA(BS)23

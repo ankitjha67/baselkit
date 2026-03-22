@@ -1,1 +1,35 @@
 # Brazil BCB - Banco Central do Brasil
+jurisdiction: brazil
+regulator: Banco Central do Brasil (BCB)
+framework: Basel III (Resolução CMN 4.958)
+effective_date: "2023-01-01"
+
+credit_risk:
+  approaches_permitted: [SA, FIRB, AIRB]
+  pd_floor_bps: 3
+  lgd_supervisory:
+    senior_unsecured: 0.45
+    subordinated: 0.75
+  maturity_default_years: 2.5
+
+output_floor:
+  enabled: true
+  final_pct: 0.725
+  phase_in_start: "2023-01-01"
+
+default_definition:
+  dpd_threshold: 90
+  materiality_threshold_absolute_brl: 100
+
+capital_requirements:
+  minimum_cet1_pct: 0.045
+  minimum_tier1_pct: 0.06
+  minimum_total_capital_pct: 0.08
+  capital_conservation_buffer_pct: 0.025
+
+leverage_ratio:
+  minimum_pct: 0.03
+
+reporting:
+  frequency: quarterly
+  currency: BRL

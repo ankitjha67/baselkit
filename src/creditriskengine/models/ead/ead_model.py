@@ -1,0 +1,140 @@
+"""
+EAD (Exposure at Default) modeling framework.
+
+Provides CCF estimation, regulatory EAD calculation, and
+EAD term structure generation for off-balance sheet exposures.
+
+References:
+- BCBS d424: CRE31 (EAD under IRB), CRE20 (EAD under SA)
+- CRE32.26-32.32: CCF parameters
+- EBA GL/2017/16: EAD estimation for A-IRB
+"""
+
+import logging
+
+import numpy as np
+
+logger = logging.getLogger(__name__)
+
+# Supervisory CCFs for F-IRB per BCBS CRE32.29-32.32
+SUPERVISORY_CCFS: dict[str, float] = {
+    "committed_unconditionally_cancellable": 0.40,
+    "committed_other": 0.75,
+    "transaction_related_contingencies": 0.50,
+    "trade_related_contingencies": 0.20,
+    "note_issuance_facilities": 0.75,
+    "direct_credit_substitutes": 1.00,
+}
+
+# A-IRB CCF floors per CRE32.33
+CCF_FLOOR_AIRB: float = 0.50
+
+
+def calculate_ead(
+    drawn_amount: float,
+    undrawn_commitment: float,
+    ccf: float,
+) -> float:
+    """Calculate Exposure at Default.
+
+    EAD = Drawn + CCF × Undrawn
+
+    Args:
+        drawn_amount: Current outstanding balance.
+        undrawn_commitment: Undrawn committed amount.
+        ccf: Credit Conversion Factor.
+
+    Returns:
+        EAD value.
+    """
+    return drawn_amount + ccf * undrawn_commitment
+
+
+def estimate_ccf(
+    ead_at_default: float,
+    drawn_at_reference: float,
+    limit: float,
+) -> float:
+    """Estimate realized CCF from default observation.
+
+    CCF = (EAD - Drawn_ref) / (Limit - Drawn_ref)
+
+    Args:
+        ead_at_default: Actual EAD observed at default.
+        drawn_at_reference: Drawn amount at reference date (12m before default).
+        limit: Total committed limit.
+
+    Returns:
+        Realized CCF, clipped to [0, 1].
+    """
+    undrawn = limit - drawn_at_reference
+    if undrawn <= 0:
+        return 1.0
+    ccf = (ead_at_default - drawn_at_reference) / undrawn
+    return float(np.clip(ccf, 0.0, 1.0))
+
+
+def get_supervisory_ccf(facility_type: str) -> float:
+    """Get the F-IRB supervisory CCF for a facility type.
+
+    Args:
+        facility_type: Facility type key (see SUPERVISORY_CCFS).
+
+    Returns:
+        Supervisory CCF value.
+
+    Raises:
+        ValueError: If facility type is unknown.
+    """
+    ccf = SUPERVISORY_CCFS.get(facility_type)
+    if ccf is None:
+        raise ValueError(
+            f"Unknown facility type: {facility_type}. "
+            f"Valid types: {list(SUPERVISORY_CCFS.keys())}"
+        )
+    return ccf
+
+
+def apply_ccf_floor(ccf: float, approach: str = "airb") -> float:
+    """Apply regulatory CCF floor.
+
+    A-IRB floor per CRE32.33: CCF >= 50% for revolving.
+    F-IRB: supervisory values are fixed, no floor needed.
+
+    Args:
+        ccf: Estimated CCF.
+        approach: "airb" or "firb".
+
+    Returns:
+        Floored CCF.
+    """
+    if approach == "airb":
+        return max(ccf, CCF_FLOOR_AIRB)
+    return ccf
+
+
+def ead_term_structure(
+    drawn_amount: float,
+    undrawn_commitment: float,
+    ccf: float,
+    n_periods: int,
+    amortization_rate: float = 0.0,
+) -> np.ndarray:
+    """Generate EAD term structure with optional amortization.
+
+    Args:
+        drawn_amount: Current drawn amount.
+        undrawn_commitment: Undrawn commitment.
+        ccf: Credit conversion factor.
+        n_periods: Number of periods.
+        amortization_rate: Annual amortization rate for the drawn amount.
+
+    Returns:
+        Array of EAD values by period.
+    """
+    eads = np.empty(n_periods, dtype=np.float64)
+    for t in range(n_periods):
+        remaining_drawn = drawn_amount * (1.0 - amortization_rate) ** t
+        ead = remaining_drawn + ccf * undrawn_commitment
+        eads[t] = max(ead, 0.0)
+    return eads

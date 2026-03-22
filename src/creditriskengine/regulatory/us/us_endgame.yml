@@ -1,1 +1,108 @@
 # US Basel III Endgame
+# Federal Reserve, OCC, FDIC joint rulemaking (re-proposed)
+
+jurisdiction: US
+regulator: Federal Reserve / OCC / FDIC
+framework: Basel III Endgame (US proposal)
+effective_date: "2026-07-01"
+document_reference: NPR July 2023, re-proposal September 2024
+
+credit_risk:
+  approaches_permitted: [SA-Expanded, SA-Erisk]
+  note: "US Endgame eliminates IRB for most banks; dual-stack requirement"
+  applicability:
+    threshold_total_assets_usd: 100000000000  # $100B
+    applies_to: "Category I-IV banking organizations"
+  standardised_approach:
+    risk_weights:
+      sovereigns:
+        us_government: 0.0
+        us_gse: 0.20
+        aaa_to_aa_minus: 0.0
+        a_plus_to_a_minus: 0.20
+        bbb_plus_to_bbb_minus: 0.50
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+      banks:
+        investment_grade: 0.20
+        non_investment_grade: 1.50
+        unrated: 0.50
+      corporates:
+        investment_grade: 0.65
+        speculative_grade: 1.00
+        unrated_general: 1.00
+      retail:
+        regulatory_retail: 0.75
+        residential_mortgage_lte_80_ltv:
+          category_1: 0.20
+          category_2: 0.40
+        residential_mortgage_gt_80_lte_90: 0.25
+        residential_mortgage_gt_90_lte_100: 0.30
+      commercial_real_estate:
+        income_producing_lte_60_ltv: 0.70
+        income_producing_gt_60_lte_80_ltv: 0.90
+        income_producing_gt_80_ltv: 1.10
+        non_income_producing: 1.50
+  irb_approach:
+    permitted: false
+    note: "A-IRB and F-IRB removed for credit risk under US Endgame"
+
+output_floor:
+  enabled: true
+  final_pct: 0.725
+  note: "Dual-stack: binding capital = higher of SA-expanded and SA-erisk"
+  phase_in:
+    "2026-07-01": 0.55
+    "2027-07-01": 0.60
+    "2028-07-01": 0.65
+    "2029-07-01": 0.70
+    "2030-07-01": 0.725
+
+default_definition:
+  dpd_threshold: 90
+  nonaccrual_status: true
+  materiality_threshold_absolute_usd: null  # not explicitly defined
+  materiality_threshold_relative: null
+  charge_off_based: true
+  note: "US uses charge-off and nonaccrual concepts rather than EU-style default"
+
+capital_requirements:
+  minimum_cet1_pct: 0.045
+  minimum_tier1_pct: 0.06
+  minimum_total_capital_pct: 0.08
+  capital_conservation_buffer_pct: 0.025
+  countercyclical_buffer_pct: 0.0  # currently 0%
+  gsib_surcharge_method:
+    method_1: true
+    method_2: true
+    binding: higher_of
+    range:
+      min: 0.01
+      max: 0.045
+  stress_capital_buffer:
+    enabled: true
+    minimum_pct: 0.025
+    replaces: capital_conservation_buffer
+    derived_from: CCAR/DFAST
+
+leverage_ratio:
+  minimum_pct: 0.04  # eSLR for GSIBs
+  supplementary_leverage_ratio: 0.03
+  enhanced_slr_buffer_pct: 0.02
+  total_elsr_pct: 0.05
+
+cva_risk:
+  approaches: [BA-CVA, SA-CVA]
+  note: "US re-proposal may retain simplified BA-CVA"
+
+reporting:
+  frequency: quarterly
+  call_reports: true
+  fr_y14: true  # for CCAR banks
+  currency: USD
+
+operational_risk:
+  approach: Standardised (BIC-based)
+  internal_loss_multiplier: true
+  loss_data_years: 10

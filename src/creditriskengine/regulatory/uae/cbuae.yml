@@ -1,1 +1,113 @@
 # UAE CBUAE - Central Bank of the UAE
+# Basel III implementation under CBUAE Standards
+
+jurisdiction: UAE
+regulator: Central Bank of the UAE (CBUAE)
+framework: Basel III (CBUAE Capital Adequacy Standards)
+effective_date: "2025-01-01"
+document_reference: CBUAE Standards Re Capital Adequacy, revised 2024
+
+credit_risk:
+  approaches_permitted: [SA, FIRB, AIRB]
+  note: "IRB approaches require CBUAE approval; most UAE banks use SA"
+  standardised_approach:
+    risk_weights:
+      sovereigns:
+        aaa_to_aa_minus: 0.0
+        a_plus_to_a_minus: 0.20
+        bbb_plus_to_bbb_minus: 0.50
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+        uae_federal_government_aed: 0.0
+        emirates_government: 0.0
+      banks:
+        grade_a: 0.20
+        grade_b: 0.30
+        grade_c: 0.50
+        grade_d: 1.00
+        grade_e: 1.50
+      corporates:
+        aaa_to_aa_minus: 0.20
+        a_plus_to_a_minus: 0.50
+        bbb_plus_to_bbb_minus: 0.75
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+      retail:
+        regulatory_retail: 0.75
+        residential_mortgage_lte_80: 0.25
+        residential_mortgage_gt_80_lte_90: 0.30
+        residential_mortgage_gt_90_lte_100: 0.40
+      commercial_real_estate:
+        completed_lte_60_ltv: 0.80
+        completed_gt_60_lte_80_ltv: 1.00
+        under_construction: 1.50
+  irb_approach:
+    pd_floor_bps: 3
+    lgd_supervisory:
+      senior_unsecured: 0.45
+      subordinated: 0.75
+      secured_financial_collateral: 0.0
+      secured_receivables: 0.20
+      secured_real_estate: 0.20
+      secured_other_collateral: 0.25
+    maturity_default_years: 2.5
+    maturity_min_years: 1.0
+    maturity_max_years: 5.0
+
+output_floor:
+  enabled: true
+  final_pct: 0.725
+  phase_in_start: "2025-01-01"
+  phase_in:
+    "2025-01-01": 0.50
+    "2026-01-01": 0.55
+    "2027-01-01": 0.60
+    "2028-01-01": 0.65
+    "2029-01-01": 0.70
+    "2030-01-01": 0.725
+
+default_definition:
+  dpd_threshold: 90
+  unlikeliness_to_pay: true
+  materiality_threshold_absolute_aed: 1000
+  materiality_threshold_relative: 0.01
+  cure_period_months: 3
+  cbuae_classification:
+    performing: "Normal and watch list"
+    non_performing:
+      substandard: "DPD 90-180"
+      doubtful: "DPD 180-360"
+      loss: "DPD >360 or irrecoverable"
+
+capital_requirements:
+  minimum_cet1_pct: 0.07
+  minimum_tier1_pct: 0.085
+  minimum_total_capital_pct: 0.105
+  capital_conservation_buffer_pct: 0.025
+  countercyclical_buffer_pct: 0.0
+  dsib_surcharge:
+    enabled: true
+    range:
+      min: 0.005
+      max: 0.015
+  note: "CBUAE sets higher minimum capital requirements than BCBS"
+
+leverage_ratio:
+  minimum_pct: 0.03
+
+cva_risk:
+  approaches: [BA-CVA]
+  exemptions:
+    - sovereigns
+    - central_banks
+
+reporting:
+  frequency: quarterly
+  currency: AED
+  cbuae_returns:
+    - Capital Adequacy Return
+    - Large Exposure Return
+    - Credit Risk Return
+  pillar3_disclosure: semi_annual

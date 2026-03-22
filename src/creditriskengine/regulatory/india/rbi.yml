@@ -1,1 +1,119 @@
 # India RBI - Reserve Bank of India
+# Basel III implementation under RBI master circulars
+
+jurisdiction: India
+regulator: Reserve Bank of India (RBI)
+framework: Basel III (RBI adaptation)
+effective_date: "2025-04-01"
+document_reference: RBI Master Circular on Basel III Capital Regulations
+
+credit_risk:
+  approaches_permitted: [SA, FIRB]
+  note: "A-IRB not permitted by RBI; banks must use SA or F-IRB with approval"
+  standardised_approach:
+    risk_weights:
+      sovereigns:
+        indian_government_inr: 0.0
+        indian_state_government: 0.20
+        aaa_to_aa_minus: 0.0
+        a_plus_to_a_minus: 0.20
+        bbb_plus_to_bbb_minus: 0.50
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+      banks:
+        scheduled_commercial_banks:
+          aaa_to_aa_minus: 0.20
+          a_plus_to_a_minus: 0.30
+          bbb_plus_to_bbb_minus: 0.50
+          bb_plus_to_b_minus: 1.00
+          below_b_minus: 1.50
+          unrated: 0.50
+      corporates:
+        aaa: 0.20
+        aa: 0.30
+        a: 0.50
+        bbb: 1.00
+        below_bbb: 1.50
+        unrated: 1.00
+      retail:
+        regulatory_retail: 0.75
+        residential_mortgage_lte_80: 0.35
+        residential_mortgage_gt_80: 0.50
+        priority_sector_housing:
+          upto_30_lakh_inr: 0.35
+          above_30_lakh_upto_75_lakh_inr: 0.35
+          above_75_lakh_inr: 0.50
+      commercial_real_estate:
+        cre_general: 1.00
+        cre_residential_housing: 0.75
+      nbfc:
+        aaa: 0.20
+        aa: 0.30
+        a: 0.50
+        bbb: 1.00
+        below_bbb: 1.50
+        unrated: 1.00
+  irb_approach:
+    pd_floor_bps: 3
+    lgd_supervisory:
+      senior_unsecured: 0.45
+      subordinated: 0.75
+    maturity_default_years: 2.5
+    note: "Only F-IRB permitted; limited to select large banks with RBI approval"
+
+output_floor:
+  enabled: true
+  final_pct: 0.80
+  note: "RBI has adopted a higher output floor of 80% vs BCBS 72.5%"
+  phase_in:
+    "2025-04-01": 0.55
+    "2026-04-01": 0.60
+    "2027-04-01": 0.65
+    "2028-04-01": 0.70
+    "2029-04-01": 0.75
+    "2030-04-01": 0.80
+
+default_definition:
+  dpd_threshold: 90
+  unlikeliness_to_pay: true
+  materiality_threshold_absolute_inr: 50000  # INR 50,000
+  materiality_threshold_relative: 0.01
+  npa_classification:
+    substandard: "up to 12 months"
+    doubtful: "12 to 36 months"
+    loss: "above 36 months or uncollectable"
+  agricultural_loans_dpd: 90
+  note: "NPA classification aligned at 90 DPD for all loan categories"
+
+capital_requirements:
+  minimum_cet1_pct: 0.055  # RBI higher than BCBS
+  minimum_tier1_pct: 0.07
+  minimum_total_capital_pct: 0.09
+  capital_conservation_buffer_pct: 0.025
+  countercyclical_buffer_pct: 0.0  # currently 0%
+  dsib_surcharge:
+    enabled: true
+    buckets:
+      bucket_1: 0.002
+      bucket_2: 0.004
+      bucket_3: 0.006
+      bucket_4: 0.008
+      bucket_5: 0.01
+
+leverage_ratio:
+  minimum_pct: 0.04
+  note: "RBI requires 4% vs BCBS 3%"
+
+cva_risk:
+  approaches: [BA-CVA]
+  note: "Simplified approach given limited derivatives market depth"
+
+reporting:
+  frequency: quarterly
+  currency: INR
+  fiscal_year_start: "April"
+  rbi_returns:
+    - DSB Return
+    - ALM Returns
+    - Basel III Monitoring

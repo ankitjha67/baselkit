@@ -1,1 +1,137 @@
 # Australia APRA - Australian Prudential Regulation Authority
+# APS 112, APS 113 and related prudential standards
+
+jurisdiction: Australia
+regulator: Australian Prudential Regulation Authority (APRA)
+framework: Basel III Final Reforms (APRA)
+effective_date: "2025-01-01"
+document_reference: APS 112 (Capital Adequacy), APS 113 (Credit Risk), revised 2023
+
+credit_risk:
+  approaches_permitted: [SA, AIRB]
+  note: "APRA does not permit F-IRB; banks use SA or A-IRB"
+  standardised_approach:
+    risk_weights:
+      sovereigns:
+        aaa_to_aa_minus: 0.0
+        a_plus_to_a_minus: 0.20
+        bbb_plus_to_bbb_minus: 0.50
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+        australian_government_aud: 0.0
+        state_territory_government: 0.0
+      banks:
+        grade_a: 0.20
+        grade_b: 0.30
+        grade_c: 0.50
+        grade_d: 1.00
+        grade_e: 1.50
+      corporates:
+        aaa_to_aa_minus: 0.20
+        a_plus_to_a_minus: 0.50
+        bbb_plus_to_bbb_minus: 0.75
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+        sme_retail_treatment_threshold_aud: 1000000
+      retail:
+        regulatory_retail: 0.75
+        residential_mortgage_standard:
+          lte_60_ltv: 0.20
+          gt_60_lte_80_ltv: 0.25
+          gt_80_lte_90_ltv: 0.30
+          gt_90_lte_100_ltv: 0.40
+          gt_100_ltv: 0.70
+        residential_mortgage_interest_only:
+          lte_80_ltv: 0.30
+          gt_80_lte_90_ltv: 0.40
+          gt_90_ltv: 0.70
+  irb_approach:
+    pd_floor_bps: 5
+    lgd_floors:
+      senior_unsecured: 0.25
+      subordinated: 0.50
+    lgd_supervisory:
+      senior_unsecured: 0.45
+      subordinated: 0.75
+      secured_financial_collateral: 0.0
+      secured_receivables: 0.20
+      secured_commercial_real_estate: 0.20
+      secured_residential_real_estate: 0.20
+      secured_other_collateral: 0.25
+    maturity_default_years: 2.5
+    maturity_min_years: 1.0
+    maturity_max_years: 5.0
+    asset_correlation:
+      corporate:
+        rho_min: 0.12
+        rho_max: 0.24
+      retail_mortgage:
+        rho: 0.15
+      retail_revolving:
+        rho: 0.04
+      retail_other:
+        rho_min: 0.03
+        rho_max: 0.16
+    scaling_factor: 1.06
+    apra_specific:
+      downturn_lgd_required: true
+      loss_data_minimum_years: 7
+
+output_floor:
+  enabled: true
+  final_pct: 0.725
+  phase_in_start: "2025-01-01"
+  note: "APRA implemented output floor from 1 January 2023 with full 72.5% immediate"
+  immediate_full_application: true
+  phase_in:
+    "2023-01-01": 0.725
+
+default_definition:
+  dpd_threshold: 90
+  unlikeliness_to_pay: true
+  materiality_threshold_absolute_aud: 1000
+  materiality_threshold_relative: 0.01
+  cure_period_months: 3
+
+capital_requirements:
+  minimum_cet1_pct: 0.045
+  minimum_tier1_pct: 0.06
+  minimum_total_capital_pct: 0.08
+  capital_conservation_buffer_pct: 0.025
+  countercyclical_buffer_pct: 0.01
+  dsib_surcharge:
+    enabled: true
+    range:
+      min: 0.01
+      max: 0.03
+    applicable_banks:
+      - CBA
+      - Westpac
+      - ANZ
+      - NAB
+  apra_unquestionably_strong:
+    cet1_benchmark_pct: 0.105
+    note: "APRA requires ADIs to hold CET1 well above minimums"
+
+leverage_ratio:
+  minimum_pct: 0.035
+  note: "APRA applies 3.5% leverage ratio for IRB ADIs"
+
+cva_risk:
+  approaches: [BA-CVA, SA-CVA]
+  exemptions:
+    - sovereigns
+    - central_banks
+    - multilateral_development_banks
+
+reporting:
+  frequency: quarterly
+  currency: AUD
+  apra_returns:
+    - ARF 110.0
+    - ARF 112.0
+    - ARF 113.0
+    - ARF 115.0
+  pillar3_disclosure: semi_annual

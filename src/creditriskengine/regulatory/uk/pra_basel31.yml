@@ -1,1 +1,135 @@
 # UK PRA - Basel 3.1 Implementation
+# PRA Policy Statement PS17/23 and subsequent updates
+
+jurisdiction: UK
+regulator: Prudential Regulation Authority (PRA)
+framework: Basel 3.1
+effective_date: "2026-01-01"
+document_reference: PRA PS17/23, PS9/24
+
+credit_risk:
+  approaches_permitted: [SA, FIRB, AIRB]
+  standardised_approach:
+    risk_weights:
+      sovereigns:
+        aaa_to_aa_minus: 0.0
+        a_plus_to_a_minus: 0.20
+        bbb_plus_to_bbb_minus: 0.50
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+        uk_sovereign_gbp: 0.0
+      banks:
+        grade_a: 0.20
+        grade_b: 0.30
+        grade_c: 0.50
+        grade_d: 1.00
+        grade_e: 1.50
+      corporates:
+        aaa_to_aa_minus: 0.20
+        a_plus_to_a_minus: 0.50
+        bbb_plus_to_bbb_minus: 0.75
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+      retail:
+        regulatory_retail: 0.75
+        residential_mortgage_lte_80: 0.20
+        residential_mortgage_gt_80_lte_90: 0.25
+        residential_mortgage_gt_90_lte_100: 0.30
+      infrastructure:
+        supporting_factor_eligible: true
+        supporting_factor: 0.75
+  irb_approach:
+    pd_floor_bps: 5
+    lgd_floors:
+      senior_unsecured: 0.25
+      subordinated: 0.50
+    lgd_supervisory:
+      senior_unsecured: 0.45
+      subordinated: 0.75
+      secured_financial_collateral: 0.0
+      secured_receivables: 0.20
+      secured_commercial_real_estate: 0.20
+      secured_residential_real_estate: 0.20
+      secured_other_collateral: 0.25
+    maturity_default_years: 2.5
+    maturity_min_years: 1.0
+    maturity_max_years: 5.0
+    asset_correlation:
+      corporate:
+        rho_min: 0.12
+        rho_max: 0.24
+      retail_mortgage:
+        rho: 0.15
+      retail_revolving:
+        rho: 0.04
+      retail_other:
+        rho_min: 0.03
+        rho_max: 0.16
+    scaling_factor: 1.06
+    airb_restrictions:
+      - financial_institutions
+      - large_corporates
+
+output_floor:
+  enabled: true
+  final_pct: 0.725
+  phase_in_start: "2027-01-01"
+  note: "UK delayed output floor implementation relative to BCBS timeline"
+  phase_in:
+    "2027-01-01": 0.50
+    "2028-01-01": 0.55
+    "2029-01-01": 0.60
+    "2030-01-01": 0.65
+    "2031-01-01": 0.70
+    "2032-01-01": 0.725
+
+default_definition:
+  dpd_threshold: 90
+  unlikeliness_to_pay: true
+  materiality_threshold_absolute_gbp: 100
+  materiality_threshold_relative: 0.01
+  cure_period_months: 3
+  technical_default_exclusion: true
+
+capital_requirements:
+  minimum_cet1_pct: 0.045
+  minimum_tier1_pct: 0.06
+  minimum_total_capital_pct: 0.08
+  capital_conservation_buffer_pct: 0.025
+  countercyclical_buffer:
+    current_rate_pct: 0.02
+    neutral_rate_pct: 0.02
+    max_pct: 0.025
+  gsib_surcharge_range:
+    min: 0.01
+    max: 0.035
+  systemic_risk_buffer:
+    enabled: true
+    ring_fenced_bodies: 0.03
+  pillar2:
+    pillar2a:
+      set_by: PRA
+      methodology: ICAAP review
+    pillar2b:
+      pra_buffer: true
+      stress_test_driven: true
+
+leverage_ratio:
+  minimum_pct: 0.0325
+  countercyclical_leverage_buffer: true
+  gsib_additional_buffer: true
+  central_bank_claims_exclusion: true
+
+cva_risk:
+  approaches: [BA-CVA, SA-CVA]
+  exemptions:
+    - sovereigns
+    - central_banks
+    - multilateral_development_banks
+
+reporting:
+  frequency: quarterly
+  disclosure_pillar3: semi_annual
+  currency: GBP
