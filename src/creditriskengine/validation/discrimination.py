@@ -14,7 +14,7 @@ Regulatory context:
 import logging
 
 import numpy as np
-from scipy import stats  # type: ignore[import-untyped]
+from scipy import stats
 
 logger = logging.getLogger(__name__)
 

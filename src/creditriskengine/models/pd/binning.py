@@ -327,7 +327,7 @@ def optimal_binning(
     Returns:
         BinResult with optimal, monotonic WoE bins.
     """
-    from sklearn.tree import DecisionTreeClassifier  # type: ignore[import-untyped]
+    from sklearn.tree import DecisionTreeClassifier
 
     values = np.asarray(values, dtype=np.float64)
     target = np.asarray(target, dtype=np.int64)
@@ -411,7 +411,7 @@ def apply_woe_transform(
 
 # ── Sklearn-compatible Transformer ────────────────────────────────
 
-from sklearn.base import (  # type: ignore[import-untyped]  # noqa: E402
+from sklearn.base import (  # noqa: E402
     BaseEstimator,
     TransformerMixin,
 )

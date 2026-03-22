@@ -150,7 +150,7 @@ def apply_lgd_floor(
 
 # ── Sklearn-compatible Estimator ──────────────────────────────────
 
-from sklearn.base import BaseEstimator, RegressorMixin  # type: ignore[import-untyped]  # noqa: E402
+from sklearn.base import BaseEstimator, RegressorMixin  # noqa: E402
 
 
 class LGDModel(BaseEstimator, RegressorMixin):  # type: ignore[misc]

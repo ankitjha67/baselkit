@@ -13,7 +13,7 @@ References:
 import logging
 
 import numpy as np
-from sklearn.base import BaseEstimator, RegressorMixin  # type: ignore[import-untyped]
+from sklearn.base import BaseEstimator, RegressorMixin
 
 logger = logging.getLogger(__name__)
 

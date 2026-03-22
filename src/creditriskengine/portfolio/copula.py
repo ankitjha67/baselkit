@@ -8,7 +8,7 @@ loss simulation.
 import logging
 
 import numpy as np
-from scipy.stats import norm  # type: ignore[import-untyped]
+from scipy.stats import norm
 
 logger = logging.getLogger(__name__)
 
