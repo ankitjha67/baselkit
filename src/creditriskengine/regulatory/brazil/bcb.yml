@@ -1,35 +1,143 @@
 # Brazil BCB - Banco Central do Brasil
-jurisdiction: brazil
+# Basel III implementation under BCB Resolution CMN 4.958 and related norms
+
+jurisdiction: Brazil
 regulator: Banco Central do Brasil (BCB)
-framework: Basel III (Resolução CMN 4.958)
-effective_date: "2023-01-01"
+framework: Basel III (BCB Prudential Regulation)
+effective_date: "2025-01-01"
+document_reference: Resolution CMN 4.958, BCB Resolution 265
 
 credit_risk:
   approaches_permitted: [SA, FIRB, AIRB]
-  pd_floor_bps: 3
-  lgd_supervisory:
-    senior_unsecured: 0.45
-    subordinated: 0.75
-  maturity_default_years: 2.5
+  note: "IRB approaches require BCB authorization; large banks may use AIRB"
+  standardised_approach:
+    risk_weights:
+      sovereigns:
+        brazil_federal_government_brl: 0.0
+        aaa_to_aa_minus: 0.0
+        a_plus_to_a_minus: 0.20
+        bbb_plus_to_bbb_minus: 0.50
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+      banks:
+        grade_a: 0.20
+        grade_b: 0.30
+        grade_c: 0.50
+        grade_d: 1.00
+        grade_e: 1.50
+      corporates:
+        aaa_to_aa_minus: 0.20
+        a_plus_to_a_minus: 0.50
+        bbb_plus_to_bbb_minus: 0.75
+        bb_plus_to_b_minus: 1.00
+        below_b_minus: 1.50
+        unrated: 1.00
+      retail:
+        regulatory_retail: 0.75
+        residential_mortgage:
+          sfh_lte_80_ltv: 0.20
+          sfh_gt_80_lte_90_ltv: 0.30
+          sfh_gt_90_ltv: 0.50
+        payroll_deduction_loans: 0.75
+      rural_credit:
+        risk_weight: 0.75
+        note: "Agricultural credit with government guarantee may have lower RW"
+  irb_approach:
+    pd_floor_bps: 3
+    lgd_floors:
+      senior_unsecured: 0.25
+      subordinated: 0.50
+    lgd_supervisory:
+      senior_unsecured: 0.45
+      subordinated: 0.75
+      secured_financial_collateral: 0.0
+      secured_receivables: 0.20
+      secured_real_estate: 0.20
+      secured_other_collateral: 0.25
+    maturity_default_years: 2.5
+    maturity_min_years: 1.0
+    maturity_max_years: 5.0
+    asset_correlation:
+      corporate:
+        rho_min: 0.12
+        rho_max: 0.24
+      retail_mortgage:
+        rho: 0.15
+      retail_revolving:
+        rho: 0.04
+    scaling_factor: 1.06
 
 output_floor:
   enabled: true
   final_pct: 0.725
-  phase_in_start: "2023-01-01"
+  phase_in_start: "2025-01-01"
+  phase_in:
+    "2025-01-01": 0.50
+    "2026-01-01": 0.55
+    "2027-01-01": 0.60
+    "2028-01-01": 0.65
+    "2029-01-01": 0.70
+    "2030-01-01": 0.725
 
 default_definition:
   dpd_threshold: 90
+  unlikeliness_to_pay: true
   materiality_threshold_absolute_brl: 100
+  materiality_threshold_relative: 0.01
+  cure_period_months: 3
+  bcb_risk_levels:
+    aa: "Lowest risk"
+    a: "DPD 0-14"
+    b: "DPD 15-30"
+    c: "DPD 31-60"
+    d: "DPD 61-90"
+    e: "DPD 91-120"
+    f: "DPD 121-150"
+    g: "DPD 151-180"
+    h: "DPD >180"
+  provisioning_rules:
+    level_a_pct: 0.005
+    level_b_pct: 0.01
+    level_c_pct: 0.03
+    level_d_pct: 0.10
+    level_e_pct: 0.30
+    level_f_pct: 0.50
+    level_g_pct: 0.70
+    level_h_pct: 1.00
 
 capital_requirements:
   minimum_cet1_pct: 0.045
   minimum_tier1_pct: 0.06
   minimum_total_capital_pct: 0.08
   capital_conservation_buffer_pct: 0.025
+  countercyclical_buffer_pct: 0.0
+  dsib_surcharge:
+    enabled: true
+    range:
+      min: 0.01
+      max: 0.02
+    applicable_banks:
+      - Itau Unibanco
+      - Banco do Brasil
+      - Bradesco
+      - Santander Brasil
+      - Caixa Economica
 
 leverage_ratio:
   minimum_pct: 0.03
 
+cva_risk:
+  approaches: [BA-CVA, SA-CVA]
+  exemptions:
+    - sovereigns
+    - central_banks
+
 reporting:
   frequency: quarterly
   currency: BRL
+  bcb_returns:
+    - DLO - Demonstrativo de Limites Operacionais
+    - SCR - Sistema de Informacoes de Credito
+    - CADOC 2070 Capital Adequacy
+  pillar3_disclosure: semi_annual
