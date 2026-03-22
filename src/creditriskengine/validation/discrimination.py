@@ -41,11 +41,11 @@ def auroc(y_true: np.ndarray, y_score: np.ndarray) -> float:
     if n_pos == 0 or n_neg == 0:
         return 0.5
 
-    # Sort by score descending
-    order = np.argsort(-y_score)
+    # Sort by score ascending
+    order = np.argsort(y_score)
     y_sorted = y_true[order]
 
-    # Mann-Whitney U
+    # Mann-Whitney U: for each positive, count negatives ranked below it
     cum_neg = np.cumsum(1 - y_sorted)
     auc = float(np.sum(cum_neg[y_sorted == 1])) / (n_pos * n_neg)
     return auc

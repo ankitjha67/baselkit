@@ -76,8 +76,9 @@ class TestMaturityAdjustment:
     """BCBS CRE31.7."""
 
     def test_at_2_5_years(self):
+        # At M=2.5: numerator = 1, MA = 1 / (1 - 1.5*b) > 1
         ma = maturity_adjustment(0.01, 2.5)
-        assert ma == pytest.approx(1.0, abs=1e-6)
+        assert ma > 1.0
 
     def test_longer_maturity_higher(self):
         ma_short = maturity_adjustment(0.01, 1.0)
