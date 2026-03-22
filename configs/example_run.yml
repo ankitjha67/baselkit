@@ -1,1 +1,55 @@
 # Example run configuration for CreditRiskEngine
+#
+# Defines parameters for a credit risk calculation run.
+
+run:
+  name: "Q1 2026 Credit Risk Run"
+  reporting_date: "2026-03-31"
+  jurisdiction: eu
+  approach: foundation_irb
+
+  # Portfolio input
+  portfolio_file: "configs/example_portfolio.yml"
+
+  # RWA calculation
+  rwa:
+    calculate_sa: true
+    calculate_irb: true
+    apply_output_floor: true
+
+  # ECL calculation
+  ecl:
+    framework: ifrs9
+    scenarios:
+      - name: base
+        weight: 0.50
+        pd_multiplier: 1.0
+        lgd_add_on: 0.0
+      - name: upside
+        weight: 0.20
+        pd_multiplier: 0.8
+        lgd_add_on: -0.02
+      - name: downside
+        weight: 0.25
+        pd_multiplier: 1.5
+        lgd_add_on: 0.05
+      - name: severe_downside
+        weight: 0.05
+        pd_multiplier: 2.5
+        lgd_add_on: 0.10
+
+  # Model validation
+  validation:
+    run_discrimination: true
+    run_calibration: true
+    run_stability: true
+    psi_threshold_yellow: 0.10
+    psi_threshold_red: 0.25
+    gini_threshold_yellow: 0.30
+    gini_threshold_red: 0.15
+
+  # Output
+  output:
+    format: json
+    include_exposure_level: true
+    include_portfolio_summary: true

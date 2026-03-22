@@ -1,1 +1,63 @@
 # Example portfolio configuration for CreditRiskEngine
+#
+# Defines a sample portfolio of credit exposures for RWA and ECL calculation.
+
+portfolio:
+  name: "Sample Corporate Portfolio"
+  jurisdiction: eu
+  approach: foundation_irb
+  reporting_date: "2026-03-31"
+
+exposures:
+  - exposure_id: "EXP001"
+    counterparty_id: "CP001"
+    ead: 5000000.0
+    drawn_amount: 4000000.0
+    undrawn_commitment: 1000000.0
+    sa_exposure_class: corporate
+    irb_asset_class: corporate
+    pd: 0.01
+    lgd: 0.45
+    maturity_years: 3.0
+    credit_quality_step: 3
+    currency: EUR
+
+  - exposure_id: "EXP002"
+    counterparty_id: "CP002"
+    ead: 2000000.0
+    drawn_amount: 2000000.0
+    undrawn_commitment: 0.0
+    sa_exposure_class: corporate_sme
+    irb_asset_class: corporate
+    irb_corporate_subclass: sme_corporate
+    pd: 0.03
+    lgd: 0.45
+    maturity_years: 2.5
+    turnover_eur_millions: 25.0
+    currency: EUR
+
+  - exposure_id: "EXP003"
+    counterparty_id: "CP003"
+    ead: 500000.0
+    drawn_amount: 450000.0
+    undrawn_commitment: 50000.0
+    sa_exposure_class: residential_mortgage
+    irb_asset_class: retail
+    irb_retail_subclass: residential_mortgage
+    pd: 0.005
+    lgd: 0.15
+    ltv_ratio: 0.65
+    property_value: 750000.0
+    currency: EUR
+
+  - exposure_id: "EXP004"
+    counterparty_id: "CP004"
+    ead: 100000.0
+    drawn_amount: 80000.0
+    undrawn_commitment: 20000.0
+    sa_exposure_class: retail
+    irb_asset_class: retail
+    irb_retail_subclass: qualifying_revolving_retail
+    pd: 0.02
+    lgd: 0.80
+    currency: EUR

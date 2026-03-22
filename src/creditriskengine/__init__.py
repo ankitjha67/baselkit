@@ -12,3 +12,31 @@ Modules:
 """
 
 __version__ = "0.1.0"
+
+# Public API — convenient top-level imports
+from creditriskengine.core.exposure import Collateral, Exposure
+from creditriskengine.core.portfolio import Portfolio
+from creditriskengine.core.types import (
+    CollateralType,
+    CreditQualityStep,
+    CreditRiskApproach,
+    IFRS9Stage,
+    IRBAssetClass,
+    IRBRetailSubClass,
+    Jurisdiction,
+    SAExposureClass,
+)
+
+__all__ = [
+    "Collateral",
+    "CollateralType",
+    "CreditQualityStep",
+    "CreditRiskApproach",
+    "Exposure",
+    "IFRS9Stage",
+    "IRBAssetClass",
+    "IRBRetailSubClass",
+    "Jurisdiction",
+    "Portfolio",
+    "SAExposureClass",
+]
