@@ -105,5 +105,13 @@ class Exposure(BaseModel):
     @field_validator("pd")
     @classmethod
     def pd_floor_check(cls, v: float | None) -> float | None:
-        """Basel III PD floor is 0.03% (3 bps) for non-defaulted per CRE32.13."""
+        """Validate PD is between 0 and 1 (inclusive).
+
+        Note: The Basel III PD floor of 0.03% (CRE32.13) is enforced at the
+        IRB calculation level (``rwa.irb.formulas``), not at the data model
+        level, because SA and ECL workflows accept PDs below the IRB floor.
+        """
+        if v is not None and not 0 <= v <= 1:
+            msg = f"PD must be between 0 and 1, got {v}"
+            raise ValueError(msg)
         return v

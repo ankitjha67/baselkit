@@ -1,7 +1,8 @@
-"""Tests for core data models — Exposure and Portfolio."""
+"""Tests for core data models — Exposure, Portfolio, and config loader."""
 
 import pytest
 
+from creditriskengine.core.config import load_jurisdiction_config
 from creditriskengine.core.exposure import Collateral, Exposure
 from creditriskengine.core.portfolio import Portfolio
 from creditriskengine.core.types import (
@@ -37,7 +38,7 @@ class TestExposure:
         )
         assert e.pd == 0.02
 
-    def test_pd_rejects_invalid(self):
+    def test_pd_rejects_above_one(self):
         with pytest.raises(Exception):
             Exposure(
                 exposure_id="E001",
@@ -47,6 +48,18 @@ class TestExposure:
                 jurisdiction=Jurisdiction.EU,
                 approach=CreditRiskApproach.FIRB,
                 pd=1.5,
+            )
+
+    def test_pd_rejects_negative(self):
+        with pytest.raises(Exception):
+            Exposure(
+                exposure_id="E001",
+                counterparty_id="C001",
+                ead=100.0,
+                drawn_amount=100.0,
+                jurisdiction=Jurisdiction.EU,
+                approach=CreditRiskApproach.FIRB,
+                pd=-0.01,
             )
 
     def test_ead_non_negative(self):
@@ -112,3 +125,19 @@ class TestPortfolio:
         p.add_exposure(self._make_exposure("E1", 100.0))
         result = p.filter_by_approach(CreditRiskApproach.SA)
         assert len(result) == 1
+
+
+class TestCoreConfigDelegation:
+    """Verify core.config delegates to regulatory.loader correctly."""
+
+    def test_load_jurisdiction_config_returns_dict(self):
+        config = load_jurisdiction_config(Jurisdiction.EU)
+        assert isinstance(config, dict)
+        assert "regulator" in config or "jurisdiction" in config
+
+    def test_load_jurisdiction_config_matches_loader(self):
+        from creditriskengine.regulatory.loader import load_config
+
+        config_via_core = load_jurisdiction_config(Jurisdiction.UK)
+        config_via_loader = load_config(Jurisdiction.UK)
+        assert config_via_core == config_via_loader
