@@ -130,6 +130,27 @@ class TestPDBacktestFull:
         result = pd_backtest_full(pds, defaults, grades, confidence=0.95)
         assert isinstance(result, FullBacktestResult)
 
+    def test_overall_assessment_yellow(self) -> None:
+        """Line 182: yellow zone assessment when n_yellow > 0 but n_red == 0."""
+        from scipy import stats
+
+        # Single grade with defaults in the yellow zone of the traffic light
+        n = 200
+        pd_val = 0.02
+        p_95 = int(stats.binom.ppf(0.95, n, pd_val))
+        p_9999 = int(stats.binom.ppf(0.9999, n, pd_val))
+        n_def = p_95 + 1  # just above green threshold
+        assert n_def <= p_9999, "Sanity: must be in yellow zone"
+
+        pds = np.full(n, pd_val)
+        defaults = np.zeros(n, dtype=int)
+        defaults[:n_def] = 1
+        grades = np.full(n, "A")
+        result = pd_backtest_full(pds, defaults, grades)
+        assert result.overall_traffic_light == "yellow"
+        assert "WARNING" in result.overall_assessment
+        assert "yellow zone" in result.overall_assessment
+
 
 class TestMultiPeriodBacktest:
     """Test time-series backtesting across vintages."""
@@ -219,3 +240,41 @@ class TestMultiPeriodBacktest:
         periods = np.concatenate(per_list)
         result = multi_period_backtest(pds, defaults, periods)
         assert isinstance(result, MultiPeriodBacktestResult)
+
+    def test_yellow_zone_multi_period(self) -> None:
+        """Line 319: n_yellow >= n_periods // 2 and n_red <= 1 triggers yellow assessment."""
+        from scipy import stats
+
+        # We need 4 periods: >=2 yellow, 0 red.
+        # Yellow means n_defaults > binom.ppf(0.95) but <= binom.ppf(0.9999).
+        n_per = 200
+        pd_val = 0.02
+        p_95 = int(stats.binom.ppf(0.95, n_per, pd_val))
+        p_9999 = int(stats.binom.ppf(0.9999, n_per, pd_val))
+        # Pick a default count in the yellow zone
+        n_def_yellow = p_95 + 1
+        assert n_def_yellow <= p_9999, "Sanity: must be in yellow zone"
+
+        pds_list = []
+        def_list = []
+        per_list = []
+        # 3 yellow periods + 1 green period -> n_yellow=3 >= 4//2=2, n_red=0
+        for i in range(3):
+            pds_list.append(np.full(n_per, pd_val))
+            d = np.zeros(n_per, dtype=int)
+            d[:n_def_yellow] = 1
+            def_list.append(d)
+            per_list.append(np.full(n_per, f"Q{i + 1}"))
+        # One green period (no defaults)
+        pds_list.append(np.full(n_per, pd_val))
+        def_list.append(np.zeros(n_per, dtype=int))
+        per_list.append(np.full(n_per, "Q4"))
+
+        pds = np.concatenate(pds_list)
+        defaults = np.concatenate(def_list)
+        periods = np.concatenate(per_list)
+        result = multi_period_backtest(pds, defaults, periods)
+        assert result.n_red == 0
+        assert result.n_yellow >= result.n_periods // 2
+        assert "WARNING" in result.overall_assessment
+        assert "yellow zone" in result.overall_assessment

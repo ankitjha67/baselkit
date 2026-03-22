@@ -1,14 +1,19 @@
 """Tests for model validation discrimination metrics."""
 
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 
 from creditriskengine.validation.discrimination import (
+    accuracy_ratio,
     auroc,
+    cap_curve,
     divergence,
     gini_coefficient,
     information_value,
     ks_statistic,
+    somers_d,
 )
 
 
@@ -76,6 +81,12 @@ class TestDivergence:
         y_score = np.array([0.9, 0.8, 0.7, 0.3, 0.2, 0.1])
         assert divergence(y_true, y_score) > 0.0
 
+    def test_insufficient_samples_returns_zero(self) -> None:
+        # Only one default observation (len(defaults) < 2)
+        y_true = np.array([1, 0, 0, 0])
+        y_score = np.array([0.9, 0.3, 0.2, 0.1])
+        assert divergence(y_true, y_score) == 0.0
+
 
 class TestInformationValue:
     def test_no_signal(self) -> None:
@@ -87,3 +98,46 @@ class TestInformationValue:
 
     def test_no_defaults_returns_zero(self) -> None:
         assert information_value(np.random.rand(100), np.zeros(100)) == 0.0
+
+    def test_exception_in_binning_returns_zero(self) -> None:
+        feature = np.array([1.0, 2.0, 3.0, 4.0])
+        target = np.array([0, 1, 0, 1])
+        with patch("numpy.percentile", side_effect=ValueError("bad bins")):
+            iv = information_value(feature, target, bins=10)
+        assert iv == 0.0
+
+
+class TestCapCurve:
+    def test_basic(self) -> None:
+        y_true = np.array([1, 1, 0, 0])
+        y_score = np.array([0.9, 0.8, 0.2, 0.1])
+        frac_pop, frac_def = cap_curve(y_true, y_score)
+        assert len(frac_pop) == 4
+        assert len(frac_def) == 4
+        assert frac_pop[-1] == pytest.approx(1.0)
+        assert frac_def[-1] == pytest.approx(1.0)
+
+    def test_no_defaults(self) -> None:
+        y_true = np.array([0, 0, 0])
+        y_score = np.array([0.5, 0.3, 0.1])
+        frac_pop, frac_def = cap_curve(y_true, y_score)
+        # n_defaults == 0, so frac_defaults = cum_defaults (no division)
+        assert frac_pop[-1] == pytest.approx(1.0)
+
+
+class TestAccuracyRatio:
+    def test_equals_gini(self) -> None:
+        y_true = np.array([1, 1, 0, 0])
+        y_score = np.array([0.9, 0.8, 0.2, 0.1])
+        ar = accuracy_ratio(y_true, y_score)
+        gini = gini_coefficient(y_true, y_score)
+        assert ar == pytest.approx(gini)
+
+
+class TestSomersD:
+    def test_equals_gini(self) -> None:
+        y_true = np.array([1, 1, 0, 0])
+        y_score = np.array([0.9, 0.8, 0.2, 0.1])
+        sd = somers_d(y_true, y_score)
+        gini = gini_coefficient(y_true, y_score)
+        assert sd == pytest.approx(gini)

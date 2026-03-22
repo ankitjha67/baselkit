@@ -128,6 +128,32 @@ class TestPortfolio:
         assert len(result) == 1
 
 
+class TestExposurePDValidation:
+    """Cover lines 115-116: PD validator raises ValueError for out-of-range PD."""
+
+    def test_pd_out_of_range_message(self) -> None:
+        """Trigger the explicit ValueError message branch (lines 115-116)."""
+        from creditriskengine.core.exposure import Exposure
+
+        # Call the validator method directly to bypass Pydantic field constraints
+        with pytest.raises(ValueError, match="PD must be between 0 and 1"):
+            Exposure.pd_floor_check(2.0)
+
+    def test_pd_negative_out_of_range(self) -> None:
+        with pytest.raises(ValueError, match="PD must be between 0 and 1"):
+            Exposure.pd_floor_check(-0.5)
+
+    def test_pd_validator_directly_above_one(self) -> None:
+        """Ensure lines 115-116 are reached by calling validator directly."""
+        with pytest.raises(ValueError, match="PD must be between 0 and 1, got 1.1"):
+            Exposure.pd_floor_check(1.1)
+
+    def test_pd_validator_directly_below_zero(self) -> None:
+        """Ensure lines 115-116 are reached by calling validator directly."""
+        with pytest.raises(ValueError, match="PD must be between 0 and 1, got -0.01"):
+            Exposure.pd_floor_check(-0.01)
+
+
 class TestCoreConfigDelegation:
     """Verify core.config delegates to regulatory.loader correctly."""
 

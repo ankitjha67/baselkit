@@ -206,3 +206,26 @@ class TestRegulatoryBenchmarkCheck:
         mr = result.metric_results[0]
         assert "description" in mr
         assert "reference" in mr
+
+    def test_metric_with_both_min_and_max(self) -> None:
+        """Line 274: threshold_desc += ', ' when a metric has both min and max."""
+        metrics = {"custom_bounded": 0.50}
+        custom = {
+            "custom_bounded": {
+                "min": 0.20, "max": 0.80,
+                "description": "test", "reference": "test",
+            },
+        }
+        result = regulatory_benchmark_check(metrics, custom_thresholds=custom)
+        assert result.overall_pass is True
+        mr = result.metric_results[0]
+        assert "min=0.2" in mr["threshold"]
+        assert "max=0.8" in mr["threshold"]
+        assert ", " in mr["threshold"]
+
+    def test_metric_with_both_min_and_max_fail(self) -> None:
+        """Both min and max present, value violates max."""
+        metrics = {"custom_bounded": 0.90}
+        custom = {"custom_bounded": {"min": 0.20, "max": 0.80}}
+        result = regulatory_benchmark_check(metrics, custom_thresholds=custom)
+        assert result.overall_pass is False

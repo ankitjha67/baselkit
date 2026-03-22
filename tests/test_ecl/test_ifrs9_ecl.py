@@ -27,6 +27,18 @@ class TestDiscountFactors:
         assert all(dfs[i] > dfs[i + 1] for i in range(len(dfs) - 1))
 
 
+class TestDiscountFactorsEdgeCases:
+    """Cover line 38: EIR <= -1 raises ValueError."""
+
+    def test_eir_invalid_raises(self) -> None:
+        with pytest.raises(ValueError, match="EIR must be greater than -1"):
+            discount_factors(-1.0, 3)
+
+    def test_eir_below_minus_one_raises(self) -> None:
+        with pytest.raises(ValueError, match="EIR must be greater than -1"):
+            discount_factors(-2.0, 5)
+
+
 class TestECL12Month:
     def test_basic(self) -> None:
         ecl = ecl_12_month(pd_12m=0.02, lgd=0.45, ead=1000.0)

@@ -113,6 +113,18 @@ class TestIRBCapitalRequirement:
         # K should be roughly in the range 3-8% for typical corporate
         assert 0.03 < k < 0.10
 
+    def test_invalid_correlation_zero_raises(self) -> None:
+        with pytest.raises(ValueError, match="Correlation must be in \\(0, 1\\)"):
+            irb_capital_requirement_k(0.01, 0.45, 0.0)
+
+    def test_invalid_correlation_one_raises(self) -> None:
+        with pytest.raises(ValueError, match="Correlation must be in \\(0, 1\\)"):
+            irb_capital_requirement_k(0.01, 0.45, 1.0)
+
+    def test_invalid_correlation_negative_raises(self) -> None:
+        with pytest.raises(ValueError, match="Correlation must be in \\(0, 1\\)"):
+            irb_capital_requirement_k(0.01, 0.45, -0.1)
+
 
 class TestIRBRiskWeight:
     """Full IRB risk weight calculation."""
@@ -146,6 +158,10 @@ class TestIRBRiskWeight:
             pd=0.02, lgd=0.80, asset_class="qrre", is_qrre_transactor=True
         )
         assert rw_trans == pytest.approx(rw, rel=1e-6)
+
+    def test_other_retail(self) -> None:
+        rw = irb_risk_weight(pd=0.02, lgd=0.50, asset_class="other_retail")
+        assert rw > 0.0
 
     def test_defaulted_returns_zero(self) -> None:
         assert irb_risk_weight(pd=1.0, lgd=0.45, asset_class="corporate") == 0.0

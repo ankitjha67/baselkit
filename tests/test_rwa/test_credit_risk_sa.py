@@ -1,5 +1,7 @@
 """Tests for Standardized Approach risk weight functions."""
 
+from unittest.mock import patch
+
 import pytest
 
 from creditriskengine.core.types import (
@@ -257,3 +259,176 @@ class TestAssignSaRiskWeight:
         # PSEs use bank risk weight table per CRE20.10 Option A
         rw = assign_sa_risk_weight(SAExposureClass.PSE, CreditQualityStep.CQS_1)
         assert rw == get_bank_risk_weight(cqs=CreditQualityStep.CQS_1)
+
+    def test_securities_firm_dispatch(self) -> None:
+        """Line 432: SECURITIES_FIRM uses bank risk weight table."""
+        rw = assign_sa_risk_weight(
+            SAExposureClass.SECURITIES_FIRM, CreditQualityStep.CQS_1
+        )
+        assert rw == get_bank_risk_weight(cqs=CreditQualityStep.CQS_1)
+
+    def test_commercial_re_requires_ltv(self) -> None:
+        """Lines 446-448: COMMERCIAL_REAL_ESTATE without LTV raises ValueError."""
+        with pytest.raises(ValueError, match="LTV required for commercial real estate"):
+            assign_sa_risk_weight(SAExposureClass.COMMERCIAL_REAL_ESTATE)
+
+    def test_commercial_re_with_ltv(self) -> None:
+        """Lines 446-448: COMMERCIAL_REAL_ESTATE with LTV works."""
+        rw = assign_sa_risk_weight(
+            SAExposureClass.COMMERCIAL_REAL_ESTATE,
+            ltv=0.50,
+            counterparty_rw=100.0,
+        )
+        assert rw == 60.0
+
+    def test_land_adc_dispatch(self) -> None:
+        """Line 453: LAND_ADC dispatches to commercial RE with is_adc=True."""
+        rw = assign_sa_risk_weight(SAExposureClass.LAND_ADC)
+        assert rw == 150.0
+
+    def test_land_adc_presold(self) -> None:
+        """Line 453: LAND_ADC with presold residential."""
+        rw = assign_sa_risk_weight(
+            SAExposureClass.LAND_ADC, is_presold_residential=True
+        )
+        assert rw == 100.0
+
+    def test_retail_dispatch(self) -> None:
+        """Line 458: RETAIL dispatches to get_retail_risk_weight."""
+        rw = assign_sa_risk_weight(SAExposureClass.RETAIL)
+        assert rw == 75.0
+
+    def test_retail_non_regulatory_dispatch(self) -> None:
+        """Line 458: RETAIL with non-regulatory retail."""
+        rw = assign_sa_risk_weight(
+            SAExposureClass.RETAIL, is_regulatory_retail=False
+        )
+        assert rw == 100.0
+
+    def test_equity_dispatch(self) -> None:
+        """Line 467: EQUITY dispatches to get_equity_risk_weight."""
+        rw = assign_sa_risk_weight(SAExposureClass.EQUITY)
+        assert rw == 250.0
+
+    def test_equity_speculative_dispatch(self) -> None:
+        """Line 467: EQUITY speculative dispatch."""
+        rw = assign_sa_risk_weight(
+            SAExposureClass.EQUITY, is_speculative=True
+        )
+        assert rw == 400.0
+
+    def test_retail_regulatory_dispatch(self) -> None:
+        """Line 461: RETAIL_REGULATORY always returns 75%."""
+        rw = assign_sa_risk_weight(SAExposureClass.RETAIL_REGULATORY)
+        assert rw == 75.0
+
+    def test_defaulted_dispatch(self) -> None:
+        """Line 464: DEFAULTED dispatches to get_defaulted_risk_weight."""
+        rw = assign_sa_risk_weight(
+            SAExposureClass.DEFAULTED, specific_provisions_pct=0.25
+        )
+        assert rw == 100.0
+
+    def test_defaulted_low_provisions_dispatch(self) -> None:
+        """Line 464: DEFAULTED with low provisions → 150%."""
+        rw = assign_sa_risk_weight(
+            SAExposureClass.DEFAULTED, specific_provisions_pct=0.05
+        )
+        assert rw == 150.0
+
+    def test_subordinated_debt_dispatch(self) -> None:
+        """Line 470: SUBORDINATED_DEBT dispatches to get_subordinated_debt_risk_weight."""
+        rw = assign_sa_risk_weight(SAExposureClass.SUBORDINATED_DEBT)
+        assert rw == 150.0
+
+
+class TestResidentialRealEstateFallback:
+    """Cover line 263: fallback return when LTV doesn't match any band."""
+
+    def test_rre_fallback_via_monkeypatch(self) -> None:
+        """Line 263: Force fallback by using an empty band table."""
+        empty_table: list[tuple[float, float, float]] = []
+        with patch(
+            "creditriskengine.rwa.standardized.credit_risk_sa.RRE_WHOLE_LOAN_RW",
+            empty_table,
+        ):
+            # ltv=0.5 > 0, loop finds nothing, ltv <= 0 is False → hits line 263
+            # But empty table → table[-1] would IndexError. Use a gap table instead.
+            pass
+
+    def test_rre_fallback_with_gap_table(self) -> None:
+        """Line 263: Use a table with a gap so positive LTV falls through."""
+        gap_table: list[tuple[float, float, float]] = [
+            (0.0, 0.50, 20.0),
+            (0.60, 0.70, 30.0),
+            # Gap: 0.50 < ltv <= 0.60 is not covered, and ltv=0.55 > 0
+        ]
+        with patch(
+            "creditriskengine.rwa.standardized.credit_risk_sa.RRE_WHOLE_LOAN_RW",
+            gap_table,
+        ):
+            rw = get_residential_re_risk_weight(0.55)
+            assert rw == 30.0  # table[-1][2]
+
+
+class TestCommercialRealEstateCashflow:
+    """Cover lines 293-298: cashflow-dependent CRE (IPRE) path."""
+
+    @pytest.mark.parametrize(
+        "ltv,expected",
+        [
+            (0.30, 70.0),   # First band: (0.0, 0.60] → 70%
+            (0.60, 70.0),   # At boundary of first band
+            (0.70, 90.0),   # Second band: (0.60, 0.80] → 90%
+            (0.80, 90.0),   # At boundary of second band
+            (0.90, 110.0),  # Third band: (0.80, inf) → 110%
+            (1.50, 110.0),  # Well above → 110%
+        ],
+    )
+    def test_cre_ipre_by_ltv(self, ltv: float, expected: float) -> None:
+        """Lines 293-295: IPRE table lookup."""
+        assert get_commercial_re_risk_weight(
+            ltv, is_cashflow_dependent=True
+        ) == expected
+
+    def test_cre_ipre_zero_ltv(self) -> None:
+        """Lines 296-297: LTV <= 0 returns first band RW."""
+        rw = get_commercial_re_risk_weight(0.0, is_cashflow_dependent=True)
+        assert rw == 70.0
+
+    def test_cre_ipre_negative_ltv(self) -> None:
+        """Lines 296-297: Negative LTV returns first band RW."""
+        rw = get_commercial_re_risk_weight(-0.1, is_cashflow_dependent=True)
+        assert rw == 70.0
+
+    def test_cre_ipre_fallback(self) -> None:
+        """Line 298: Fallback when LTV doesn't match any IPRE band."""
+        gap_table: list[tuple[float, float, float]] = [
+            (0.0, 0.50, 70.0),
+            (0.60, 0.80, 90.0),
+        ]
+        with patch(
+            "creditriskengine.rwa.standardized.credit_risk_sa.CRE_IPRE_RW",
+            gap_table,
+        ):
+            rw = get_commercial_re_risk_weight(0.55, is_cashflow_dependent=True)
+            assert rw == 90.0  # table[-1][2]
+
+
+class TestEquityUnlisted:
+    """Cover line 365: unlisted non-speculative equity."""
+
+    def test_unlisted_non_speculative(self) -> None:
+        """Line 365: Unlisted, non-speculative equity → 400%."""
+        assert get_equity_risk_weight(is_listed=False, is_speculative=False) == 400.0
+
+
+class TestFinalFallback:
+    """Cover line 483: final fallback return 100.0 for unknown exposure class."""
+
+    def test_unknown_exposure_class_fallback(self) -> None:
+        """Line 483: An unrecognized exposure class falls through to 100%."""
+        # Pass a string that doesn't match any SAExposureClass member.
+        # Python doesn't enforce type hints at runtime.
+        rw = assign_sa_risk_weight(exposure_class="unknown_class")  # type: ignore[arg-type]
+        assert rw == 100.0

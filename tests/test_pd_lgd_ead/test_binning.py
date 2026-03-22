@@ -113,6 +113,103 @@ class TestOptimalBinning:
         # Allow small tolerance due to binning mechanics
         assert min_pct >= 0.05
 
+    def test_optimal_binning_few_unique_values(self) -> None:
+        """Cover lines 364-365: break when len(woe) <= 2 in optimal_binning."""
+        values = np.array([0.0, 0.0, 1.0, 1.0, 0.0, 1.0], dtype=np.float64)
+        target = np.array([0, 1, 1, 0, 0, 1], dtype=np.int64)
+        result = optimal_binning(values, target, max_bins=2)
+        assert isinstance(result, BinResult)
+
+    def test_optimal_binning_two_bins_woe_break(self) -> None:
+        """Cover line 365: len(woe) <= 2 break in optimal_binning monotonicity loop."""
+        # Binary feature with very few values forces tree to produce <= 2 bins
+        values = np.array([0.0] * 50 + [1.0] * 50, dtype=np.float64)
+        target = np.array([0] * 40 + [1] * 10 + [1] * 30 + [0] * 20, dtype=np.int64)
+        result = optimal_binning(values, target, max_bins=2)
+        assert isinstance(result, BinResult)
+        assert len(result.woe_values) <= 2
+
+    def test_optimal_binning_non_monotonic_data(self) -> None:
+        """Cover lines 370-374, 379-382: violation detection and merging in optimal_binning."""
+        rng = np.random.default_rng(77)
+        n = 500
+        # Create non-monotonic relationship
+        values = np.concatenate([
+            rng.normal(-2, 0.5, n // 3),
+            rng.normal(0, 0.5, n // 3),
+            rng.normal(2, 0.5, n - 2 * (n // 3)),
+        ])
+        target = np.concatenate([
+            (rng.random(n // 3) < 0.3).astype(np.int64),
+            (rng.random(n // 3) < 0.05).astype(np.int64),
+            (rng.random(n - 2 * (n // 3)) < 0.4).astype(np.int64),
+        ])
+        result = optimal_binning(values, target, max_bins=10)
+        assert isinstance(result, BinResult)
+
+    def test_optimal_binning_decreasing_correlation(self) -> None:
+        """Cover line 373-374: decreasing direction violation detection."""
+        rng = np.random.default_rng(55)
+        n = 500
+        values = rng.normal(0, 1, n)
+        # Negative correlation: higher values -> lower default
+        prob = 1 / (1 + np.exp(0.8 * values))
+        target = (rng.random(n) < prob).astype(np.int64)
+        result = optimal_binning(values, target, max_bins=8)
+        assert isinstance(result, BinResult)
+
+    def test_optimal_binning_violation_at_last_edge(self) -> None:
+        """Cover lines 379-382: merge_edge_pos when violation_idx is at the last bin."""
+        rng = np.random.default_rng(123)
+        n = 600
+        # Create strongly non-monotonic data with violation likely at last bin
+        values = np.concatenate([
+            rng.normal(-3, 0.3, n // 3),
+            rng.normal(0, 0.3, n // 3),
+            rng.normal(3, 0.3, n - 2 * (n // 3)),
+        ])
+        target = np.concatenate([
+            (rng.random(n // 3) < 0.2).astype(np.int64),
+            (rng.random(n // 3) < 0.05).astype(np.int64),
+            (rng.random(n - 2 * (n // 3)) < 0.5).astype(np.int64),
+        ])
+        result = optimal_binning(values, target, max_bins=10)
+        assert isinstance(result, BinResult)
+
+    def test_optimal_binning_merges_down_to_two(self) -> None:
+        """Cover line 365: len(woe) <= 2 break after repeated merging in optimal_binning."""
+        # U-shaped default rate forces continuous merging until 2 bins
+        n = 400
+        values = np.concatenate([
+            np.full(n // 4, -3.0),
+            np.full(n // 4, -1.0),
+            np.full(n // 4, 1.0),
+            np.full(n // 4, 3.0),
+        ])
+        target = np.concatenate([
+            np.ones(n // 4, dtype=np.int64),
+            np.zeros(n // 4, dtype=np.int64),
+            np.zeros(n // 4, dtype=np.int64),
+            np.ones(n // 4, dtype=np.int64),
+        ])
+        result = optimal_binning(values, target, max_bins=10)
+        assert isinstance(result, BinResult)
+
+    def test_optimal_binning_last_bin_violation(self) -> None:
+        """Cover line 379-382: violation at the last bin in optimal_binning."""
+        # 3 clusters: increasing default for first 2, then drop at last -> violation at end
+        values = np.array(
+            [1.0] * 100 + [2.0] * 100 + [3.0] * 100, dtype=np.float64
+        )
+        target = np.array(
+            [0] * 90 + [1] * 10
+            + [0] * 70 + [1] * 30
+            + [0] * 95 + [1] * 5,
+            dtype=np.int64,
+        )
+        result = optimal_binning(values, target, max_bins=5)
+        assert isinstance(result, BinResult)
+
 
 class TestEqualWidthBinning:
     """Test equal-width binning."""
@@ -155,6 +252,124 @@ class TestMonotonicBinningExtended:
         values, target = binary_data
         result = monotonic_binning(values, target, feature_name="my_feature")
         assert result.feature_name == "my_feature"
+
+    def test_few_unique_values_breaks_early(self) -> None:
+        """Cover line 277: break when len(woe) <= 2."""
+        # Only 2 unique values -> at most 2 bins -> breaks immediately
+        values = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0], dtype=np.float64)
+        target = np.array([0, 0, 1, 1, 1, 0], dtype=np.int64)
+        result = monotonic_binning(values, target, n_bins=2, increasing=True)
+        assert isinstance(result, BinResult)
+        assert len(result.woe_values) <= 2
+
+    def test_few_unique_values_decreasing(self) -> None:
+        """Cover line 277: break when len(woe) <= 2 with decreasing direction."""
+        values = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0], dtype=np.float64)
+        target = np.array([1, 1, 0, 0, 0, 1], dtype=np.int64)
+        result = monotonic_binning(values, target, n_bins=2, increasing=False)
+        assert isinstance(result, BinResult)
+        assert len(result.woe_values) <= 2
+
+    def test_violation_at_last_bin_merges_previous(self) -> None:
+        """Cover line 298: violation at last index merges with previous."""
+        # Create data with deliberate non-monotonic WoE at the end
+        rng = np.random.default_rng(99)
+        n = 300
+        values = np.concatenate([
+            rng.normal(-2, 0.3, n // 3),
+            rng.normal(0, 0.3, n // 3),
+            rng.normal(2, 0.3, n // 3),
+        ])
+        # Non-monotonic target: high default rate at ends, low in middle
+        target = np.concatenate([
+            (rng.random(n // 3) < 0.3).astype(np.int64),
+            (rng.random(n // 3) < 0.05).astype(np.int64),
+            (rng.random(n // 3) < 0.4).astype(np.int64),
+        ])
+        result = monotonic_binning(values, target, n_bins=10, increasing=True)
+        assert isinstance(result, BinResult)
+        # The result should be monotonic after merging
+        diffs = np.diff(result.woe_values)
+        assert np.all(diffs >= -1e-10)
+
+    def test_violation_at_last_bin_decreasing(self) -> None:
+        """Cover line 298: merge_edge_pos = violation_idx - 1 when violation is at last bin."""
+        # Create data where violation happens at the very last bin for decreasing WoE.
+        # Use 3 distinct clusters with WoE that violates decreasing pattern at the end.
+        rng = np.random.default_rng(77)
+        n = 600
+        values = np.concatenate([
+            rng.normal(-3, 0.2, n // 3),
+            rng.normal(0, 0.2, n // 3),
+            rng.normal(3, 0.2, n - 2 * (n // 3)),
+        ])
+        # For decreasing: high default at low values, low at mid, but high again at end (violation)
+        target = np.concatenate([
+            (rng.random(n // 3) < 0.5).astype(np.int64),
+            (rng.random(n // 3) < 0.1).astype(np.int64),
+            (rng.random(n - 2 * (n // 3)) < 0.6).astype(np.int64),
+        ])
+        result = monotonic_binning(values, target, n_bins=10, increasing=False)
+        assert isinstance(result, BinResult)
+        diffs = np.diff(result.woe_values)
+        assert np.all(diffs <= 1e-10)
+
+    def test_monotonic_merges_down_to_two_bins(self) -> None:
+        """Cover line 277: merging keeps going until only 2 bins remain.
+
+        Use heavily non-monotonic data with many unique values so the
+        merging loop doesn't stop early at 'violation_idx == -1' but
+        instead keeps merging until len(woe) <= 2.
+        """
+        # 4 distinct clusters with U-shaped default rate -> forces increasing
+        # direction to keep merging
+        rng = np.random.default_rng(321)
+        n = 400
+        values = np.concatenate([
+            rng.normal(-3, 0.1, n // 4),
+            rng.normal(-1, 0.1, n // 4),
+            rng.normal(1, 0.1, n // 4),
+            rng.normal(3, 0.1, n // 4),
+        ])
+        # U-shaped: high default at extremes, low in middle -> always violates
+        target = np.concatenate([
+            np.ones(n // 4, dtype=np.int64),       # 100% default
+            np.zeros(n // 4, dtype=np.int64),       # 0% default
+            np.zeros(n // 4, dtype=np.int64),       # 0% default
+            np.ones(n // 4, dtype=np.int64),        # 100% default
+        ])
+        result = monotonic_binning(values, target, n_bins=10, increasing=True)
+        assert isinstance(result, BinResult)
+        assert len(result.woe_values) <= 2
+
+    def test_monotonic_violation_at_last_index_only(self) -> None:
+        """Cover line 298: violation_idx == len(woe) - 1.
+
+        Construct 3 bins where only the last bin violates monotonicity
+        (increasing direction).
+        """
+        import unittest.mock as mock
+
+        from creditriskengine.models.pd.binning import _build_bin_result
+
+        # Create data with 3 clear clusters
+        values = np.array(
+            [1.0] * 100 + [2.0] * 100 + [3.0] * 100, dtype=np.float64
+        )
+        # Increasing WoE for first 2 bins, then violation at last bin
+        # Low default in bin1, medium in bin2, low in bin3 -> violation at idx=2
+        target = np.array(
+            [0] * 90 + [1] * 10  # bin1: low default
+            + [0] * 70 + [1] * 30  # bin2: medium default
+            + [0] * 95 + [1] * 5,  # bin3: very low default -> violation
+            dtype=np.int64,
+        )
+        result = monotonic_binning(values, target, n_bins=3, increasing=True)
+        assert isinstance(result, BinResult)
+        # After merging, result should be monotonic
+        if len(result.woe_values) > 1:
+            diffs = np.diff(result.woe_values)
+            assert np.all(diffs >= -1e-10)
 
 
 class TestApplyWoETransform:

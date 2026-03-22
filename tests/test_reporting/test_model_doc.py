@@ -288,6 +288,13 @@ class TestPlainTextReport:
         # Should not contain numbered findings
         assert "Findings:" not in report
 
+    def test_stability_extra_keys(self) -> None:
+        """Cover line 509: stability metrics with keys other than 'psi'."""
+        doc = _make_doc(stability_metrics={"psi": 0.08, "csi": 0.03, "js_div": 0.02})
+        report = _generate_plain_text_report(doc)
+        assert "csi" in report
+        assert "js_div" in report
+
     def test_no_limitations(self) -> None:
         doc = _make_doc(limitations=[])
         report = _generate_plain_text_report(doc)
@@ -355,3 +362,54 @@ class TestValidationReportExtended:
             discrimination={"gini": 0.50, "auroc": 0.75, "ks": 0.40},
         )
         assert "ks" in report
+
+    def test_additional_stability_metrics_in_report(self) -> None:
+        """Extra keys beyond 'psi' in stability dict appear in validation report."""
+        report = generate_validation_report(
+            _make_doc(),
+            stability={"psi": 0.05, "csi": 0.03},
+        )
+        assert "csi" in report
+
+
+class TestJinja2TemplateFallback:
+    """Test Jinja2 template rendering failure falls back to plain text."""
+
+    def test_jinja2_template_failure_falls_back(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: object,
+    ) -> None:
+        """When Jinja2 template rendering raises, fall back to plain text."""
+        # Point TEMPLATES_DIR to a real directory so the .exists() check passes
+        from pathlib import Path
+
+        import creditriskengine.reporting.model_doc as mod
+        fake_templates = Path(str(tmp_path)) / "templates"
+        fake_templates.mkdir()
+        # Write an invalid Jinja2 template that will cause a rendering error
+        (fake_templates / "model_doc.html.j2").write_text("{{ undefined_var | bad_filter }}")
+
+        monkeypatch.setattr(mod, "TEMPLATES_DIR", fake_templates)
+
+        doc = _make_doc()
+        report = generate_model_doc_report(doc)
+        # Should fall back to plain text
+        assert "MODEL DOCUMENTATION" in report
+        assert "Corporate PD Model" in report
+
+    def test_jinja2_import_error_falls_back(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """When Jinja2 is not importable, fall back to plain text."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def mock_import(name: str, *args: object, **kwargs: object) -> object:
+            if name == "jinja2":
+                raise ImportError("No module named 'jinja2'")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", mock_import)
+
+        doc = _make_doc()
+        report = generate_model_doc_report(doc)
+        assert "MODEL DOCUMENTATION" in report
+        assert "Corporate PD Model" in report

@@ -41,6 +41,26 @@ class TestEstimateCureRate:
         assert result.time_to_cure_months_mean > 0
 
 
+class TestEstimateCureRateEdgeCases:
+    """Cover uncovered lines in estimate_cure_rate."""
+
+    def test_empty_outcomes(self) -> None:
+        """Lines 55-56: empty array returns zero cure rate."""
+        outcomes = np.array([], dtype=np.int64)
+        result = estimate_cure_rate(outcomes)
+        assert result.overall_cure_rate == 0.0
+        assert result.n_defaults == 0
+        assert result.n_cured == 0
+
+    def test_with_time_no_cured(self) -> None:
+        """Lines 76-77: time_in_default provided but no cured cases."""
+        outcomes = np.array([0, 0, 0])
+        times = np.array([3.0, 6.0, 12.0])
+        result = estimate_cure_rate(outcomes, times)
+        assert result.time_to_cure_months_mean == 0.0
+        assert result.time_to_cure_months_median == 0.0
+
+
 class TestCureRateBySegment:
     """Test segment-level cure rates."""
 
@@ -52,6 +72,15 @@ class TestCureRateBySegment:
         assert "corporate" in result
         assert result["retail"] == pytest.approx(0.5)
         assert result["corporate"] == pytest.approx(0.25)
+
+    def test_segment_labels_mismatch(self) -> None:
+        """Lines 135-140, 147: segment_labels length != unique segments -> falls back to numeric."""
+        outcomes = np.array([1, 0, 1, 0])
+        segments = np.array([0, 0, 1, 1])
+        # Provide 3 labels but only 2 unique segments -> falls back
+        result = cure_rate_by_segment(outcomes, segments, ["a", "b", "c"])
+        assert "0" in result
+        assert "1" in result
 
 
 class TestMacroAdjustedCureRate:
@@ -75,6 +104,13 @@ class TestMacroAdjustedCureRate:
                                              gdp_growth_baseline=0.02, sensitivity=2.0)
         assert 0.0 <= adjusted <= 1.0
 
+    def test_zero_baseline_gdp(self) -> None:
+        """Line 190: near-zero baseline uses absolute difference."""
+        adjusted = macro_adjusted_cure_rate(0.30, gdp_growth_current=0.02,
+                                             gdp_growth_baseline=0.0, sensitivity=0.5)
+        assert 0.0 <= adjusted <= 1.0
+        assert adjusted > 0.30  # positive current GDP should increase cure rate
+
 
 class TestLGDWithCureAdjustment:
     """Test cure-adjusted LGD per EBA GL/2017/16."""
@@ -97,6 +133,65 @@ class TestLGDWithCureAdjustment:
                                             lgd_if_cured=0.05)
         expected = 0.70 * 0.45 + 0.30 * 0.05
         assert lgd_adj == pytest.approx(expected)
+
+
+class TestEstimateCureRateEmptyOutcomes:
+    """Cover lines 55-56: empty default_outcomes array."""
+
+    def test_empty_array_returns_zero(self) -> None:
+        outcomes = np.array([], dtype=np.int64)
+        result = estimate_cure_rate(outcomes)
+        assert result.overall_cure_rate == 0.0
+        assert result.n_defaults == 0
+        assert result.n_cured == 0
+        assert len(result.cure_rates_by_period) == 0
+
+
+class TestEstimateCureRateNoCured:
+    """Cover lines 76-77: time_in_default with no cured cases."""
+
+    def test_time_provided_no_cures(self) -> None:
+        outcomes = np.array([0, 0, 0, 0])
+        times = np.array([2.0, 5.0, 8.0, 12.0])
+        result = estimate_cure_rate(outcomes, times)
+        assert result.time_to_cure_months_mean == 0.0
+        assert result.time_to_cure_months_median == 0.0
+
+
+class TestCureRateBySegmentLabelMismatch:
+    """Cover lines 135-140, 147: segment_labels length mismatch -> numeric fallback."""
+
+    def test_labels_too_many(self) -> None:
+        outcomes = np.array([1, 0, 1, 0])
+        segments = np.array([0, 0, 1, 1])
+        result = cure_rate_by_segment(outcomes, segments, ["a", "b", "c"])
+        assert "0" in result
+        assert "1" in result
+
+    def test_labels_too_few(self) -> None:
+        outcomes = np.array([1, 0, 1, 0, 1, 0])
+        segments = np.array([0, 0, 1, 1, 2, 2])
+        result = cure_rate_by_segment(outcomes, segments, ["a"])
+        assert "0" in result
+        assert "1" in result
+        assert "2" in result
+
+
+class TestMacroAdjustedCureRateZeroBaseline:
+    """Cover line 190: near-zero baseline GDP uses absolute difference."""
+
+    def test_near_zero_baseline(self) -> None:
+        adjusted = macro_adjusted_cure_rate(
+            0.30, gdp_growth_current=0.03, gdp_growth_baseline=0.0, sensitivity=0.5
+        )
+        assert 0.0 <= adjusted <= 1.0
+        assert adjusted > 0.30
+
+    def test_exactly_zero_baseline(self) -> None:
+        adjusted = macro_adjusted_cure_rate(
+            0.50, gdp_growth_current=-0.05, gdp_growth_baseline=1e-15, sensitivity=1.0
+        )
+        assert 0.0 <= adjusted <= 1.0
 
 
 class TestCureRateTermStructure:

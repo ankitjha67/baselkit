@@ -108,6 +108,20 @@ class TestGenerateC0801IRB:
         tpl = generate_c0801_irb(_sample_irb_data(), "2025-12-31")
         assert tpl.total_rwa == pytest.approx(1_300_000, rel=1e-6)
 
+    def test_non_standard_class_appended(self) -> None:
+        data = {
+            "CustomIRBClass": {
+                "original_exposure": 100_000,
+                "credit_risk_mitigation": 0,
+                "ead_post_crm": 100_000,
+                "rwa": 50_000,
+                "expected_loss": 500,
+            },
+        }
+        tpl = generate_c0801_irb(data, "2025-12-31")
+        assert len(tpl.rows) == 1
+        assert tpl.rows[0].exposure_class == "CustomIRBClass"
+
 
 class TestGenerateC0802AIRB:
     """C 08.02 -- A-IRB template."""
@@ -117,6 +131,20 @@ class TestGenerateC0802AIRB:
         assert isinstance(tpl, COREPTemplate)
         assert tpl.template_id == "C 08.02"
         assert tpl.metadata["approach"] == "A-IRB"
+
+    def test_non_standard_class_appended(self) -> None:
+        data = {
+            "CustomAIRBClass": {
+                "original_exposure": 200_000,
+                "credit_risk_mitigation": 10_000,
+                "ead_post_crm": 190_000,
+                "rwa": 80_000,
+                "expected_loss": 1_000,
+            },
+        }
+        tpl = generate_c0802_airb(data, "2025-12-31")
+        assert len(tpl.rows) == 1
+        assert tpl.rows[0].exposure_class == "CustomAIRBClass"
 
 
 class TestCOREPToDict:

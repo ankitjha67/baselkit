@@ -186,3 +186,98 @@ class TestAdvancedIRBCalculator:
         result = calc.calculate(exp)
         assert result.asset_class == "residential_mortgage"
         assert result.rwa > 0
+
+    def test_sovereign_asset_class(self) -> None:
+        calc = AdvancedIRBCalculator()
+        exp = _make_exposure(
+            irb_asset_class=IRBAssetClass.SOVEREIGN,
+            pd=0.01,
+            lgd=0.35,
+            drawn_amount=1_000_000,
+            undrawn_commitment=0,
+        )
+        result = calc.calculate(exp)
+        assert result.asset_class == "sovereign"
+        assert result.rwa > 0
+
+    def test_bank_asset_class(self) -> None:
+        calc = AdvancedIRBCalculator()
+        exp = _make_exposure(
+            irb_asset_class=IRBAssetClass.BANK,
+            pd=0.01,
+            lgd=0.35,
+            drawn_amount=1_000_000,
+            undrawn_commitment=0,
+        )
+        result = calc.calculate(exp)
+        assert result.asset_class == "bank"
+        assert result.rwa > 0
+
+    def test_retail_qrre_asset_class(self) -> None:
+        calc = AdvancedIRBCalculator()
+        exp = _make_exposure(
+            irb_asset_class=IRBAssetClass.RETAIL,
+            irb_retail_subclass=IRBRetailSubClass.QRRE,
+            pd=0.02,
+            lgd=0.80,
+            drawn_amount=50_000,
+            undrawn_commitment=0,
+        )
+        result = calc.calculate(exp)
+        assert result.asset_class == "qrre"
+        assert result.rwa > 0
+
+    def test_retail_other_retail_fallback(self) -> None:
+        """Retail with no mortgage/QRRE subclass falls back to other_retail."""
+        calc = AdvancedIRBCalculator()
+        exp = _make_exposure(
+            irb_asset_class=IRBAssetClass.RETAIL,
+            irb_retail_subclass=IRBRetailSubClass.OTHER_RETAIL,
+            pd=0.02,
+            lgd=0.50,
+            drawn_amount=100_000,
+            undrawn_commitment=0,
+        )
+        result = calc.calculate(exp)
+        assert result.asset_class == "other_retail"
+        assert result.rwa > 0
+
+    def test_retail_sme_subclass_falls_to_other_retail(self) -> None:
+        """SME retail subclass is neither mortgage nor QRRE, returns other_retail."""
+        calc = AdvancedIRBCalculator()
+        exp = _make_exposure(
+            irb_asset_class=IRBAssetClass.RETAIL,
+            irb_retail_subclass=IRBRetailSubClass.SME_RETAIL,
+            pd=0.03,
+            lgd=0.40,
+            drawn_amount=200_000,
+            undrawn_commitment=0,
+        )
+        result = calc.calculate(exp)
+        assert result.asset_class == "other_retail"
+        assert result.rwa > 0
+
+    def test_ccf_floor_applied_for_undrawn_commitment(self) -> None:
+        """When undrawn_commitment > 0 and no ead_model, CCF floor is applied."""
+        calc = AdvancedIRBCalculator()
+        exp = _make_exposure(
+            pd=0.02,
+            lgd=0.35,
+            ead_model=None,
+            drawn_amount=800_000,
+            undrawn_commitment=200_000,
+        )
+        result = calc.calculate(exp)
+        # CCF floor is 50%, so EAD = 800k + 0.50 * 200k = 900k
+        assert result.ead == pytest.approx(900_000, rel=1e-6)
+
+    def test_unknown_asset_class_raises(self) -> None:
+        """EQUITY is not handled by _resolve_asset_class, triggers ValueError."""
+        calc = AdvancedIRBCalculator()
+        exp = _make_exposure(
+            irb_asset_class=IRBAssetClass.EQUITY,
+            pd=0.02,
+            lgd=0.35,
+        )
+        with pytest.raises(ValueError, match="Cannot determine IRB asset class"):
+            calc.calculate(exp)

@@ -50,3 +50,28 @@ class TestLoadConfig:
         from pathlib import Path
         with pytest.raises((ConfigurationError, JurisdictionError)):
             load_config(Jurisdiction.EU, config_dir=Path("/nonexistent/path"))
+
+    def test_empty_config_file_raises(self, tmp_path: object) -> None:
+        """Cover line 69: empty YAML config raises ConfigurationError."""
+
+        # Replicate the directory structure for EU config
+        config_path = get_config_path(Jurisdiction.EU)
+        from creditriskengine.regulatory.loader import _REGULATORY_DIR
+
+        rel_path = config_path.relative_to(_REGULATORY_DIR)
+        target = tmp_path / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("")  # Empty YAML file
+
+        with pytest.raises(ConfigurationError, match="Empty config"):
+            load_config(Jurisdiction.EU, config_dir=tmp_path)
+
+    def test_unknown_jurisdiction_raises(self) -> None:
+        """Cover line 40: unknown jurisdiction raises ConfigurationError."""
+        import unittest.mock as mock
+
+        # Create a mock jurisdiction with a value not in the mapping
+        fake_jurisdiction = mock.MagicMock()
+        fake_jurisdiction.value = "atlantis"
+        with pytest.raises(ConfigurationError, match="Unknown jurisdiction"):
+            get_config_path(fake_jurisdiction)

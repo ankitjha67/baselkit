@@ -30,6 +30,13 @@ class TestBinomialTest:
         assert result["p_value"] == 1.0
         assert not result["reject_h0"]
 
+    def test_zero_variance_pd(self) -> None:
+        """Line 51: std < 1e-15 early return when predicted_pd is 0 or 1."""
+        result = binomial_test(0, 100, 0.0)
+        assert result["z_stat"] == 0.0
+        assert result["p_value"] == 1.0
+        assert result["reject_h0"] is False
+
 
 class TestHosmerLemeshow:
     def test_perfect_calibration(self) -> None:
@@ -62,6 +69,16 @@ class TestSpiegelhalter:
         result = spiegelhalter_test(np.array([]), np.array([]))
         assert not result["reject_h0"]
 
+    def test_zero_variance_brier(self) -> None:
+        """Line 133: var_brier < 1e-15 early return (all predictions 0 or 1)."""
+        # When all predictions are exactly 0.0 or 1.0, (1-2*y_pred)^2 * y_pred*(1-y_pred) = 0
+        y_true = np.array([0.0, 0.0, 1.0, 1.0])
+        y_pred = np.array([0.0, 0.0, 1.0, 1.0])
+        result = spiegelhalter_test(y_true, y_pred)
+        assert result["z_stat"] == 0.0
+        assert result["p_value"] == 1.0
+        assert result["reject_h0"] is False
+
 
 class TestTrafficLight:
     def test_green(self) -> None:
@@ -72,6 +89,18 @@ class TestTrafficLight:
 
     def test_empty(self) -> None:
         assert traffic_light_test(0, 0, 0.01) == "green"
+
+    def test_yellow(self) -> None:
+        """Line 177: yellow return when n_defaults between p_95 and p_9999."""
+        from scipy import stats
+
+        n = 1000
+        pd_val = 0.01
+        p_95 = int(stats.binom.ppf(0.95, n, pd_val))
+        p_9999 = int(stats.binom.ppf(0.9999, n, pd_val))
+        n_defaults = p_95 + 1  # just above green
+        assert n_defaults <= p_9999, "Sanity: must be in yellow zone"
+        assert traffic_light_test(n_defaults, n, pd_val) == "yellow"
 
 
 class TestJeffreys:

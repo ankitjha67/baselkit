@@ -91,6 +91,42 @@ class TestGenerateScheduleH1:
         sched = generate_schedule_h1([], "2025-03-31")
         assert len(sched.rows) == 0
 
+    def test_validate_exposure_missing_fields(self) -> None:
+        """Exposure missing required fields logs warning and still creates row."""
+        from creditriskengine.reporting.fr_y14 import _validate_exposure_fields
+
+        exposure = {"obligor_id": "OB-BAD"}
+        result = _validate_exposure_fields(
+            exposure,
+            ["obligor_id", "committed_exposure", "pd", "lgd"],
+            "Schedule H.1",
+        )
+        assert result is False
+
+    def test_validate_exposure_missing_fields_loan_id(self) -> None:
+        """Exposure identified by loan_id when obligor_id absent."""
+        from creditriskengine.reporting.fr_y14 import _validate_exposure_fields
+
+        exposure = {"loan_id": "LN-001"}
+        result = _validate_exposure_fields(
+            exposure,
+            ["committed_exposure", "pd"],
+            "Schedule H.2",
+        )
+        assert result is False
+
+    def test_validate_exposure_missing_fields_unknown(self) -> None:
+        """Exposure with neither obligor_id nor loan_id uses 'unknown'."""
+        from creditriskengine.reporting.fr_y14 import _validate_exposure_fields
+
+        exposure: dict[str, object] = {}
+        result = _validate_exposure_fields(
+            exposure,
+            ["committed_exposure"],
+            "test",
+        )
+        assert result is False
+
 
 class TestGenerateScheduleH2:
     """FR Y-14Q Schedule H.2 -- CRE."""

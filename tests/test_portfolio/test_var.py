@@ -166,3 +166,24 @@ class TestExpectedShortfall:
         var_95 = historical_simulation_var(losses, confidence=0.95)
         # ES should be meaningfully above VaR for exponential distribution
         assert es_95 > var_95 * 1.05
+
+    def test_empty_tail_returns_var(self) -> None:
+        """Cover lines 354-358: empty tail returns VaR as ES."""
+        # With only 1 observation, VaR = that value, but tail (>= VaR) might be empty
+        # when using very high confidence on a tiny sample
+        # Actually, with a single value, quantile returns that value and tail is non-empty.
+        # Use a sample where all values are identical so VaR = that value
+        # and use a value just slightly above the max so tail is empty.
+        # The simplest way: use 2 values and a very high confidence.
+        # Mock historical_simulation_var to return a value higher than all losses
+        # so tail is empty.
+        import unittest.mock as mock
+
+        with mock.patch(
+            "creditriskengine.portfolio.var.historical_simulation_var",
+            return_value=10.0,
+        ):
+            # All values below 10.0 -> empty tail
+            losses_small = np.array([1.0, 2.0, 3.0])
+            es = expected_shortfall(losses_small, confidence=0.95)
+            assert es == pytest.approx(10.0)

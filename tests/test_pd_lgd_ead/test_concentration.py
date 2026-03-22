@@ -80,3 +80,12 @@ class TestGranularityAdjustment:
     def test_zero_ead(self) -> None:
         ga = granularity_adjustment(np.array([]), np.array([]), np.array([]), rho=0.15)
         assert ga == 0.0
+
+    def test_zero_total_el_returns_zero(self) -> None:
+        """Cover line 130: total_el <= 0 returns 0.0."""
+        # All PDs are zero -> EL contributions are all zero
+        eads = np.array([100.0, 200.0, 300.0])
+        pds = np.array([0.0, 0.0, 0.0])
+        lgds = np.array([0.45, 0.45, 0.45])
+        ga = granularity_adjustment(eads, pds, lgds, rho=0.15)
+        assert ga == 0.0

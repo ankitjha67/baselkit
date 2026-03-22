@@ -90,6 +90,45 @@ class TestLookupLtvTable:
         rw = _lookup_ltv_table(CRE_NOT_CASHFLOW_RW, 0.80, 100.0)
         assert rw == pytest.approx(80.0)
 
+    def test_ltv_zero_with_sentinel_first_bucket(self) -> None:
+        """When LTV <= 0 and first bucket has sentinel (-1), return counterparty_rw."""
+        sentinel_table = [
+            (-0.01, 0.60, -1.0),  # sentinel first bucket
+            (0.60, 0.80, 80.0),
+            (0.80, float("inf"), 110.0),
+        ]
+        rw = _lookup_ltv_table(sentinel_table, 0.0, 75.0)
+        assert rw == pytest.approx(75.0)
+
+    def test_beyond_last_bucket_with_positive_rw(self) -> None:
+        """LTV beyond last bucket with positive last_rw returns last_rw."""
+        # Use IPRE table where last bucket has rw=110 (not sentinel)
+        rw = _lookup_ltv_table(CRE_IPRE_RW, 999.0, 50.0)
+        assert rw == pytest.approx(110.0)
+
+    def test_beyond_last_bucket_with_sentinel_rw(self) -> None:
+        """LTV beyond last bucket with sentinel last_rw returns counterparty_rw."""
+        # CRE_NOT_CASHFLOW_RW last bucket has sentinel -1
+        # Need LTV beyond all buckets — but last bucket is (0.80, inf), so it
+        # always matches. Use a custom table with finite upper bound.
+        custom_table = [
+            (0.0, 0.50, 60.0),
+            (0.50, 0.80, 80.0),
+            (0.80, 0.90, -1.0),  # sentinel, finite upper bound
+        ]
+        rw = _lookup_ltv_table(custom_table, 0.95, 130.0)
+        assert rw == pytest.approx(130.0)
+
+    def test_ltv_zero_with_sentinel_first_bucket_exact_lower_bound(self) -> None:
+        """When LTV=0, no bucket matches (lower bound is 0.0), and first_rw is sentinel."""
+        sentinel_table = [
+            (0.0, 0.60, -1.0),  # first bucket starts at 0.0; ltv=0 won't match (0.0 < 0.0 is False)
+            (0.60, 0.80, 80.0),
+            (0.80, float("inf"), 110.0),
+        ]
+        rw = _lookup_ltv_table(sentinel_table, 0.0, 75.0)
+        assert rw == pytest.approx(75.0)
+
 
 class TestGetCRERiskWeight:
     """Test main CRE risk weight function."""

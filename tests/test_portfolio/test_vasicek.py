@@ -48,6 +48,34 @@ class TestVasicekLossQuantile:
         assert var_high_rho > var_low_rho
 
 
+class TestVasicekConditionalDefaultRateRhoValidation:
+    """Cover line 48: invalid rho raises ValueError."""
+
+    def test_rho_zero_raises(self) -> None:
+        with pytest.raises(ValueError, match="rho must be in"):
+            vasicek_conditional_default_rate(0.02, 0.0, 1.0)
+
+    def test_rho_one_raises(self) -> None:
+        with pytest.raises(ValueError, match="rho must be in"):
+            vasicek_conditional_default_rate(0.02, 1.0, 1.0)
+
+    def test_rho_negative_raises(self) -> None:
+        with pytest.raises(ValueError, match="rho must be in"):
+            vasicek_conditional_default_rate(0.02, -0.5, 1.0)
+
+
+class TestVasicekLossQuantileRhoValidation:
+    """Cover line 78: invalid rho raises ValueError."""
+
+    def test_rho_zero_raises(self) -> None:
+        with pytest.raises(ValueError, match="rho must be in"):
+            vasicek_loss_quantile(0.02, 0.0, 0.45)
+
+    def test_rho_one_raises(self) -> None:
+        with pytest.raises(ValueError, match="rho must be in"):
+            vasicek_loss_quantile(0.02, 1.0, 0.45)
+
+
 class TestExpectedLoss:
     def test_basic(self) -> None:
         assert expected_loss(0.02, 0.45) == pytest.approx(0.009)

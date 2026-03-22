@@ -44,6 +44,20 @@ class TestSingleFactorSimulation:
             simulate_single_factor(pds, lgds, eads, rho=1.0, seed=42)
 
 
+class TestSingleFactorNoAntithetic:
+    """Cover lines 65-66: antithetic=False path."""
+
+    def test_no_antithetic(self) -> None:
+        pds = np.array([0.02, 0.03, 0.01])
+        lgds = np.array([0.45, 0.40, 0.50])
+        eads = np.array([100.0, 200.0, 150.0])
+        losses = simulate_single_factor(
+            pds, lgds, eads, rho=0.15, n_simulations=500, seed=42, antithetic=False
+        )
+        assert losses.shape == (500,)
+        assert np.all(losses >= 0)
+
+
 class TestMultiFactorSimulation:
     def test_shape(self) -> None:
         pds = np.array([0.02, 0.03])

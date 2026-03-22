@@ -255,3 +255,44 @@ class TestScorecardBuilder:
         model = ScorecardBuilder()
         with pytest.raises(AssertionError):
             model.predict_proba(np.array([[1.0, 2.0, 3.0]]))
+
+    def test_predict_proba_single_sample(  # noqa: E501
+        self, training_data: tuple[np.ndarray, np.ndarray],
+    ) -> None:
+        """Cover line 297: scores.ndim == 0 branch for single sample."""
+        X, y = training_data  # noqa: N806
+        model = ScorecardBuilder()
+        model.fit(X, y)
+        # Single sample -> logistic_score may return scalar
+        proba = model.predict_proba(X[:1])
+        assert proba.shape == (1, 2)
+        np.testing.assert_allclose(proba.sum(axis=1), 1.0)
+
+    def test_predict_proba_scalar_ndim0(self, training_data: tuple[np.ndarray, np.ndarray]) -> None:
+        """Cover line 297: scores.ndim == 0 when passing 1D input (single observation)."""
+        X, y = training_data  # noqa: N806
+        model = ScorecardBuilder()
+        model.fit(X, y)
+        # Pass a 1D array (single sample without batch dim) -> @ produces scalar ndim==0
+        proba = model.predict_proba(X[0])
+        assert proba.shape == (1, 2)
+        np.testing.assert_allclose(proba.sum(axis=1), 1.0)
+
+    def test_score_points_single_sample(self, training_data: tuple[np.ndarray, np.ndarray]) -> None:
+        """Cover line 312: scores.ndim == 0 branch for single sample."""
+        X, y = training_data  # noqa: N806
+        model = ScorecardBuilder(base_score=600.0, pdo=20.0, base_odds=50.0)
+        model.fit(X, y)
+        points = model.score_points(X[:1])
+        assert len(points) == 1
+        assert np.all(np.isfinite(points))
+
+    def test_score_points_scalar_ndim0(self, training_data: tuple[np.ndarray, np.ndarray]) -> None:
+        """Cover line 312: scores.ndim == 0 when passing 1D input (single observation)."""
+        X, y = training_data  # noqa: N806
+        model = ScorecardBuilder(base_score=600.0, pdo=20.0, base_odds=50.0)
+        model.fit(X, y)
+        # Pass 1D array -> @ with coefficients produces scalar ndim==0
+        points = model.score_points(X[0])
+        assert len(points) == 1
+        assert np.all(np.isfinite(points))

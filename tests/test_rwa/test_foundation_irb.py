@@ -7,6 +7,7 @@ from creditriskengine.core.types import (
     CollateralType,
     CreditRiskApproach,
     IRBAssetClass,
+    IRBRetailSubClass,
     Jurisdiction,
 )
 from creditriskengine.rwa.irb.foundation import (
@@ -203,6 +204,44 @@ class TestFoundationIRBCalculator:
         )
         result = calc.calculate(exp)
         assert result.asset_class == "sovereign"
+        assert result.rwa > 0
+
+    def test_bank_asset_class(self) -> None:
+        calc = FoundationIRBCalculator()
+        exp = _make_exposure(
+            irb_asset_class=IRBAssetClass.BANK,
+            pd=0.01,
+            drawn_amount=1_000_000,
+            undrawn_commitment=0,
+        )
+        result = calc.calculate(exp)
+        assert result.asset_class == "bank"
+        assert result.rwa > 0
+
+    def test_retail_with_subclass(self) -> None:
+        calc = FoundationIRBCalculator()
+        exp = _make_exposure(
+            irb_asset_class=IRBAssetClass.RETAIL,
+            irb_retail_subclass=IRBRetailSubClass.OTHER_RETAIL,
+            pd=0.02,
+            drawn_amount=500_000,
+            undrawn_commitment=0,
+        )
+        result = calc.calculate(exp)
+        assert result.asset_class == "other_retail"
+        assert result.rwa > 0
+
+    def test_retail_no_subclass_defaults_to_other_retail(self) -> None:
+        calc = FoundationIRBCalculator()
+        exp = _make_exposure(
+            irb_asset_class=IRBAssetClass.RETAIL,
+            irb_retail_subclass=None,
+            pd=0.02,
+            drawn_amount=500_000,
+            undrawn_commitment=0,
+        )
+        result = calc.calculate(exp)
+        assert result.asset_class == "other_retail"
         assert result.rwa > 0
 
     def test_unknown_asset_class_raises(self) -> None:

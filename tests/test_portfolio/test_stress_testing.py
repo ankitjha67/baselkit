@@ -147,6 +147,35 @@ class TestMultiPeriodProjection:
         period_eads = result["period_eads"]
         assert period_eads[0] > period_eads[2]
 
+    def test_with_amortisation_rates(self) -> None:
+        """Amortisation rates reduce EAD faster across periods."""
+        pds = np.array([0.02])
+        lgds = np.array([0.40])
+        eads = np.array([1e6])
+        pd_mult = np.array([1.5, 2.0])
+        lgd_add = np.array([0.05, 0.10])
+        amort = np.array([0.05, 0.05])
+
+        result = multi_period_projection(
+            pds, lgds, eads, pd_mult, lgd_add, amortisation_rates=amort,
+        )
+        assert result["cumulative_el"] > 0
+        # With amortisation, second period EAD should be lower
+        assert result["period_eads"][1] < result["period_eads"][0]
+
+    def test_amortisation_rates_length_mismatch_raises(self) -> None:
+        pds = np.array([0.02])
+        lgds = np.array([0.40])
+        eads = np.array([1e6])
+        pd_mult = np.array([1.5, 2.0])
+        lgd_add = np.array([0.05, 0.10])
+        amort = np.array([0.05])  # wrong length
+
+        with pytest.raises(ValueError, match="amortisation_rates length"):
+            multi_period_projection(
+                pds, lgds, eads, pd_mult, lgd_add, amortisation_rates=amort,
+            )
+
 
 class TestEBAStressTest:
     """EBA stress test framework."""
@@ -234,6 +263,22 @@ class TestCCARScenario:
         with pytest.raises(ValueError, match="ppnr_quarterly must have exactly"):
             CCARScenario(scenario, horizon_quarters=9, ppnr_quarterly=np.ones(5))
 
+    def test_explicit_pd_and_lgd_quarterly_arrays(self) -> None:
+        """Cover lines 522, 527: explicit pd_quarterly_multipliers and lgd_add_ons."""
+        scenario = MacroScenario(name="CCAR Explicit", horizon_years=3)
+        ccar = CCARScenario(scenario, horizon_quarters=9)
+        pd_mults = np.array([1.2, 1.4, 1.6, 1.8, 2.0, 1.8, 1.6, 1.4, 1.2])
+        lgd_adds = np.array([0.02, 0.04, 0.06, 0.08, 0.10, 0.08, 0.06, 0.04, 0.02])
+        result = ccar.project_quarterly_losses(
+            np.array([0.03, 0.05]),
+            np.array([0.35, 0.40]),
+            np.array([1e6, 2e6]),
+            pd_quarterly_multipliers=pd_mults,
+            lgd_add_ons_quarterly=lgd_adds,
+        )
+        assert result["total_loss"] > 0
+        assert len(result["quarterly_totals"]) == 9
+
 
 class TestRBIStressTest:
     """RBI stress testing with sensitivity analysis."""
@@ -265,3 +310,74 @@ class TestRBIStressTest:
             np.array([1e6]),
         )
         assert result["incremental_provisions"] > 0
+
+    def test_require_baseline_raises_on_missing_keys(self) -> None:
+        """Cover lines 670-672: _require_baseline raises ValueError."""
+        rbi = RBIStressTest(severity="moderate", baseline_metrics={})
+        with pytest.raises(ValueError, match="Missing required baseline_metrics"):
+            rbi._require_baseline("npa_ratio", "car")
+
+    def test_interest_rate_sensitivity(self) -> None:
+        """Cover lines 749-777."""
+        rbi = RBIStressTest(
+            severity="moderate",
+            baseline_metrics={
+                "net_interest_income": 500_000.0,
+                "total_advances": 10_000_000.0,
+                "car": 12.0,
+            },
+        )
+        result = rbi.interest_rate_sensitivity(
+            rate_shock_bps=200.0,
+            duration_gap=2.5,
+            total_assets=15_000_000.0,
+        )
+        assert "eve_impact" in result
+        assert "nii_impact" in result
+        assert "stressed_car" in result
+        assert "stressed_nii" in result
+        assert result["rate_shock_bps"] == 200.0
+        # EVE impact should be negative for positive rate shock with positive duration gap
+        assert result["eve_impact"] < 0
+
+    def test_credit_quality_sensitivity(self) -> None:
+        """Cover lines 809-834."""
+        rbi = RBIStressTest(
+            severity="moderate",
+            baseline_metrics={
+                "npa_ratio": 3.0,
+                "car": 12.0,
+                "total_advances": 10_000_000.0,
+            },
+        )
+        result = rbi.credit_quality_sensitivity(npa_increase_pct=2.0)
+        assert result["baseline_npa_ratio"] == 3.0
+        assert result["stressed_npa_ratio"] == 5.0
+        assert result["incremental_provisions"] > 0
+        assert result["stressed_car"] < 12.0
+        assert result["car_reduction_pp"] > 0
+
+    def test_liquidity_sensitivity(self) -> None:
+        """Cover lines 870-891."""
+        rbi = RBIStressTest(severity="moderate")
+        result = rbi.liquidity_sensitivity(
+            deposit_outflow_pct=10.0,
+            hqla=2_000_000.0,
+            total_deposits=10_000_000.0,
+            net_cash_outflows_30d=1_500_000.0,
+        )
+        assert "baseline_lcr_pct" in result
+        assert "stressed_lcr_pct" in result
+        assert result["stressed_lcr_pct"] < result["baseline_lcr_pct"]
+        assert isinstance(result["lcr_breach"], (bool, np.bool_))
+
+    def test_liquidity_sensitivity_zero_outflows_raises(self) -> None:
+        """Cover line 870-871: ValueError on non-positive outflows."""
+        rbi = RBIStressTest(severity="moderate")
+        with pytest.raises(ValueError, match="net_cash_outflows_30d must be positive"):
+            rbi.liquidity_sensitivity(
+                deposit_outflow_pct=10.0,
+                hqla=2_000_000.0,
+                total_deposits=10_000_000.0,
+                net_cash_outflows_30d=0.0,
+            )

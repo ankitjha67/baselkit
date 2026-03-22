@@ -1,10 +1,12 @@
 """Tests for automated validation report generator."""
 
 import json
+from unittest import mock
 
 import numpy as np
 import pytest
 
+import creditriskengine.validation.reporting as reporting_module
 from creditriskengine.validation.reporting import (
     MetricSnapshot,
     _format_dict_section,
@@ -395,3 +397,134 @@ class TestTimeSeriesTracking:
         assert summary["min"] == pytest.approx(0.40)
         assert summary["max"] == pytest.approx(0.60)
         assert summary["std"] == pytest.approx(0.10)
+
+
+class TestFallbackTextReport:
+    """Test text report generation when Jinja2 is not available (lines 177-203)."""
+
+    def test_fallback_basic(self) -> None:
+        """Exercise the manual formatting fallback path."""
+        with mock.patch.object(reporting_module, "_HAS_JINJA2", False):
+            report = generate_validation_report_text(
+                "FallbackModel",
+                {"gini": 0.50, "auroc": 0.75},
+                {"hl_stat": 5.0},
+                {"psi": 0.05},
+                report_date="2025-06-01",
+            )
+        assert "FallbackModel" in report
+        assert "2025-06-01" in report
+        assert "GREEN" in report
+        assert "DISCRIMINATION" in report
+        assert "CALIBRATION" in report
+        assert "STABILITY" in report
+
+    def test_fallback_with_backtesting(self) -> None:
+        with mock.patch.object(reporting_module, "_HAS_JINJA2", False):
+            report = generate_validation_report_text(
+                "M",
+                {"gini": 0.50},
+                {},
+                {"psi": 0.05},
+                backtesting_results={"traffic_light": "green"},
+                report_date="2025-01-01",
+            )
+        assert "BACKTESTING" in report
+
+    def test_fallback_with_benchmarking(self) -> None:
+        with mock.patch.object(reporting_module, "_HAS_JINJA2", False):
+            report = generate_validation_report_text(
+                "M",
+                {"gini": 0.50},
+                {},
+                {"psi": 0.05},
+                benchmarking_results={"auroc_diff": 0.02},
+                report_date="2025-01-01",
+            )
+        assert "BENCHMARKING" in report
+
+    def test_fallback_with_recommendations(self) -> None:
+        with mock.patch.object(reporting_module, "_HAS_JINJA2", False):
+            report = generate_validation_report_text(
+                "M",
+                {"gini": 0.50},
+                {},
+                {"psi": 0.05},
+                recommendations=["Recalibrate model", "Increase sample size"],
+                report_date="2025-01-01",
+            )
+        assert "RECOMMENDATIONS" in report
+        assert "Recalibrate model" in report
+        assert "Increase sample size" in report
+
+    def test_fallback_regulatory_references(self) -> None:
+        with mock.patch.object(reporting_module, "_HAS_JINJA2", False):
+            report = generate_validation_report_text(
+                "M",
+                {"gini": 0.50},
+                {},
+                {"psi": 0.05},
+                report_date="2025-01-01",
+            )
+        assert "Regulatory references" in report
+
+
+class TestExportJsonNumpyFloating:
+    """Test the np.floating branch in _default (line 259)."""
+
+    def test_numpy_floating_serialization(self) -> None:
+        """np.float32 is np.floating but not np.integer or ndarray."""
+        result = export_validation_json(
+            "M",
+            {"gini": np.float32(0.55)},
+            {},
+            {"psi": 0.05},
+        )
+        data = json.loads(result)
+        assert data["discrimination"]["gini"] == pytest.approx(0.55, abs=1e-5)
+
+
+class TestExportJsonNumpyImportError:
+    """Test the ImportError fallback in _default (lines 262-263)."""
+
+    def test_numpy_import_error_fallback(self) -> None:
+        """When numpy import fails inside _default, non-serializable objects raise TypeError."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(
+            name: str, *args: object, **kwargs: object,
+        ) -> object:
+            if name == "numpy":
+                raise ImportError("mocked numpy unavailable")
+            return real_import(name, *args, **kwargs)
+
+        # We need an object that would normally be caught by numpy checks
+        # but since numpy import fails, it falls through to TypeError
+        with (
+            mock.patch("builtins.__import__", side_effect=fake_import),
+            pytest.raises(TypeError, match="not JSON serializable"),
+        ):
+                export_validation_json(
+                    "M",
+                    {"gini": 0.50},
+                    {"bad": object()},
+                    {"psi": 0.05},
+                )
+
+
+class TestTimeSeriesTrackingTrendException:
+    """Test the except block in trend computation (lines 390-391)."""
+
+    def test_polyfit_exception_falls_back_to_stable(self) -> None:
+        """When np.polyfit raises, trend should remain 'stable'."""
+        history = [
+            {"date": f"2025-{i:02d}-01", "metric_name": "gini", "value": 0.60 - i * 0.08}
+            for i in range(1, 6)
+        ]
+        with mock.patch("numpy.polyfit", side_effect=RuntimeError("mocked polyfit failure")):
+            result = time_series_tracking(history)
+        summary = result["summary_by_metric"]["gini"]
+        assert summary["trend_direction"] == "stable"
+        assert summary["trend_slope"] == pytest.approx(0.0)

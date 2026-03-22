@@ -74,3 +74,17 @@ class TestModelInventory:
         )
         assert entry["overall_rag"] == "red"
         assert entry["stability"]["rag"] == "red"
+
+    def test_red_low_gini(self) -> None:
+        entry = generate_model_inventory_entry(
+            "PD_Low", "PD", "Retail", date(2026, 1, 15),
+            auroc=0.55, gini=0.10, psi=0.05, calibration_result="green",
+        )
+        assert entry["discrimination"]["rag"] == "red"
+
+    def test_yellow_moderate_psi(self) -> None:
+        entry = generate_model_inventory_entry(
+            "PD_ModPSI", "PD", "Corporate", date(2026, 1, 15),
+            auroc=0.80, gini=0.60, psi=0.15, calibration_result="green",
+        )
+        assert entry["stability"]["rag"] == "yellow"
