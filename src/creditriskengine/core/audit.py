@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
@@ -70,7 +70,7 @@ class AuditTrail:
         """
         rec = CalculationRecord(
             exposure_id=exposure_id,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             approach=approach,
             jurisdiction=jurisdiction,
             inputs=dict(inputs),

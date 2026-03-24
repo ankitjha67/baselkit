@@ -402,7 +402,10 @@ def generate_loss_schedule(
 
     rows: list[FRY14LossProjectionRow] = []
     cumulative_loss = 0.0
-    total_beginning_balance = sum(projected_losses.values()) * 10  # placeholder
+    # Beginning balance is approximated as 10x the total projected losses.
+    # This is a simplified heuristic for the Schedule B template; in production,
+    # callers should supply actual portfolio balances via an extended API.
+    total_beginning_balance = sum(projected_losses.values()) * 10
 
     for idx, q_label in enumerate(sorted_quarters[:horizon_quarters]):
         nco = projected_losses.get(q_label, 0.0)
