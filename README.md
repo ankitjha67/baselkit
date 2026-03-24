@@ -1,5 +1,11 @@
 # CreditRiskEngine
 
+[![PyPI](https://img.shields.io/pypi/v/creditriskengine)](https://pypi.org/project/creditriskengine/)
+[![Python](https://img.shields.io/pypi/pyversions/creditriskengine)](https://pypi.org/project/creditriskengine/)
+[![CI](https://github.com/ankitjha67/baselkit/actions/workflows/ci.yml/badge.svg)](https://github.com/ankitjha67/baselkit/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)]()
+[![License](https://img.shields.io/pypi/l/creditriskengine)](https://github.com/ankitjha67/baselkit/blob/main/LICENSE)
+
 Production-grade open-source credit risk analytics library.
 
 **The scikit-learn of credit risk.**
