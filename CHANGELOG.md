@@ -2,6 +2,63 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-03-24
+
+### Added
+
+**Spec Compliance (8 Gap Fixes)**
+- QRRE transactor 0.75× RW scalar (BCBS CRE31.9 footnote 15)
+- UK PRA loan-splitting for residential RE (`uk_pra_loan_splitting_rre()`)
+- BoE ACS stress testing class with 5-year horizon and CET1 hurdle tracking
+- 13 spec-aligned re-export modules for file granularity compliance
+- SA Bank SCRA grade routing fix through `assign_sa_risk_weight()` dispatcher
+- `is_short_term` parameter wired through SA bank risk weight dispatcher
+
+**New Modules**
+- Credit Risk Mitigation engine (`rwa/crm.py`): comprehensive approach,
+  simple approach, guarantee substitution, supervisory haircuts, maturity
+  mismatch (CRE22)
+- Operational Risk SMA (`rwa/operational_risk.py`): Business Indicator
+  Component, Internal Loss Multiplier (OPE25)
+- Market Risk FRTB integration (`rwa/market_risk.py`): SbM credit spread,
+  Default Risk Charge, Residual Risk Add-on (MAR)
+- Audit trail (`core/audit.py`): `CalculationRecord`, `AuditTrail` with
+  JSON export and DataFrame output
+- YAML schema validation (`regulatory/schema.py`): config validation,
+  input sanitization, range checks
+- Structured logging (`core/logging_config.py`): JSON formatter for
+  production log aggregation
+
+**Documentation**
+- MkDocs site with Material theme (`mkdocs.yml`)
+- API reference for all modules
+- User guides: IRB, SA, ECL, stress testing, model validation
+- Regulatory disclaimers with interpretation choices table
+- Regulatory config versioning strategy
+- Performance benchmarks (`benchmarks/bench_portfolio.py`)
+
+**Packaging**
+- `py.typed` PEP 561 marker for typed package
+- Upper-bounded dependency versions (numpy<3.0, scipy<2.0, etc.)
+- Project URLs (homepage, docs, issues, changelog)
+- Python 3.13 classifier added
+
+### Changed
+- EU CRR3 YAML: full 7-bucket LTV tables for residential and commercial RE,
+  detailed AIRB restrictions with revenue threshold, infrastructure supporting
+  factor
+- EU CRR3 YAML: LGD supervisory values corrected (secured: 0.20→0.10,
+  other: 0.25→0.15) per CRE32.22-24
+- EU CRR3 YAML: PD floor corrected from 5 bps to 3 bps per CRE32.13
+- UK PRA YAML: LGD supervisory values corrected, loan-splitting config added
+
+### Tests
+- 1,200+ tests with 100% line coverage
+- Regulatory back-testing against Basel Committee worked examples
+- Integration tests with 10,000+ exposure portfolios
+- Cross-validation against known vendor reference ranges
+- 0 ruff lint errors, 0 mypy type errors
+
 ## [0.1.0] - 2026-03-22
 
 ### Added

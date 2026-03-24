@@ -1,0 +1,73 @@
+site_name: CreditRiskEngine
+site_description: Production-grade credit risk analytics — Basel III RWA, IFRS 9 ECL, IRB modeling
+site_url: https://ankitjha67.github.io/baselkit/
+repo_url: https://github.com/ankitjha67/baselkit
+repo_name: ankitjha67/baselkit
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            members_order: source
+
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - Architecture: architecture.md
+  - User Guide:
+    - IRB Risk Weights: guide/irb.md
+    - Standardized Approach: guide/sa.md
+    - ECL Calculation: guide/ecl.md
+    - Stress Testing: guide/stress.md
+    - Model Validation: guide/validation.md
+  - Regulatory:
+    - Mapping: regulatory_mapping.md
+    - Disclaimers: regulatory_disclaimers.md
+    - Config Versioning: regulatory_versioning.md
+  - API Reference:
+    - Core: api/core.md
+    - RWA: api/rwa.md
+    - ECL: api/ecl.md
+    - Models: api/models.md
+    - Portfolio: api/portfolio.md
+    - Validation: api/validation.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+  - attr_list
+  - pymdownx.highlight:
+      anchor_linenums: true

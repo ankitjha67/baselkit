@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "creditriskengine"
-version = "0.1.0"
+version = "0.2.0"
 description = "Production-grade open-source credit risk analytics: Basel III/CRR3 RWA, IFRS 9/CECL ECL, IRB modeling, and model validation"
 readme = "README.md"
 license = "Apache-2.0"
@@ -14,24 +14,36 @@ authors = [
 ]
 keywords = ["credit-risk", "basel-iii", "irb", "ifrs9", "cecl", "rwa", "ecl", "banking", "risk-management"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Office/Business :: Financial",
+    "Topic :: Scientific/Engineering :: Mathematics",
     "Typing :: Typed",
 ]
 dependencies = [
-    "numpy>=1.26.0",
-    "scipy>=1.12.0",
-    "pandas>=2.2.0",
-    "pydantic>=2.6.0",
-    "pyyaml>=6.0.1",
-    "scikit-learn>=1.4.0",
-    "statsmodels>=0.14.0",
-    "jinja2>=3.1.0",
+    "numpy>=1.26.0,<3.0",
+    "scipy>=1.12.0,<2.0",
+    "pandas>=2.2.0,<3.0",
+    "pydantic>=2.6.0,<3.0",
+    "pyyaml>=6.0.1,<7.0",
+    "scikit-learn>=1.4.0,<2.0",
+    "statsmodels>=0.14.0,<1.0",
+    "jinja2>=3.1.0,<4.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/ankitjha67/baselkit"
+Documentation = "https://ankitjha67.github.io/baselkit/"
+Repository = "https://github.com/ankitjha67/baselkit"
+Issues = "https://github.com/ankitjha67/baselkit/issues"
+Changelog = "https://github.com/ankitjha67/baselkit/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
@@ -46,7 +58,13 @@ dev = [
 ]
 docs = [
     "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
     "mkdocstrings[python]>=0.24.0",
+    "mkdocs-gen-files>=0.5.0",
+    "mkdocs-literate-nav>=0.6.0",
+]
+bench = [
+    "pytest-benchmark>=4.0.0",
 ]
 
 [tool.ruff]

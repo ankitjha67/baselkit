@@ -25,6 +25,15 @@ authoritative regulatory sources.
 | CRE32.25 | LGD floors (A-IRB) | `models/lgd/lgd_model.py` | `apply_lgd_floor()` |
 | CRE32.29-32 | Supervisory CCF (F-IRB) | `models/ead/ead_model.py` | `SUPERVISORY_CCFS`, `get_supervisory_ccf()` |
 | CRE32.33 | CCF floor (A-IRB) | `models/ead/ead_model.py` | `apply_ccf_floor()` |
+| CRE20.19-20.21 | Bank SCRA RW | `rwa/standardized/credit_risk_sa.py` | `get_bank_risk_weight(scra_grade=)` |
+| CRE22.35-22.39 | CRM simple approach | `rwa/crm.py` | `simple_approach()` |
+| CRE22.40-22.56 | CRM supervisory haircuts | `rwa/crm.py` | `supervisory_haircut()` |
+| CRE22.57-22.77 | CRM comprehensive approach | `rwa/crm.py` | `comprehensive_approach()` |
+| CRE22.78-22.93 | CRM guarantees | `rwa/crm.py` | `guarantee_substitution()` |
+| CRE22.33 | CRM maturity mismatch | `rwa/crm.py` | `maturity_mismatch_adjustment()` |
+| CRE31.9 fn 15 | QRRE transactor scalar | `rwa/irb/formulas.py` | `irb_risk_weight(is_qrre_transactor=)` |
+| OPE25.8-25.13 | Operational risk SMA | `rwa/operational_risk.py` | `sma_capital()`, `calculate_bic()` |
+| MAR (FRTB) | Market risk SbM/DRC | `rwa/market_risk.py` | `calculate_sa_market_risk()` |
 | RBC25.2-25.4 | Output floor | `rwa/output_floor.py` | `OutputFloorCalculator` |
 
 ## IFRS 9

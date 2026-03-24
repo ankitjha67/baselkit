@@ -137,20 +137,68 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-387 tests covering all modules. Type-checked with `mypy --strict` and linted with `ruff`.
+1,100+ tests covering all modules with 100% line coverage. Type-checked with `mypy --strict` and linted with `ruff`.
+
+## Performance
+
+Benchmarked on a single core (run `python benchmarks/bench_portfolio.py`):
+
+| Operation | Throughput |
+|-----------|-----------|
+| IRB risk weight (single) | ~100k calc/sec |
+| IRB portfolio (10k exposures) | ~10k exp/sec |
+| SA risk weight (10k exposures) | ~100k exp/sec |
+| IFRS 9 ECL (10k calculations) | ~100k calc/sec |
+| Stress test (10k × 3yr) | < 0.01s |
+| Monte Carlo (10k × 10k sims) | < 2s |
 
 ## Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| NumPy | Numerical computation |
-| SciPy | Statistical distributions and optimization |
-| pandas | Data manipulation |
-| Pydantic | Data validation and exposure model |
-| PyYAML | Regulatory configuration loading |
-| scikit-learn | AUC and model validation metrics |
-| statsmodels | Statistical tests for calibration |
+| Package | Version | Purpose |
+|---------|---------|---------|
+| NumPy | ≥1.26, <3.0 | Numerical computation |
+| SciPy | ≥1.12, <2.0 | Statistical distributions (norm CDF/PPF) |
+| pandas | ≥2.2, <3.0 | Data manipulation and audit trail export |
+| Pydantic | ≥2.6, <3.0 | Data validation and exposure model |
+| PyYAML | ≥6.0.1, <7.0 | Regulatory configuration loading |
+| scikit-learn | ≥1.4, <2.0 | AUC, logistic regression, model validation |
+| statsmodels | ≥0.14, <1.0 | Statistical tests for calibration |
+| Jinja2 | ≥3.1, <4.0 | Regulatory report templating |
+
+## Documentation
+
+Full documentation: [https://ankitjha67.github.io/baselkit/](https://ankitjha67.github.io/baselkit/)
+
+Build locally:
+
+```bash
+pip install -e ".[docs]"
+mkdocs serve
+```
+
+## Governance
+
+- **[Regulatory Mapping](docs/regulatory_mapping.md)**: Every function traced to its Basel/IFRS paragraph
+- **[Regulatory Disclaimers](docs/regulatory_disclaimers.md)**: Important caveats for production use
+- **[Config Versioning](docs/regulatory_versioning.md)**: How regulatory config changes are managed
+- **Audit Trail**: `AuditTrail` class records every calculation with inputs, outputs, timestamps, and regulatory references
+- **Input Validation**: Schema validation for YAML configs and sanitization for exposure inputs
+
+## Contributing
+
+```bash
+git clone https://github.com/ankitjha67/baselkit.git
+cd baselkit
+pip install -e ".[dev]"
+pytest                   # Run tests
+ruff check src/ tests/   # Lint
+mypy src/                # Type check
+```
 
 ## License
 
-Apache 2.0
+Apache 2.0 -- see [LICENSE](LICENSE) for details.
+
+> **Disclaimer**: This library is provided for educational and analytical
+> purposes. It has not been reviewed or endorsed by any regulatory authority.
+> See [Regulatory Disclaimers](docs/regulatory_disclaimers.md) for details.
