@@ -12,8 +12,14 @@ Production-grade open-source credit risk analytics library.
 - **Model Validation** -- Discrimination (AUROC, Gini, KS, IV), calibration (binomial, Hosmer-Lemeshow, traffic-light), stability (PSI, CSI, migration)
 - **Portfolio Risk** -- Vasicek ASRF, Gaussian copula Monte Carlo, parametric VaR, economic capital, and stress testing
 - **Concentration Risk** -- Single-name, sector-level, and granularity adjustment analytics
+- **CVA Risk** -- BA-CVA (CVA25) and SA-CVA delta risk charge (CVA26) with supervisory parameters
+- **Market Risk** -- FRTB credit spread SbM (MAR21), Default Risk Charge (MAR22), and RRAO (MAR23)
+- **Securitisation** -- SEC-SA, SEC-ERBA, and SEC-IRBA per CRE40-45
+- **Operational Risk** -- Standardised Measurement Approach (SMA) per OPE25
+- **Credit Risk Mitigation** -- Comprehensive and simple approaches, haircut framework per CRE22
 - **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI, Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
-- **Regulatory Reporting** -- COREP credit risk summaries, Pillar 3 disclosures, and model inventory entries
+- **Regulatory Reporting** -- COREP credit risk summaries, Pillar 3 disclosures, FR Y-14 (CCAR), and model inventory entries
+- **Stress Testing** -- EBA, BoE ACS, US CCAR/DFAST, and RBI macro stress testing frameworks
 
 ## Installation
 
@@ -50,8 +56,8 @@ from creditriskengine.rwa.standardized.credit_risk_sa import assign_sa_risk_weig
 from creditriskengine.core.types import SAExposureClass, CreditQualityStep, Jurisdiction
 
 rw = assign_sa_risk_weight(
-    exposure_class=SAExposureClass.CORPORATES,
-    cqs=CreditQualityStep.CQS2,
+    exposure_class=SAExposureClass.CORPORATE,
+    cqs=CreditQualityStep.CQS_2,
     jurisdiction=Jurisdiction.EU,
 )
 print(f"SA Risk Weight: {rw:.0f}%")
@@ -79,11 +85,12 @@ print(f"12-month ECL: {ecl:,.2f}")
 from creditriskengine.models.pd.scorecard import scorecard_to_pd, assign_rating_grade, build_master_scale
 import numpy as np
 
-scores = np.array([350, 500, 650, 800])
+scores = np.array([537, 587, 640, 706])
 pds = scorecard_to_pd(scores)  # Convert scorecard points to PD
 
-master_scale = build_master_scale(n_grades=10, min_pd=0.0003, max_pd=0.20)
+master_scale = build_master_scale([0.0003, 0.001, 0.005, 0.01, 0.02, 0.05, 0.10, 0.20, 1.0])
 grades = [assign_rating_grade(pd, master_scale) for pd in pds]
+# grades: ['Grade_7', 'Grade_5', 'Grade_2', 'Grade_1']
 ```
 
 ### Model Validation
@@ -104,24 +111,29 @@ print(f"KS:    {ks_statistic(y_true, y_score):.4f}")
 
 ```
 src/creditriskengine/
-    core/           # Exposure model, portfolio container, enums, config
-    regulatory/     # Jurisdiction YAML configs and loader
+    core/               # Exposure model, portfolio container, enums, audit trail, logging
+    regulatory/         # Jurisdiction YAML configs (17 jurisdictions) and loader
     rwa/
         standardized/   # SA risk weight tables (CRE20)
         irb/            # IRB formulas (CRE31) -- correlation, K, RW
         output_floor.py # Output floor phase-in by jurisdiction
+        cva.py          # BA-CVA (CVA25) and SA-CVA (CVA26) capital charges
+        market_risk.py  # FRTB SbM, DRC, RRAO (MAR21-23)
+        securitisation.py # SEC-SA, SEC-ERBA, SEC-IRBA (CRE40-45)
+        operational_risk.py # Standardised Measurement Approach (OPE25)
+        crm.py          # Credit risk mitigation, haircuts (CRE22)
     ecl/
-        ifrs9/      # Staging, SICR, lifetime PD, scenarios, TTC-to-PIT, ECL calc
-        cecl/       # PD*LGD, loss-rate, vintage, DCF, qualitative factors
-        ind_as109/  # India-specific wrapper over IFRS 9
+        ifrs9/          # Staging, SICR, lifetime PD, scenarios, TTC-to-PIT, ECL calc
+        cecl/           # PD*LGD, loss-rate, vintage, DCF, qualitative factors
+        ind_as109/      # India-specific wrapper over IFRS 9
     models/
         pd/             # Scorecard, calibration, master scale, Vasicek PD
-        lgd/            # Workout LGD, downturn LGD, term structure, floors
+        lgd/            # Workout LGD, downturn LGD, term structure, floors, cure rate
         ead/            # CCF estimation, supervisory CCF, EAD term structure
         concentration/  # Single-name, sector, granularity adjustment
-    portfolio/      # Copula simulation, VaR, economic capital, stress testing, Vasicek ASRF
-    validation/     # Discrimination, calibration, stability, backtesting, benchmarking
-    reporting/      # COREP, Pillar 3, model inventory
+    portfolio/          # Copula simulation, VaR, economic capital, stress testing, Vasicek ASRF
+    validation/         # Discrimination, calibration, stability, backtesting, benchmarking
+    reporting/          # COREP, Pillar 3, FR Y-14 (CCAR), model inventory
 ```
 
 ## Testing
@@ -137,7 +149,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-1,100+ tests covering all modules with 100% line coverage. Type-checked with `mypy --strict` and linted with `ruff`.
+1,490+ tests covering all modules with 100% line coverage. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 
@@ -185,6 +197,8 @@ mkdocs serve
 - **Input Validation**: Schema validation for YAML configs and sanitization for exposure inputs
 
 ## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines. Quick start:
 
 ```bash
 git clone https://github.com/ankitjha67/baselkit.git
