@@ -19,7 +19,6 @@ from creditriskengine.rwa.operational_risk import (
     sma_capital,
 )
 
-
 # ============================================================
 # Business Indicator (BI)
 # ============================================================

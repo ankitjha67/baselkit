@@ -3,10 +3,9 @@
 import numpy as np
 import pytest
 
-from creditriskengine.rwa.irb.formulas import irb_risk_weight, PD_FLOOR
-from creditriskengine.ecl.ifrs9.ecl_calc import ecl_12_month, calculate_ecl
 from creditriskengine.core.types import IFRS9Stage
-
+from creditriskengine.ecl.ifrs9.ecl_calc import calculate_ecl, ecl_12_month
+from creditriskengine.rwa.irb.formulas import PD_FLOOR, irb_risk_weight
 
 # ============================================================
 # Synthetic portfolio generation
@@ -190,8 +189,6 @@ class TestPortfolioECL:
     def test_lifetime_ecl_exceeds_12m(self, synthetic_portfolio):
         """Lifetime ECL (Stage 2) should exceed 12-month ECL for same exposure."""
         port = synthetic_portfolio
-        rng = np.random.default_rng(99)
-
         for i in range(100):
             pd_12m = float(port["pds"][i])
             lgd = float(port["lgds"][i])

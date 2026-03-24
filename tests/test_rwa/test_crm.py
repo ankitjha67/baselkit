@@ -1,6 +1,5 @@
 """Tests for Credit Risk Mitigation — BCBS d424, CRE22."""
 
-import math
 
 import pytest
 
@@ -13,7 +12,6 @@ from creditriskengine.rwa.crm import (
     simple_approach,
     supervisory_haircut,
 )
-
 
 # ============================================================
 # supervisory_haircut
@@ -32,22 +30,28 @@ class TestSupervisoryHaircut:
 
     # --- Sovereign bonds ---
     def test_sovereign_cqs1_le1(self) -> None:
-        assert supervisory_haircut("sovereign_bond", 0.5, credit_quality_step=1) == pytest.approx(0.005)
+        h = supervisory_haircut("sovereign_bond", 0.5, credit_quality_step=1)
+        assert h == pytest.approx(0.005)
 
     def test_sovereign_cqs1_1to5(self) -> None:
-        assert supervisory_haircut("sovereign_bond", 3.0, credit_quality_step=1) == pytest.approx(0.02)
+        h = supervisory_haircut("sovereign_bond", 3.0, credit_quality_step=1)
+        assert h == pytest.approx(0.02)
 
     def test_sovereign_cqs1_gt5(self) -> None:
-        assert supervisory_haircut("sovereign_bond", 7.0, credit_quality_step=1) == pytest.approx(0.04)
+        h = supervisory_haircut("sovereign_bond", 7.0, credit_quality_step=1)
+        assert h == pytest.approx(0.04)
 
     def test_sovereign_cqs2_le1(self) -> None:
-        assert supervisory_haircut("sovereign_bond", 1.0, credit_quality_step=2) == pytest.approx(0.01)
+        h = supervisory_haircut("sovereign_bond", 1.0, credit_quality_step=2)
+        assert h == pytest.approx(0.01)
 
     def test_sovereign_cqs2_1to5(self) -> None:
-        assert supervisory_haircut("sovereign_bond", 4.0, credit_quality_step=2) == pytest.approx(0.03)
+        h = supervisory_haircut("sovereign_bond", 4.0, credit_quality_step=2)
+        assert h == pytest.approx(0.03)
 
     def test_sovereign_cqs2_gt5(self) -> None:
-        assert supervisory_haircut("sovereign_bond", 10.0, credit_quality_step=2) == pytest.approx(0.06)
+        h = supervisory_haircut("sovereign_bond", 10.0, credit_quality_step=2)
+        assert h == pytest.approx(0.06)
 
     def test_sovereign_cqs3_same_as_cqs2(self) -> None:
         for mat in [0.5, 3.0, 7.0]:
@@ -57,22 +61,28 @@ class TestSupervisoryHaircut:
 
     # --- Corporate bonds ---
     def test_corporate_cqs1_le1(self) -> None:
-        assert supervisory_haircut("corporate_bond", 0.5, credit_quality_step=1) == pytest.approx(0.01)
+        h = supervisory_haircut("corporate_bond", 0.5, credit_quality_step=1)
+        assert h == pytest.approx(0.01)
 
     def test_corporate_cqs1_1to5(self) -> None:
-        assert supervisory_haircut("corporate_bond", 3.0, credit_quality_step=1) == pytest.approx(0.04)
+        h = supervisory_haircut("corporate_bond", 3.0, credit_quality_step=1)
+        assert h == pytest.approx(0.04)
 
     def test_corporate_cqs1_gt5(self) -> None:
-        assert supervisory_haircut("corporate_bond", 7.0, credit_quality_step=1) == pytest.approx(0.08)
+        h = supervisory_haircut("corporate_bond", 7.0, credit_quality_step=1)
+        assert h == pytest.approx(0.08)
 
     def test_corporate_cqs2_le1(self) -> None:
-        assert supervisory_haircut("corporate_bond", 0.5, credit_quality_step=2) == pytest.approx(0.02)
+        h = supervisory_haircut("corporate_bond", 0.5, credit_quality_step=2)
+        assert h == pytest.approx(0.02)
 
     def test_corporate_cqs2_1to5(self) -> None:
-        assert supervisory_haircut("corporate_bond", 3.0, credit_quality_step=2) == pytest.approx(0.06)
+        h = supervisory_haircut("corporate_bond", 3.0, credit_quality_step=2)
+        assert h == pytest.approx(0.06)
 
     def test_corporate_cqs2_gt5(self) -> None:
-        assert supervisory_haircut("corporate_bond", 7.0, credit_quality_step=2) == pytest.approx(0.12)
+        h = supervisory_haircut("corporate_bond", 7.0, credit_quality_step=2)
+        assert h == pytest.approx(0.12)
 
     # --- Equities ---
     def test_main_index_equity(self) -> None:
@@ -88,7 +98,9 @@ class TestSupervisoryHaircut:
     # --- Currency mismatch add-on ---
     def test_currency_mismatch_addon_bond(self) -> None:
         base = supervisory_haircut("corporate_bond", 3.0, credit_quality_step=1)
-        with_fx = supervisory_haircut("corporate_bond", 3.0, credit_quality_step=1, currency_mismatch=True)
+        with_fx = supervisory_haircut(
+            "corporate_bond", 3.0, credit_quality_step=1, currency_mismatch=True,
+        )
         assert with_fx == pytest.approx(base + 0.08)
 
     def test_currency_mismatch_addon_equity(self) -> None:
@@ -505,10 +517,10 @@ class TestIntegration:
 
     def test_haircut_table_completeness(self) -> None:
         """Every entry in HAIRCUT_TABLE yields a valid haircut."""
-        for (ctype, cqs), buckets in HAIRCUT_TABLE.items():
-            for bucket, value in buckets.items():
+        for (_ctype, _cqs), buckets in HAIRCUT_TABLE.items():
+            for _bucket, value in buckets.items():
                 assert isinstance(value, float)
                 assert 0.0 <= value <= 1.0
 
     def test_constants(self) -> None:
-        assert CURRENCY_MISMATCH_HAIRCUT == pytest.approx(0.08)
+        assert pytest.approx(0.08) == CURRENCY_MISMATCH_HAIRCUT

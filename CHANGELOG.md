@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-03-24
+
+### Fixed
+- Version bump to 0.3.0 to match PyPI release
+- Removed broken GitHub Pages docs link (site not yet deployed)
+- Fixed CI: ruff ANN rules now exclude test files, mypy configured to ignore missing third-party stubs
+- Removed unused `type: ignore` comment in `core/portfolio.py`
+
 ## [0.2.0] - 2026-03-24
 
 ### Added

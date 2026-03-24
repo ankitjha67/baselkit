@@ -188,9 +188,7 @@ Benchmarked on a single core (run `python benchmarks/bench_portfolio.py`):
 
 ## Documentation
 
-Full documentation: [https://ankitjha67.github.io/baselkit/](https://ankitjha67.github.io/baselkit/)
-
-Build locally:
+Build and serve the docs locally:
 
 ```bash
 pip install -e ".[docs]"

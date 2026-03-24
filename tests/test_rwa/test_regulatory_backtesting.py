@@ -1,35 +1,28 @@
 """Regulatory back-testing against Basel III worked examples (CRE31-32)."""
 
-import pytest
 from datetime import date
 
+import pytest
+
+from creditriskengine.core.types import CreditQualityStep, Jurisdiction
 from creditriskengine.rwa.irb.formulas import (
     PD_FLOOR,
-    irb_risk_weight,
-    irb_capital_requirement_k,
     asset_correlation_corporate,
-    asset_correlation_qrre,
     asset_correlation_other_retail,
+    asset_correlation_qrre,
     asset_correlation_residential_mortgage,
-    sme_firm_size_adjustment,
+    irb_risk_weight,
     maturity_adjustment,
+    sme_firm_size_adjustment,
 )
+from creditriskengine.rwa.output_floor import OutputFloorCalculator, get_output_floor_pct
 from creditriskengine.rwa.standardized.credit_risk_sa import (
-    get_sovereign_risk_weight,
     get_bank_risk_weight,
+    get_commercial_re_risk_weight,
     get_corporate_risk_weight,
     get_residential_re_risk_weight,
-    get_commercial_re_risk_weight,
-    SOVEREIGN_RW,
-    BANK_ECRA_RW,
-    BANK_SCRA_RW,
-    CORPORATE_RW,
-    RRE_WHOLE_LOAN_RW,
-    RRE_CASHFLOW_DEPENDENT_RW,
+    get_sovereign_risk_weight,
 )
-from creditriskengine.core.types import CreditQualityStep, Jurisdiction
-from creditriskengine.rwa.output_floor import get_output_floor_pct, OutputFloorCalculator
-
 
 # ============================================================
 # IRB Corporate Risk Weights — CRE31 reference ranges

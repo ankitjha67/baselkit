@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pandas as pd
 import pytest
 
 import creditriskengine
 from creditriskengine.core.audit import AuditTrail, CalculationRecord
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -20,7 +19,7 @@ def _make_record(**overrides) -> CalculationRecord:
     """Build a CalculationRecord with sensible defaults."""
     defaults = {
         "exposure_id": "EXP-001",
-        "timestamp": datetime(2025, 6, 15, 12, 0, 0, tzinfo=timezone.utc),
+        "timestamp": datetime(2025, 6, 15, 12, 0, 0, tzinfo=UTC),
         "approach": "standardized",
         "jurisdiction": "EU",
         "inputs": {"pd": 0.01, "lgd": 0.45},
@@ -58,7 +57,7 @@ class TestCalculationRecord:
     def test_default_warnings_empty(self) -> None:
         rec = CalculationRecord(
             exposure_id="X",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             approach="SA",
             jurisdiction="UK",
             inputs={},
@@ -123,9 +122,9 @@ class TestAuditTrailRecord:
 
     def test_auto_timestamp_utc(self) -> None:
         trail = AuditTrail()
-        before = datetime.now(timezone.utc)
+        before = datetime.now(UTC)
         rec = trail.record("E1", "SA", "EU", {}, {}, "CRE20")
-        after = datetime.now(timezone.utc)
+        after = datetime.now(UTC)
         assert before <= rec.timestamp <= after
         assert rec.timestamp.tzinfo is not None
 

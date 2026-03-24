@@ -1,13 +1,13 @@
 """Cross-validation tests against vendor reference ranges."""
 
 import pytest
+
 from creditriskengine.rwa.irb.formulas import (
-    irb_risk_weight,
     PD_FLOOR,
     asset_correlation_corporate,
     asset_correlation_other_retail,
+    irb_risk_weight,
 )
-
 
 # ============================================================
 # Monotonicity tests

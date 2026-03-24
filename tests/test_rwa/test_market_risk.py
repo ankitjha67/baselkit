@@ -15,7 +15,6 @@ from creditriskengine.rwa.market_risk import (
     total_market_risk_capital,
 )
 
-
 # ============================================================
 # FRTBApproach enum
 # ============================================================
@@ -105,7 +104,7 @@ class TestSbMCreditSpread:
             [0.3, 1.0, 0.5],
             [0.2, 0.5, 1.0],
         ]
-        ws = [si * ri for si, ri in zip(s, rw)]
+        ws = [si * ri for si, ri in zip(s, rw, strict=True)]
         total = sum(w ** 2 for w in ws)
         for i in range(3):
             for j in range(i + 1, 3):

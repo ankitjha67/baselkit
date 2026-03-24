@@ -227,7 +227,7 @@ def calculate_sa_market_risk(
     drc_risk_weights: list[float] | None = None,
     exotic_gross_notional: float = 0.0,
     other_gross_notional: float = 0.0,
-) -> dict:
+) -> dict[str, float]:
     """Calculate total SA market risk capital.
 
     Combines SbM (credit spread risk), DRC, and RRAO into a single
@@ -268,7 +268,7 @@ def total_market_risk_capital(
     sbm: float,
     drc: float,
     rrao: float,
-) -> dict:
+) -> dict[str, float]:
     """Aggregate market risk capital components.
 
     Total = SbM + DRC + RRAO

@@ -1,20 +1,21 @@
 """Tests for capital buffer calculations — BCBS d424 RBC40."""
 
-import pytest
-import yaml
 from pathlib import Path
 from typing import Any
 
+import pytest
+import yaml
+
 from creditriskengine.core.exceptions import ConfigurationError, ValidationError
 from creditriskengine.rwa.capital_buffers import (
-    capital_conservation_buffer,
-    countercyclical_buffer,
-    gsib_surcharge,
-    dsib_surcharge,
-    combined_buffer_requirement,
-    minimum_capital_requirements,
-    maximum_distributable_amount,
     capital_adequacy_summary,
+    capital_conservation_buffer,
+    combined_buffer_requirement,
+    countercyclical_buffer,
+    dsib_surcharge,
+    gsib_surcharge,
+    maximum_distributable_amount,
+    minimum_capital_requirements,
 )
 
 # ---------------------------------------------------------------------------
