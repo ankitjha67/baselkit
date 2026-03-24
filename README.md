@@ -98,6 +98,8 @@ pds = scorecard_to_pd(scores)  # Convert scorecard points to PD
 master_scale = build_master_scale([0.0003, 0.001, 0.005, 0.01, 0.02, 0.05, 0.10, 0.20, 1.0])
 grades = [assign_rating_grade(pd, master_scale) for pd in pds]
 # grades: ['Grade_7', 'Grade_5', 'Grade_2', 'Grade_1']
+print(f"PDs: {pds}")
+print(f"Grades: {grades}")
 ```
 
 ### Model Validation
