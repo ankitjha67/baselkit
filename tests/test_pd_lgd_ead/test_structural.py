@@ -133,3 +133,15 @@ class TestImpliedAssetValue:
         """Extreme inputs should cause non-convergence with very few iterations."""
         with pytest.raises(RuntimeError, match="did not converge"):
             implied_asset_value(1e-15, 1e15, 0.01, 0.0, max_iterations=1)
+
+    def test_near_zero_derivative_raises(self) -> None:
+        """When d1 is extremely negative, N(d1) ≈ 0 → derivative near zero."""
+        # Tiny equity relative to massive debt forces V ≈ debt,
+        # making d1 extremely negative and N(d1) ≈ 0
+        with pytest.raises(RuntimeError, match="derivative near zero"):
+            implied_asset_value(
+                equity_value=1e-100,
+                debt_face_value=1e10,
+                asset_volatility=0.001,
+                risk_free_rate=0.0,
+            )

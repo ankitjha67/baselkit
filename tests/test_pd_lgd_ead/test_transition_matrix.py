@@ -249,15 +249,15 @@ class TestGeneratorMatrixComplex:
     """Edge cases for generator_matrix with complex results."""
 
     def test_non_embeddable_matrix_warns(self) -> None:
-        """A non-embeddable matrix produces complex log; should warn and return real."""
-        # Construct a matrix whose log has non-trivial imaginary part
-        # A permutation-like matrix that isn't embeddable
+        """A matrix with negative eigenvalues produces complex log with material imaginary part."""
+        # This reflection-like matrix has a negative eigenvalue (-0.8),
+        # so logm returns complex128 with imag norm ≈ pi
         tm = np.array([
-            [0.0, 1.0, 0.0],
+            [0.1, 0.9, 0.0],
+            [0.9, 0.1, 0.0],
             [0.0, 0.0, 1.0],
-            [1.0, 0.0, 0.0],
         ], dtype=np.float64)
-        Q = generator_matrix(tm)
-        # Should return real matrix
-        assert Q.dtype == np.float64
-        assert Q.shape == (3, 3)
+        gen = generator_matrix(tm)
+        # Should return real matrix after taking real part
+        assert gen.dtype == np.float64
+        assert gen.shape == (3, 3)
