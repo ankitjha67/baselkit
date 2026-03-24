@@ -358,6 +358,8 @@ def generate_loss_schedule(
     reporting_date: str,
     bhc_name: str = "",
     horizon_quarters: int = DEFAULT_HORIZON_QUARTERS,
+    beginning_balance: float | None = None,
+    gross_to_net_ratio: float = 1.1,
 ) -> FRY14Schedule:
     """Generate FR Y-14Q Schedule B -- Projected Losses (9 quarters for CCAR).
 
@@ -369,6 +371,11 @@ def generate_loss_schedule(
         reporting_date: Reporting reference date (ISO format string).
         bhc_name: Bank Holding Company name.
         horizon_quarters: Number of projection quarters (default 9 per CCAR).
+        beginning_balance: Total portfolio beginning balance.  If ``None``,
+            defaults to 10× total projected losses as a heuristic.
+            Callers should supply the actual portfolio balance.
+        gross_to_net_ratio: Ratio of gross charge-offs to net charge-offs
+            (default 1.1, i.e. recoveries = 10% of gross).
 
     Returns:
         Populated :class:`FRY14Schedule` for Schedule B.
@@ -402,23 +409,28 @@ def generate_loss_schedule(
 
     rows: list[FRY14LossProjectionRow] = []
     cumulative_loss = 0.0
-    # Beginning balance is approximated as 10x the total projected losses.
-    # This is a simplified heuristic for the Schedule B template; in production,
-    # callers should supply actual portfolio balances via an extended API.
-    total_beginning_balance = sum(projected_losses.values()) * 10
+    total_beginning_balance = (
+        beginning_balance
+        if beginning_balance is not None
+        else sum(projected_losses.values()) * 10
+    )
+
+    recovery_rate = gross_to_net_ratio - 1.0  # e.g. 1.1 → 10% recovery
 
     for idx, q_label in enumerate(sorted_quarters[:horizon_quarters]):
         nco = projected_losses.get(q_label, 0.0)
         cumulative_loss += nco
         beginning = total_beginning_balance - cumulative_loss + nco
+        gross = nco * gross_to_net_ratio
+        recoveries = nco * recovery_rate
 
         rows.append(
             FRY14LossProjectionRow(
                 quarter_label=q_label,
                 quarter_index=idx + 1,
                 beginning_balance=beginning,
-                gross_charge_offs=nco * 1.1,  # gross ~ 110% of net
-                recoveries=nco * 0.1,
+                gross_charge_offs=gross,
+                recoveries=recoveries,
                 net_charge_offs=nco,
                 provision_expense=nco,
                 ending_balance=beginning - nco,

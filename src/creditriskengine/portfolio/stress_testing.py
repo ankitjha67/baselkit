@@ -529,11 +529,19 @@ class BoEACSStressTest:
         )
         return np.maximum(multipliers, 1.0)
 
-    def translate_macro_to_lgd_stress(self) -> np.ndarray:
+    def translate_macro_to_lgd_stress(
+        self,
+        hpi_lgd_sensitivity: float = 0.6,
+    ) -> np.ndarray:
         """Translate BoE ACS macro scenario to LGD add-ons.
 
         House price index (HPI) declines drive LGD increases for secured
-        lending. The BoE uses a more conservative 0.6× multiplier than EBA.
+        lending.
+
+        Args:
+            hpi_lgd_sensitivity: Multiplier converting HPI declines to LGD
+                add-ons (default 0.6 per BoE ACS methodology; EBA uses
+                lower values around 0.4).
 
         Returns:
             LGD add-ons per period (shape: horizon_years,).
@@ -541,7 +549,7 @@ class BoEACSStressTest:
         hpi = self.scenario.variables.get(
             "house_price_index", np.zeros(self.horizon_years),
         )
-        return np.maximum(-hpi[:self.horizon_years] * 0.6, 0.0)
+        return np.maximum(-hpi[:self.horizon_years] * hpi_lgd_sensitivity, 0.0)
 
     def run(
         self,
@@ -919,6 +927,8 @@ class RBIStressTest:
         rate_shock_bps: float,
         duration_gap: float,
         total_assets: float,
+        rate_sensitive_fraction: float = 0.6,
+        avg_risk_weight: float = 0.75,
     ) -> dict[str, float]:
         """Interest rate sensitivity analysis.
 
@@ -934,6 +944,10 @@ class RBIStressTest:
             rate_shock_bps: Interest rate shock in basis points (e.g. +200).
             duration_gap: Duration gap (years) between assets and liabilities.
             total_assets: Total asset value.
+            rate_sensitive_fraction: Fraction of advances that are
+                rate-sensitive (default 0.6 per RBI guidelines).
+            avg_risk_weight: Average portfolio risk weight used to
+                approximate RWA from total assets (default 0.75).
 
         Returns:
             Dict with EVE impact, NII impact, and stressed CAR estimate.
@@ -945,14 +959,15 @@ class RBIStressTest:
         # EVE impact
         eve_impact = -duration_gap * rate_shock * total_assets
 
-        # NII impact: approximate as rate_shock x rate-sensitive advances
-        # (simplified: assume 60% of advances are rate-sensitive)
-        rate_sensitive_advances = self.baseline_metrics["total_advances"] * 0.6
+        # NII impact: rate_shock × rate-sensitive portion of advances
+        rate_sensitive_advances = (
+            self.baseline_metrics["total_advances"] * rate_sensitive_fraction
+        )
         nii_impact = rate_shock * rate_sensitive_advances
         stressed_nii = self.baseline_metrics["net_interest_income"] + nii_impact
 
-        # CAR impact (simplified: EVE change relative to RWA proxy)
-        rwa_proxy = total_assets * 0.75
+        # CAR impact: EVE change relative to RWA
+        rwa_proxy = total_assets * avg_risk_weight
         car_impact_pp = (eve_impact / rwa_proxy) * 100 if rwa_proxy > 0 else 0.0
         stressed_car = self.baseline_metrics["car"] + car_impact_pp
 
@@ -981,6 +996,7 @@ class RBIStressTest:
         self,
         npa_increase_pct: float,
         provision_coverage_ratio: float = 0.70,
+        avg_risk_weight: float = 0.75,
     ) -> dict[str, float]:
         """Credit quality sensitivity analysis via NPA ratio shift.
 
@@ -994,6 +1010,8 @@ class RBIStressTest:
                 (e.g. 2.0 means NPA ratio rises by 2 pp).
             provision_coverage_ratio: Provisioning coverage ratio for
                 incremental NPAs (default 0.70).
+            avg_risk_weight: Average portfolio risk weight used to
+                approximate RWA from total advances (default 0.75).
 
         Returns:
             Dict with stressed NPA ratio, incremental provisions, and CAR impact.
@@ -1008,7 +1026,7 @@ class RBIStressTest:
         incremental_provisions = incremental_npa_amount * provision_coverage_ratio
 
         # CAR impact: provisions reduce capital, RWA unchanged
-        rwa_proxy = total_advances * 0.75  # average risk weight 75%
+        rwa_proxy = total_advances * avg_risk_weight
         car_reduction = (
             (incremental_provisions / rwa_proxy) * 100 if rwa_proxy > 0 else 0.0
         )

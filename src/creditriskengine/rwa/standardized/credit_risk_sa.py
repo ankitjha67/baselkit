@@ -108,7 +108,7 @@ RRE_CASHFLOW_DEPENDENT_RW: list[tuple[float, float, float]] = [
 
 # CRE NOT dependent on cashflows — CRE20.89 Table 14
 CRE_NOT_CASHFLOW_RW: list[tuple[float, float, float]] = [
-    (0.0, 0.60, 60.0),  # min(60%, counterparty_rw) — simplified to 60%
+    (0.0, 0.60, 60.0),  # min(60%, counterparty_rw) — see get_commercial_re_risk_weight()
     (0.60, 0.80, 75.0),
     (0.80, float("inf"), -1.0),  # counterparty risk weight
 ]

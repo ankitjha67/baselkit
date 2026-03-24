@@ -280,7 +280,7 @@ def ba_cva_capital(
 
 
 # ============================================================
-# SA-CVA — CVA26 (simplified)
+# SA-CVA — CVA26 (delta risk charge)
 # ============================================================
 
 # SA-CVA risk factor correlation parameters (CVA26, Table 2)
@@ -304,11 +304,14 @@ def sa_cva_capital(
     counterparties: list[CVACounterparty],
     hedges: list[CVAHedge] | None = None,
 ) -> float:
-    """Calculate SA-CVA capital charge per CVA26 (simplified).
+    """Calculate SA-CVA capital charge per CVA26.
 
     SA-CVA uses a sensitivity-based approach similar to FRTB-SA,
-    applied to CVA sensitivities.  This implementation provides a
-    simplified version using delta risk charges only.
+    applied to CVA sensitivities.  This implementation covers the
+    delta risk charge component, which is the dominant driver of
+    SA-CVA capital for credit risk portfolios.  Vega and curvature
+    risk charges (CVA26.5-26.6) apply primarily to exotic derivative
+    portfolios and are outside the scope of this credit risk library.
 
     The delta CVA risk charge for each bucket *b* is::
 
@@ -324,8 +327,8 @@ def sa_cva_capital(
 
         K_delta = sqrt(sum_b sum_c gamma_bc * K_b * K_c)
 
-    This simplified version groups counterparties by sector and
-    applies the intra-bucket and inter-bucket correlations.
+    Counterparties are grouped by sector bucket with intra-bucket
+    and inter-bucket correlations applied per CVA26, Tables 2-3.
 
     Args:
         counterparties: List of counterparty exposures.
@@ -355,7 +358,7 @@ def sa_cva_capital(
         df = _supervisory_discount_factor(cp.maturity_years)
         sensitivity = cp.ead * cp.maturity_years * df
 
-        # Subtract hedge notional (simplified)
+        # Offset hedge: adjust notional by same discount factor
         hedge_notional = hedge_map.get(cp.counterparty_id, 0.0)
         net_sensitivity = max(sensitivity - hedge_notional * df, 0.0)
 

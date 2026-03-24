@@ -164,12 +164,11 @@ def validate_config(config: dict[str, Any]) -> list[str]:
                                 f"'output_floor.{key}' must be "
                                 f"<= {rules['max']}, got {value}"
                             )
-                    elif expected_type is bool:
-                        if not isinstance(value, bool):
-                            errors.append(
-                                f"'output_floor.{key}' must be "
-                                f"{expected_type.__name__}, got {type(value).__name__}"
-                            )
+                    elif expected_type is bool and not isinstance(value, bool):
+                        errors.append(
+                            f"'output_floor.{key}' must be "
+                            f"{expected_type.__name__}, got {type(value).__name__}"
+                        )
 
     # default_definition section
     default_def = config.get("default_definition")

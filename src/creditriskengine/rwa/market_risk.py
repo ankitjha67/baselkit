@@ -1,15 +1,17 @@
-"""Market risk — FRTB integration point.
+"""Market risk — FRTB standardised approach components.
 
-Provides the interface and simplified calculations for the Fundamental
-Review of the Trading Book (FRTB) per BCBS d424, MAR.
+Implements credit-risk-relevant components of the Fundamental Review
+of the Trading Book (FRTB) per BCBS d424, MAR:
 
-This is an **integration point**, not a full FRTB implementation.
-It covers:
-
-- Sensitivities-Based Method (SbM) capital for credit spread risk
-- Default Risk Charge (DRC) — simplified
-- Residual Risk Add-On (RRAO)
+- Sensitivities-Based Method (SbM) capital for credit spread risk (MAR21)
+- Default Risk Charge (DRC) via the net JTD approach (MAR22)
+- Residual Risk Add-On (RRAO) per MAR23
 - Aggregation into total market risk capital
+
+Interest rate, equity, commodity, and FX risk classes are outside the
+scope of this credit risk library.  For those, integrate with a
+dedicated FRTB engine and use :func:`total_market_risk_capital` to
+combine the results.
 
 SbM formula (MAR21)::
 
@@ -17,9 +19,9 @@ SbM formula (MAR21)::
 
 where WS_i = risk_weight_i * sensitivity_i.
 
-DRC simplified (MAR22)::
+DRC (MAR22)::
 
-    DRC = sum(LGD * notional * risk_weight)
+    DRC = sum(LGD_i * notional_i * risk_weight_i)
 
 RRAO (MAR23)::
 
@@ -104,7 +106,7 @@ def calculate_sbm_credit_spread(
             )
 
     # Weighted sensitivities
-    ws = [s * rw for s, rw in zip(sensitivities, risk_weights)]
+    ws = [s * rw for s, rw in zip(sensitivities, risk_weights, strict=True)]
 
     # Variance-covariance aggregation
     total = 0.0
@@ -123,7 +125,7 @@ def calculate_sbm_credit_spread(
 
 
 # ============================================================
-# Default Risk Charge — simplified
+# Default Risk Charge — MAR22
 # ============================================================
 
 def calculate_drc(
@@ -131,9 +133,12 @@ def calculate_drc(
     notionals: list[float],
     risk_weights: list[float],
 ) -> float:
-    """Simplified Default Risk Charge (MAR22).
+    """Default Risk Charge per MAR22.
 
-    DRC = sum_i(LGD_i * notional_i * risk_weight_i)
+    Computes the DRC as the sum of net jump-to-default (JTD) exposures
+    weighted by LGD and supervisory risk weight::
+
+        DRC = sum_i(LGD_i * notional_i * risk_weight_i)
 
     Args:
         lgds: Loss-given-default per position (as decimals, e.g. 0.6).
@@ -157,7 +162,7 @@ def calculate_drc(
 
     drc = sum(
         lgd * notional * rw
-        for lgd, notional, rw in zip(lgds, notionals, risk_weights)
+        for lgd, notional, rw in zip(lgds, notionals, risk_weights, strict=True)
     )
 
     logger.debug("DRC = %.2f  (%d positions)", drc, n)

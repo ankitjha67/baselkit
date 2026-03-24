@@ -266,10 +266,7 @@ def simple_approach(
     covered = min(collateral_value, exposure)
     uncovered = exposure - covered
 
-    if is_cash_or_zero_haircut:
-        floor = 0.0
-    else:
-        floor = 20.0
+    floor = 0.0 if is_cash_or_zero_haircut else 20.0
 
     effective_collateral_rw = max(collateral_rw, floor)
 
