@@ -87,6 +87,38 @@ def pd_to_score(
     return np.asarray(offset + factor * np.log(odds))
 
 
+def scorecard_to_pd(
+    scores: np.ndarray,
+    base_score: float = 600.0,
+    base_odds: float = 50.0,
+    pdo: float = 20.0,
+) -> np.ndarray:
+    """Convert scorecard points to PD (inverse of :func:`pd_to_score`).
+
+    Inverts the industry standard scorecard formula:
+
+        odds = exp((score - offset) / factor)
+        PD   = 1 / (1 + odds)
+
+    where ``factor = pdo / ln(2)`` and
+    ``offset = base_score - factor * ln(base_odds)``.
+
+    Args:
+        scores: Scorecard point values (e.g. 350, 500, 650, 800).
+        base_score: Score at which odds = base_odds.
+        base_odds: Odds at the base score.
+        pdo: Points to double the odds.
+
+    Returns:
+        Array of PDs in (0, 1).
+    """
+    scores = np.asarray(scores, dtype=np.float64)
+    factor = pdo / math.log(2)
+    offset = base_score - factor * math.log(base_odds)
+    odds = np.exp((scores - offset) / factor)
+    return np.asarray(1.0 / (1.0 + odds))
+
+
 # ── Master Scale / Rating Grade Construction ───────────────────────
 
 

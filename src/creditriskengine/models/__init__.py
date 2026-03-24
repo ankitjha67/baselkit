@@ -37,6 +37,7 @@ from creditriskengine.models.pd import (
     optimal_binning,
     quantile_binning,
     score_to_pd,
+    scorecard_to_pd,
 )
 
 __all__ = [
@@ -45,6 +46,7 @@ __all__ = [
     "build_master_scale",
     "calibrate_pd_anchor_point",
     "score_to_pd",
+    "scorecard_to_pd",
     "BinResult",
     "calculate_woe",
     "calculate_iv",

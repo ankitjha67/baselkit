@@ -76,11 +76,11 @@ print(f"12-month ECL: {ecl:,.2f}")
 ### PD Scorecard
 
 ```python
-from creditriskengine.models.pd.scorecard import score_to_pd, assign_rating_grade, build_master_scale
+from creditriskengine.models.pd.scorecard import scorecard_to_pd, assign_rating_grade, build_master_scale
 import numpy as np
 
 scores = np.array([350, 500, 650, 800])
-pds = score_to_pd(scores)
+pds = scorecard_to_pd(scores)  # Convert scorecard points to PD
 
 master_scale = build_master_scale(n_grades=10, min_pd=0.0003, max_pd=0.20)
 grades = [assign_rating_grade(pd, master_scale) for pd in pds]

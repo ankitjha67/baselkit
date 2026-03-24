@@ -18,6 +18,7 @@ from creditriskengine.models.pd.scorecard import (
     build_master_scale,
     calibrate_pd_anchor_point,
     score_to_pd,
+    scorecard_to_pd,
 )
 
 __all__ = [
@@ -25,6 +26,7 @@ __all__ = [
     "build_master_scale",
     "calibrate_pd_anchor_point",
     "score_to_pd",
+    "scorecard_to_pd",
     "BinResult",
     "calculate_woe",
     "calculate_iv",

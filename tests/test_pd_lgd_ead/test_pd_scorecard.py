@@ -14,6 +14,7 @@ from creditriskengine.models.pd.scorecard import (
     logistic_score,
     pd_to_score,
     score_to_pd,
+    scorecard_to_pd,
     vasicek_single_factor_pd,
 )
 
@@ -165,6 +166,35 @@ class TestVasicekSingleFactorPD:
         stressed = vasicek_single_factor_pd(0.01, rho=0.15, confidence=0.999)
         assert 0.0 < stressed < 1.0
         assert stressed > 0.01
+
+
+class TestScorecardToPD:
+    """Tests for scorecard_to_pd (inverse of pd_to_score)."""
+
+    def test_roundtrip(self) -> None:
+        pds_orig = np.array([0.001, 0.01, 0.05, 0.10, 0.20])
+        scores = pd_to_score(pds_orig)
+        pds_back = scorecard_to_pd(scores)
+        np.testing.assert_allclose(pds_back, pds_orig, rtol=1e-10)
+
+    def test_typical_scorecard_points(self) -> None:
+        scores = np.array([350, 500, 650, 800])
+        pds = scorecard_to_pd(scores)
+        assert all(0 < p < 1 for p in pds)
+        # Higher score → lower PD
+        assert pds[0] > pds[1] > pds[2] > pds[3]
+
+    def test_custom_parameters_roundtrip(self) -> None:
+        pds_orig = np.array([0.02, 0.10])
+        scores = pd_to_score(pds_orig, base_score=500.0, base_odds=20.0, pdo=30.0)
+        pds_back = scorecard_to_pd(scores, base_score=500.0, base_odds=20.0, pdo=30.0)
+        np.testing.assert_allclose(pds_back, pds_orig, rtol=1e-10)
+
+    def test_base_score_gives_base_pd(self) -> None:
+        # At base_score=600 with base_odds=50, PD = 1/(1+50)
+        pds = scorecard_to_pd(np.array([600.0]))
+        expected_pd = 1.0 / (1.0 + 50.0)
+        assert pds[0] == pytest.approx(expected_pd, rel=1e-6)
 
 
 class TestPDToScoreExtended:
