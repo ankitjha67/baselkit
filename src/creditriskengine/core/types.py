@@ -88,6 +88,7 @@ class SAExposureClass(StrEnum):
     RESIDENTIAL_MORTGAGE = "residential_mortgage"
     COMMERCIAL_REAL_ESTATE = "commercial_real_estate"
     LAND_ADC = "land_acquisition_development_construction"
+    COVERED_BOND = "covered_bond"
     DEFAULTED = "defaulted"
     OTHER = "other"
 

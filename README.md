@@ -6,20 +6,21 @@ Production-grade open-source credit risk analytics library.
 
 ## Features
 
-- **RWA Calculation** -- Basel III/IV Standardized Approach and IRB (F-IRB / A-IRB) with output floor phase-in
+- **RWA Calculation** -- Basel III/IV Standardized Approach and IRB (F-IRB / A-IRB) with output floor phase-in, double default (CRE32), and equity IRB (CRE33)
 - **ECL Engines** -- IFRS 9, US CECL (ASC 326), and Ind AS 109 with staging, SICR, lifetime PD, and scenario weighting
-- **PD / LGD / EAD Modeling** -- Scorecard development, calibration (anchor-point & Bayesian), TTC-to-PIT conversion, and term structures
+- **PD / LGD / EAD Modeling** -- Scorecard development, calibration (anchor-point & Bayesian), TTC-to-PIT conversion, term structures, Merton structural model, Altman Z-score, and transition matrix estimation
 - **Model Validation** -- Discrimination (AUROC, Gini, KS, IV), calibration (binomial, Hosmer-Lemeshow, traffic-light), stability (PSI, CSI, migration)
-- **Portfolio Risk** -- Vasicek ASRF, Gaussian copula Monte Carlo, parametric VaR, economic capital, and stress testing
+- **Portfolio Risk** -- Vasicek ASRF, Gaussian copula Monte Carlo, parametric VaR, economic capital, and stress testing (including reverse stress)
 - **Concentration Risk** -- Single-name, sector-level, and granularity adjustment analytics
+- **Capital Adequacy** -- Capital buffers (CConB, CCyB, G-SIB/D-SIB), leverage ratio (CRE80), and MDA framework
 - **CVA Risk** -- BA-CVA (CVA25) and SA-CVA delta risk charge (CVA26) with supervisory parameters
 - **Market Risk** -- FRTB credit spread SbM (MAR21), Default Risk Charge (MAR22), and RRAO (MAR23)
 - **Securitisation** -- SEC-SA, SEC-ERBA, and SEC-IRBA per CRE40-45
 - **Operational Risk** -- Standardised Measurement Approach (SMA) per OPE25
 - **Credit Risk Mitigation** -- Comprehensive and simple approaches, haircut framework per CRE22
 - **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI, Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
-- **Regulatory Reporting** -- COREP credit risk summaries, Pillar 3 disclosures, FR Y-14 (CCAR), and model inventory entries
-- **Stress Testing** -- EBA, BoE ACS, US CCAR/DFAST, and RBI macro stress testing frameworks
+- **Regulatory Reporting** -- COREP, Pillar 3 disclosure templates (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), and model inventory
+- **Stress Testing** -- EBA, BoE ACS, US CCAR/DFAST, RBI frameworks, and reverse stress testing
 
 ## Installation
 
@@ -117,6 +118,8 @@ src/creditriskengine/
         standardized/   # SA risk weight tables (CRE20)
         irb/            # IRB formulas (CRE31) -- correlation, K, RW
         output_floor.py # Output floor phase-in by jurisdiction
+        capital_buffers.py # CConB, CCyB, G-SIB/D-SIB, MDA (RBC40)
+        leverage_ratio.py # Basel III leverage ratio (CRE80)
         cva.py          # BA-CVA (CVA25) and SA-CVA (CVA26) capital charges
         market_risk.py  # FRTB SbM, DRC, RRAO (MAR21-23)
         securitisation.py # SEC-SA, SEC-ERBA, SEC-IRBA (CRE40-45)
@@ -127,13 +130,13 @@ src/creditriskengine/
         cecl/           # PD*LGD, loss-rate, vintage, DCF, qualitative factors
         ind_as109/      # India-specific wrapper over IFRS 9
     models/
-        pd/             # Scorecard, calibration, master scale, Vasicek PD
+        pd/             # Scorecard, calibration, master scale, Vasicek PD, Merton, Z-score, transition matrices
         lgd/            # Workout LGD, downturn LGD, term structure, floors, cure rate
         ead/            # CCF estimation, supervisory CCF, EAD term structure
         concentration/  # Single-name, sector, granularity adjustment
     portfolio/          # Copula simulation, VaR, economic capital, stress testing, Vasicek ASRF
     validation/         # Discrimination, calibration, stability, backtesting, benchmarking
-    reporting/          # COREP, Pillar 3, FR Y-14 (CCAR), model inventory
+    reporting/          # COREP, Pillar 3 (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), model inventory
 ```
 
 ## Testing
@@ -149,7 +152,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-1,490+ tests covering all modules with 100% line coverage. Type-checked with `mypy --strict` and linted with `ruff`.
+1,780+ tests covering all modules with 99%+ line coverage. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

@@ -280,3 +280,146 @@ def irb_risk_weight(
     )
 
     return rw * 100.0
+
+
+# ============================================================
+# DOUBLE DEFAULT — SUBSTITUTION APPROACH
+# BCBS d424, CRE32.38-41
+# ============================================================
+
+
+def double_default_rw(
+    pd_obligor: float,
+    pd_guarantor: float,
+    lgd: float,
+    maturity: float = 2.5,
+    asset_class: str = "corporate",
+) -> float:
+    """Double default risk weight using the substitution approach.
+
+    When a guarantee or credit derivative exists, the bank may substitute
+    the guarantor's PD for the obligor's PD while retaining the asset
+    correlation derived from the obligor's asset class.
+
+    Formula (BCBS CRE32.38-41):
+        1. Effective PD = max(PD_guarantor, PD_FLOOR)
+        2. Correlation R = derived from obligor's asset class using PD_obligor
+        3. K = IRB capital requirement using effective PD, obligor's R, and LGD
+        4. Apply maturity adjustment for non-retail asset classes
+        5. RW = K * 12.5
+
+    The guarantor PD is floored at 0.03% per CRE32.13.
+
+    Args:
+        pd_obligor: Probability of Default of the original obligor.
+        pd_guarantor: Probability of Default of the guarantor.
+        lgd: Loss Given Default (in [0, 1]).
+        maturity: Effective maturity in years (non-retail only).
+        asset_class: One of 'corporate', 'sovereign', 'bank',
+                     'residential_mortgage', 'qrre', 'other_retail'.
+
+    Returns:
+        Risk weight as a percentage (e.g., 75.0 means 75%).
+    """
+    pd_obligor_floored = max(pd_obligor, PD_FLOOR)
+    pd_eff = max(pd_guarantor, PD_FLOOR)
+
+    # Defaulted guarantor: no benefit
+    if pd_guarantor >= 1.0:
+        return 0.0
+
+    # Step 1: Asset correlation from obligor's asset class and PD
+    if asset_class in ("corporate", "sovereign", "bank"):
+        r = asset_correlation_corporate(pd_obligor_floored)
+    elif asset_class == "residential_mortgage":
+        r = asset_correlation_residential_mortgage(pd_obligor_floored)
+    elif asset_class == "qrre":
+        r = asset_correlation_qrre(pd_obligor_floored)
+    elif asset_class == "other_retail":
+        r = asset_correlation_other_retail(pd_obligor_floored)
+    else:
+        raise ValueError(f"Unknown asset class: {asset_class}")
+
+    # Step 2: Capital requirement using guarantor PD with obligor correlation
+    k = irb_capital_requirement_k(pd_eff, lgd, r)
+
+    # Step 3: Maturity adjustment (non-retail only)
+    if asset_class in ("corporate", "sovereign", "bank"):
+        m = max(1.0, min(maturity, 5.0))
+        ma = maturity_adjustment(pd_eff, m)
+        k *= ma
+
+    # Step 4: Convert to risk weight
+    rw = k * 12.5
+
+    logger.debug(
+        "Double default RW: asset_class=%s pd_obligor=%.4f pd_guarantor=%.4f "
+        "pd_eff=%.4f lgd=%.2f R=%.4f K=%.6f RW=%.2f%%",
+        asset_class, pd_obligor_floored, pd_guarantor, pd_eff, lgd, r, k,
+        rw * 100.0,
+    )
+
+    return rw * 100.0
+
+
+# ============================================================
+# EQUITY IRB — SIMPLE RISK WEIGHT METHOD
+# BCBS d424, CRE33
+# ============================================================
+
+
+def equity_irb_rw(
+    pd: float,
+    equity_type: str = "listed",
+) -> float:
+    """IRB simple risk weight method for equity exposures.
+
+    Formula (BCBS CRE33):
+        RW = max(floor, 2.5 * corporate_IRB_RW(PD, LGD=90%, M=5))
+
+    Where:
+    - Listed equity: floor = 200%
+    - Private/unlisted equity: floor = 300%
+    - LGD is fixed at 90% per CRE33
+    - Maturity M is fixed at 5 years per CRE33
+    - The corporate IRB RW uses the standard corporate correlation
+
+    Args:
+        pd: Probability of Default.
+        equity_type: One of 'listed' or 'private'.
+
+    Returns:
+        Risk weight as a percentage (e.g., 200.0 means 200%).
+
+    Raises:
+        ValueError: If equity_type is not 'listed' or 'private'.
+    """
+    if equity_type not in ("listed", "private"):
+        raise ValueError(
+            f"equity_type must be 'listed' or 'private', got '{equity_type}'"
+        )
+
+    # Fixed parameters per CRE33
+    lgd = 0.90
+    maturity = 5.0
+
+    # Corporate IRB RW with fixed LGD=90% and M=5
+    corporate_rw = irb_risk_weight(
+        pd=pd, lgd=lgd, asset_class="corporate", maturity=maturity
+    )
+
+    # Apply 2.5× multiplier
+    scaled_rw = 2.5 * corporate_rw
+
+    # Apply floor based on equity type
+    floor = 200.0 if equity_type == "listed" else 300.0
+
+    rw = max(floor, scaled_rw)
+
+    logger.debug(
+        "Equity IRB RW: type=%s pd=%.4f corporate_rw=%.2f%% "
+        "scaled=%.2f%% floor=%.2f%% final=%.2f%%",
+        equity_type, max(pd, PD_FLOOR), corporate_rw, scaled_rw, floor, rw,
+    )
+
+    return rw

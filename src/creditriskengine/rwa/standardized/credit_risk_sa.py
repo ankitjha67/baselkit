@@ -124,6 +124,16 @@ CRE_IPRE_RW: list[tuple[float, float, float]] = [
 LAND_ADC_RW: float = 150.0
 LAND_ADC_PRESOLD_RW: float = 100.0
 
+# Covered bonds (qualifying) — CRE20.60-67, Table 10
+COVERED_BOND_RW: dict[int, float] = {
+    CreditQualityStep.CQS_1: 10.0,
+    CreditQualityStep.CQS_2: 20.0,
+    CreditQualityStep.CQS_3: 20.0,
+    CreditQualityStep.CQS_4: 50.0,
+    CreditQualityStep.CQS_5: 50.0,
+    CreditQualityStep.CQS_6: 100.0,
+}
+
 
 def get_sovereign_risk_weight(
     cqs: CreditQualityStep,
@@ -457,6 +467,81 @@ def get_subordinated_debt_risk_weight() -> float:
     return 150.0
 
 
+def get_covered_bond_risk_weight(
+    cqs: CreditQualityStep,
+    is_qualifying: bool = True,
+    issuer_cqs: CreditQualityStep | None = None,
+) -> float:
+    """Risk weight for covered bond exposures.
+
+    Reference: BCBS CRE20.60-67, Table 10.
+
+    Qualifying covered bonds receive preferential risk weights based on the
+    bond's own CQS. Non-qualifying covered bonds, or unrated qualifying
+    covered bonds, fall back to the issuing bank's risk weight.
+
+    Args:
+        cqs: Credit quality step of the covered bond.
+        is_qualifying: If True, bond meets CRE20.61-66 qualifying criteria.
+        issuer_cqs: CQS of the issuing bank (used for unrated or
+                    non-qualifying bonds).
+
+    Returns:
+        Risk weight as percentage.
+    """
+    if not is_qualifying:
+        # Non-qualifying: use issuer bank RW via ECRA table
+        if issuer_cqs is not None:
+            return get_bank_risk_weight(cqs=issuer_cqs)
+        return get_bank_risk_weight()
+
+    # Qualifying: look up covered bond table
+    if cqs == CreditQualityStep.UNRATED:
+        # Unrated qualifying covered bonds: use issuer bank RW
+        if issuer_cqs is not None:
+            return get_bank_risk_weight(cqs=issuer_cqs)
+        return get_bank_risk_weight()
+
+    return COVERED_BOND_RW.get(cqs.value, 100.0)
+
+
+def get_mdb_risk_weight(
+    mdb_category: int = 1,
+    cqs: CreditQualityStep = CreditQualityStep.UNRATED,
+) -> float:
+    """Risk weight for multilateral development bank exposures.
+
+    Reference: BCBS CRE20.8-9.
+
+    Qualifying MDBs (Category 1) receive 0% risk weight. Category 2 MDBs
+    are treated using the bank ECRA table. Non-qualifying MDBs use the
+    corporate risk weight table.
+
+    Categories:
+    - Category 1 (qualifying): IBRD, IFC, ADB, AfDB, EBRD, IADB, EIB, etc.
+      These receive 0% RW per CRE20.8.
+    - Category 2: Other MDBs that meet some but not all qualifying criteria.
+      Use bank ECRA table per CRE20.9.
+    - Non-qualifying (category 3+): Use corporate risk weight table.
+
+    Args:
+        mdb_category: MDB category (1 = qualifying, 2 = bank table,
+                      3+ = corporate table).
+        cqs: Credit quality step from external rating.
+
+    Returns:
+        Risk weight as percentage.
+    """
+    if mdb_category == 1:
+        return 0.0
+
+    if mdb_category == 2:
+        return BANK_ECRA_RW.get(cqs.value, 50.0)
+
+    # Non-qualifying MDBs: use corporate table
+    return CORPORATE_RW.get(cqs.value, 100.0)
+
+
 def assign_sa_risk_weight(
     exposure_class: SAExposureClass,
     cqs: CreditQualityStep = CreditQualityStep.UNRATED,
@@ -477,6 +562,9 @@ def assign_sa_risk_weight(
     is_regulatory_retail: bool = True,
     scra_grade: str | None = None,
     is_short_term: bool = False,
+    is_qualifying: bool = True,
+    issuer_cqs: CreditQualityStep | None = None,
+    mdb_category: int = 1,
     config: dict[str, Any] | None = None,
 ) -> float:
     """Assign SA risk weight based on exposure class and parameters.
@@ -503,6 +591,9 @@ def assign_sa_risk_weight(
         is_regulatory_retail: For retail qualification.
         scra_grade: SCRA grade for banks (A/B/C).
         is_short_term: For short-term bank claims (CRE20.17).
+        is_qualifying: For covered bonds qualifying criteria (CRE20.61-66).
+        issuer_cqs: Issuing bank CQS for covered bonds.
+        mdb_category: MDB category (1=qualifying, 2=bank, 3+=corporate).
         config: Optional jurisdiction config dict.
 
     Returns:
@@ -558,9 +649,11 @@ def assign_sa_risk_weight(
         # PSEs Option A: use bank risk weight table per CRE20.10
         return get_bank_risk_weight(cqs, jurisdiction, scra_grade)
 
+    if exposure_class == SAExposureClass.COVERED_BOND:
+        return get_covered_bond_risk_weight(cqs, is_qualifying, issuer_cqs)
+
     if exposure_class == SAExposureClass.MDB:
-        # Qualifying MDBs: 0%; others: per bank table
-        return 0.0
+        return get_mdb_risk_weight(mdb_category, cqs)
 
     if exposure_class == SAExposureClass.OTHER:
         return 100.0

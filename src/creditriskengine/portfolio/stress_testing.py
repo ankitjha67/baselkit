@@ -11,6 +11,7 @@ References:
 """
 
 import logging
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -1106,3 +1107,217 @@ class RBIStressTest:
             "lcr_breach": lcr_breach,
             "rbi_min_lcr_pct": 100.0,
         }
+
+
+# ============================================================
+# Reverse Stress Testing
+# ============================================================
+
+
+def reverse_stress_test(
+    base_pds: np.ndarray,
+    base_lgds: np.ndarray,
+    base_eads: np.ndarray,
+    target_el: float,
+    pd_multiplier_range: tuple[float, float] = (1.0, 10.0),
+    tolerance: float = 0.001,
+) -> dict[str, Any]:
+    """Find the PD stress multiplier that causes expected loss to hit a target.
+
+    Uses bisection method to search for the PD multiplier within the
+    specified range that produces a portfolio expected loss equal to
+    the target (within tolerance).
+
+    This is a key reverse stress testing technique: instead of asking
+    "what is the loss under scenario X?", it asks "what scenario
+    produces loss X?".
+
+    Reference:
+        - BCBS 239: Principles for effective risk data aggregation
+        - EBA GL/2018/04: Guidelines on stress testing
+
+    Args:
+        base_pds: Baseline PDs (n_exposures,).
+        base_lgds: Baseline LGDs (n_exposures,).
+        base_eads: Baseline EADs (n_exposures,).
+        target_el: Target expected loss amount to solve for.
+        pd_multiplier_range: (low, high) search range for the PD multiplier.
+        tolerance: Convergence tolerance for absolute EL difference.
+
+    Returns:
+        Dict with:
+            - 'multiplier': PD stress multiplier that achieves target EL
+            - 'stressed_pds': Stressed PD array at the found multiplier
+            - 'stressed_el': Actual EL at the found multiplier
+            - 'iterations': Number of bisection iterations used
+
+    Raises:
+        ValueError: If the target EL is not achievable within the given range.
+    """
+    base_pds = np.asarray(base_pds, dtype=np.float64)
+    base_lgds = np.asarray(base_lgds, dtype=np.float64)
+    base_eads = np.asarray(base_eads, dtype=np.float64)
+
+    low, high = pd_multiplier_range
+
+    def _compute_el(mult: float) -> float:
+        stressed = np.minimum(base_pds * mult, 1.0)
+        return float(np.sum(stressed * base_lgds * base_eads))
+
+    el_low = _compute_el(low)
+    el_high = _compute_el(high)
+
+    if target_el < el_low or target_el > el_high:
+        raise ValueError(
+            f"Target EL {target_el:.4f} is outside achievable range "
+            f"[{el_low:.4f}, {el_high:.4f}] for multiplier range "
+            f"[{low:.2f}, {high:.2f}]."
+        )
+
+    max_iterations = 1000
+    n_iter = 0
+
+    for n_iter in range(1, max_iterations + 1):  # noqa: B007
+        mid = (low + high) / 2.0
+        el_mid = _compute_el(mid)
+
+        if abs(el_mid - target_el) < tolerance:
+            break
+
+        if el_mid < target_el:
+            low = mid
+        else:
+            high = mid
+
+    stressed_pds = np.minimum(base_pds * mid, 1.0)
+    stressed_el = _compute_el(mid)
+
+    logger.info(
+        "Reverse stress test: target_EL=%.2f, found multiplier=%.4f, "
+        "actual_EL=%.2f, iterations=%d",
+        target_el,
+        mid,
+        stressed_el,
+        n_iter,
+    )
+
+    return {
+        "multiplier": mid,
+        "stressed_pds": stressed_pds,
+        "stressed_el": stressed_el,
+        "iterations": n_iter,
+    }
+
+
+def reverse_stress_capital_breach(
+    base_pds: np.ndarray,
+    base_lgds: np.ndarray,
+    base_eads: np.ndarray,
+    cet1_capital: float,
+    cet1_floor_pct: float = 0.045,
+    rwa_func: Callable[..., float] | None = None,
+) -> dict[str, Any]:
+    """Find the PD multiplier that would breach the CET1 minimum.
+
+    Determines the stress severity (expressed as a PD multiplier) at
+    which portfolio expected losses would erode CET1 capital below
+    the regulatory minimum ratio.
+
+    The CET1 ratio is computed as:
+        CET1_ratio = (CET1_capital - EL) / RWA
+
+    A breach occurs when CET1_ratio < cet1_floor_pct.
+
+    Reference:
+        - CRR Art. 92: Own funds requirements
+        - BCBS d424: Minimum capital requirements (Basel III final)
+
+    Args:
+        base_pds: Baseline PDs (n_exposures,).
+        base_lgds: Baseline LGDs (n_exposures,).
+        base_eads: Baseline EADs (n_exposures,).
+        cet1_capital: Current CET1 capital amount.
+        cet1_floor_pct: Minimum CET1 ratio as a fraction (default 4.5%).
+        rwa_func: Optional callable(stressed_pds, base_lgds, base_eads) -> float
+            to compute stressed RWA. If None, RWA = sum(base_eads).
+
+    Returns:
+        Dict with:
+            - 'breach_multiplier': PD multiplier at which CET1 is breached
+            - 'stressed_el': Expected loss at breach point
+            - 'cet1_at_breach': CET1 ratio at breach point
+            - 'iterations': Number of bisection iterations
+
+    Raises:
+        ValueError: If CET1 is already breached at multiplier=1.0
+            or if no breach occurs even at multiplier=10.0.
+    """
+    base_pds = np.asarray(base_pds, dtype=np.float64)
+    base_lgds = np.asarray(base_lgds, dtype=np.float64)
+    base_eads = np.asarray(base_eads, dtype=np.float64)
+
+    def _rwa(stressed_pds: np.ndarray) -> float:
+        if rwa_func is not None:
+            return float(rwa_func(stressed_pds, base_lgds, base_eads))
+        return float(np.sum(base_eads))
+
+    def _cet1_ratio(mult: float) -> float:
+        stressed = np.minimum(base_pds * mult, 1.0)
+        el = float(np.sum(stressed * base_lgds * base_eads))
+        rwa = _rwa(stressed)
+        if rwa <= 0:
+            return 0.0
+        return (cet1_capital - el) / rwa
+
+    # Check boundary conditions
+    ratio_at_1 = _cet1_ratio(1.0)
+    if ratio_at_1 < cet1_floor_pct:
+        raise ValueError(
+            f"CET1 ratio ({ratio_at_1:.4f}) is already below floor "
+            f"({cet1_floor_pct:.4f}) at multiplier=1.0. "
+            "No stress needed to breach."
+        )
+
+    ratio_at_10 = _cet1_ratio(10.0)
+    if ratio_at_10 >= cet1_floor_pct:
+        raise ValueError(
+            f"CET1 ratio ({ratio_at_10:.4f}) does not breach floor "
+            f"({cet1_floor_pct:.4f}) even at multiplier=10.0. "
+            "Portfolio losses are insufficient to cause a breach."
+        )
+
+    low, high = 1.0, 10.0
+    max_iterations = 1000
+    n_iter = 0
+    tolerance = 0.0001
+
+    for n_iter in range(1, max_iterations + 1):  # noqa: B007
+        mid = (low + high) / 2.0
+        ratio = _cet1_ratio(mid)
+
+        if abs(ratio - cet1_floor_pct) < tolerance:
+            break
+
+        if ratio > cet1_floor_pct:
+            low = mid
+        else:
+            high = mid
+
+    stressed_pds = np.minimum(base_pds * mid, 1.0)
+    stressed_el = float(np.sum(stressed_pds * base_lgds * base_eads))
+    cet1_at_breach = _cet1_ratio(mid)
+
+    logger.info(
+        "Reverse stress capital breach: multiplier=%.4f, "
+        "stressed_EL=%.2f, CET1_at_breach=%.4f",
+        mid,
+        stressed_el,
+        cet1_at_breach,
+    )
+
+    return {
+        "breach_multiplier": mid,
+        "stressed_el": stressed_el,
+        "cet1_at_breach": cet1_at_breach,
+        "iterations": n_iter,
+    }

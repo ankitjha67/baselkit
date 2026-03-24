@@ -12,6 +12,8 @@ from creditriskengine.portfolio.stress_testing import (
     EBAStressTest,
     MacroScenario,
     apply_pd_stress,
+    reverse_stress_capital_breach,
+    reverse_stress_test,
 )
 from creditriskengine.portfolio.var import (
     expected_shortfall,
@@ -36,4 +38,6 @@ __all__ = [
     "BoEACSStressTest",
     "CCARScenario",
     "apply_pd_stress",
+    "reverse_stress_test",
+    "reverse_stress_capital_breach",
 ]
