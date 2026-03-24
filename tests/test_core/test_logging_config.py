@@ -4,8 +4,6 @@ import json
 import logging
 import tempfile
 
-import pytest
-
 from creditriskengine.core.logging_config import (
     JSONFormatter,
     configure_logging,

@@ -25,6 +25,6 @@ jobs:
       - name: Lint with ruff
         run: ruff check src/ tests/
       - name: Type check with mypy
-        run: mypy src/creditriskengine/
+        run: python -m mypy src/creditriskengine/
       - name: Test with pytest
         run: pytest

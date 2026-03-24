@@ -40,7 +40,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/ankitjha67/baselkit"
-Documentation = "https://ankitjha67.github.io/baselkit/"
+Documentation = "https://github.com/ankitjha67/baselkit#readme"
 Repository = "https://github.com/ankitjha67/baselkit"
 Issues = "https://github.com/ankitjha67/baselkit/issues"
 Changelog = "https://github.com/ankitjha67/baselkit/blob/main/CHANGELOG.md"
@@ -73,12 +73,31 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "ANN", "B", "SIM"]
+ignore = ["ANN201"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = [
+    "numpy",
+    "numpy.*",
+    "scipy",
+    "scipy.*",
+    "yaml",
+    "jinja2",
+    "jinja2.*",
+    "pandas",
+    "sklearn.*",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

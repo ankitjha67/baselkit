@@ -10,7 +10,6 @@ from creditriskengine.models.pd.term_structure import (
     pd_term_structure_from_transitions,
 )
 
-
 # -- pd_term_structure_from_hazard ------------------------------------------
 
 

@@ -160,8 +160,9 @@ class TestCRR3YAMLFixes:
 
     @pytest.fixture()
     def crr3_config(self) -> dict:
-        import yaml
         from pathlib import Path
+
+        import yaml
         yaml_path = Path(__file__).resolve().parents[1] / (
             "src/creditriskengine/regulatory/eu/crr3.yml"
         )
@@ -327,8 +328,9 @@ class TestUKPRAYAMLLoanSplitting:
     """Verify UK PRA YAML has loan-splitting configuration."""
 
     def test_yaml_has_loan_splitting(self) -> None:
-        import yaml
         from pathlib import Path
+
+        import yaml
         yaml_path = Path(__file__).resolve().parents[1] / (
             "src/creditriskengine/regulatory/uk/pra_basel31.yml"
         )
@@ -340,8 +342,9 @@ class TestUKPRAYAMLLoanSplitting:
 
     def test_uk_lgd_supervisory_fixed(self) -> None:
         """Gap 5: UK PRA LGD supervisory values also corrected."""
-        import yaml
         from pathlib import Path
+
+        import yaml
         yaml_path = Path(__file__).resolve().parents[1] / (
             "src/creditriskengine/regulatory/uk/pra_basel31.yml"
         )
@@ -361,7 +364,7 @@ class TestBoEACSStressTest:
     """Bank of England Annual Cyclical Scenario stress test."""
 
     @pytest.fixture()
-    def acs_scenario(self) -> "MacroScenario":
+    def acs_scenario(self) -> object:
         from creditriskengine.portfolio.stress_testing import MacroScenario
         return MacroScenario(
             name="ACS 2025",

@@ -348,9 +348,7 @@ class TestMonotonicBinningExtended:
         Construct 3 bins where only the last bin violates monotonicity
         (increasing direction).
         """
-        import unittest.mock as mock
 
-        from creditriskengine.models.pd.binning import _build_bin_result
 
         # Create data with 3 clear clusters
         values = np.array(

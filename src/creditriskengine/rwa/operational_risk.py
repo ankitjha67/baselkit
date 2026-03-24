@@ -174,7 +174,7 @@ def sma_capital(
     bi: float,
     average_annual_loss: float | None = None,
     use_ilm: bool = True,
-) -> dict:
+) -> dict[str, float | None]:
     """Calculate operational risk capital under the SMA.
 
     Args:

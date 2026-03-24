@@ -11,7 +11,6 @@ from creditriskengine.models.pd.transition_matrix import (
     validate_transition_matrix,
 )
 
-
 # -- estimate_transition_matrix ------------------------------------------------
 
 
@@ -116,10 +115,10 @@ class TestGeneratorMatrix:
             [0.10, 0.80, 0.10],
             [0.00, 0.00, 1.00],
         ])
-        Q = generator_matrix(tm)
-        assert Q.shape == (3, 3)
+        q_mat = generator_matrix(tm)
+        assert q_mat.shape == (3, 3)
         # Rows of Q should sum to approximately 0
-        np.testing.assert_allclose(Q.sum(axis=1), np.zeros(3), atol=1e-6)
+        np.testing.assert_allclose(q_mat.sum(axis=1), np.zeros(3), atol=1e-6)
 
     def test_diagonal_negative(self):
         """Diagonal elements of Q should be non-positive."""
@@ -128,13 +127,13 @@ class TestGeneratorMatrix:
             [0.05, 0.90, 0.05],
             [0.00, 0.00, 1.00],
         ])
-        Q = generator_matrix(tm)
-        assert np.all(np.diag(Q) <= 1e-10)
+        q_mat = generator_matrix(tm)
+        assert np.all(np.diag(q_mat) <= 1e-10)
 
     def test_identity_gives_zero_generator(self):
         """Identity matrix should produce a zero generator."""
-        Q = generator_matrix(np.eye(3))
-        np.testing.assert_array_almost_equal(Q, np.zeros((3, 3)))
+        q_mat = generator_matrix(np.eye(3))
+        np.testing.assert_array_almost_equal(q_mat, np.zeros((3, 3)))
 
     def test_real_valued_output(self):
         """Output should always be real-valued."""
@@ -143,8 +142,8 @@ class TestGeneratorMatrix:
             [0.10, 0.80, 0.10],
             [0.00, 0.00, 1.00],
         ])
-        Q = generator_matrix(tm)
-        assert Q.dtype == np.float64
+        q_mat = generator_matrix(tm)
+        assert q_mat.dtype == np.float64
 
 
 # -- validate_transition_matrix ------------------------------------------------

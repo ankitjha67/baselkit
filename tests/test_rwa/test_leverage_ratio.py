@@ -91,7 +91,7 @@ class TestDerivativeExposureSaCcr:
         assert ead == pytest.approx(150.0)
 
     def test_default_alpha(self) -> None:
-        assert SA_CCR_ALPHA == pytest.approx(1.4)
+        assert pytest.approx(1.4) == SA_CCR_ALPHA
 
     def test_zero_rc_and_pfe(self) -> None:
         assert derivative_exposure_sa_ccr(0.0, 0.0) == pytest.approx(0.0)
@@ -129,7 +129,7 @@ class TestOffBalanceSheetExposure:
         assert exp == pytest.approx(500.0)
 
     def test_obs_ccf_floor_constant(self) -> None:
-        assert OBS_CCF_FLOOR == pytest.approx(0.10)
+        assert pytest.approx(0.10) == OBS_CCF_FLOOR
 
     def test_zero_notional(self) -> None:
         assert off_balance_sheet_exposure(0.0, 0.50) == pytest.approx(0.0)
@@ -150,7 +150,7 @@ class TestMeetsLeverageRequirement:
         assert meets_leverage_requirement(0.029) is False
 
     def test_default_minimum(self) -> None:
-        assert MINIMUM_LEVERAGE_RATIO_PCT == pytest.approx(0.03)
+        assert pytest.approx(0.03) == MINIMUM_LEVERAGE_RATIO_PCT
 
     def test_with_gsib_buffer(self) -> None:
         # 3% min + 0.5% buffer = 3.5% required

@@ -308,7 +308,7 @@ def component_var(
         portfolio_var,
         float(np.sum(result)),
     )
-    return result  # type: ignore[no-any-return]
+    return result
 
 
 def expected_shortfall(
