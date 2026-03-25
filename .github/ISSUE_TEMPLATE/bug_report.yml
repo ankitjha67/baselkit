@@ -1,0 +1,49 @@
+name: "\U0001F41B Bug Report"
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Provide a minimal code example or steps to reproduce the issue.
+      placeholder: |
+        ```python
+        from creditriskengine.rwa.irb.formulas import irb_risk_weight
+        rw = irb_risk_weight(pd=0.01, lgd=0.45, asset_class="corporate", maturity=2.5)
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Result
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Result
+      description: What actually happened? Include error messages and tracebacks.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        - CreditRiskEngine version:
+        - Python version:
+        - OS:
+      render: markdown
+    validations:
+      required: false
+  - type: textarea
+    id: regulatory
+    attributes:
+      label: Regulatory Reference
+      description: If this is a regulatory calculation issue, cite the relevant BCBS/CRR/IFRS paragraph and your interpretation.
+    validations:
+      required: false

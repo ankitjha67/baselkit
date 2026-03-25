@@ -5,6 +5,7 @@
 [![CI](https://github.com/ankitjha67/baselkit/actions/workflows/ci.yml/badge.svg)](https://github.com/ankitjha67/baselkit/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)]()
 [![License](https://img.shields.io/pypi/l/creditriskengine)](https://github.com/ankitjha67/baselkit/blob/main/LICENSE)
+[![FINOS - Incubating](https://cdn.jsdelivr.net/gh/finos/contrib-toolbox@master/images/badge-incubating.svg)](https://community.finos.org/)
 
 Production-grade open-source credit risk analytics library.
 

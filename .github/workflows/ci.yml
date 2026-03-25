@@ -7,6 +7,18 @@ on:
     branches: [main]
 
 jobs:
+  dco-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: DCO Check
+        uses: codelytv/no-pull-requests-without-dco-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   test:
     runs-on: ubuntu-latest
     strategy:
