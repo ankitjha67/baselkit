@@ -1,7 +1,30 @@
 # Contributing to CreditRiskEngine
 
-Thank you for your interest in contributing! This document explains how to get
-started.
+Thank you for your interest in contributing to CreditRiskEngine!
+
+## FINOS Community
+
+CreditRiskEngine is preparing for contribution to the
+[Fintech Open Source Foundation (FINOS)](https://www.finos.org/).
+
+Participants are bound by the
+[FINOS Community Code of Conduct](.github/CODE_OF_CONDUCT.md) and the
+[LF Antitrust Policy](https://www.linuxfoundation.org/antitrust-policy/).
+
+## Developer Certificate of Origin (DCO)
+
+All contributions must be signed off under the
+[Developer Certificate of Origin (DCO)](DCO). This certifies that you have the
+right to submit the contribution under the project's open-source license.
+
+Sign off your commits by adding `-s` to the commit command:
+
+```bash
+git commit -s -m "Add downturn LGD floor for residential mortgages"
+```
+
+This appends a `Signed-off-by: Your Name <your.email@example.com>` line to the
+commit message, using your Git `user.name` and `user.email` configuration.
 
 ## Development Setup
 
@@ -23,13 +46,14 @@ ruff check src/ tests/       # Linting
 mypy src/creditriskengine/   # Type checking (strict mode)
 ```
 
-## Pull Request Process
+## Contribution Process
 
 1. Fork the repo and create a feature branch from `main`.
 2. Make your changes. Add or update tests to maintain 100% coverage.
 3. Ensure `pytest`, `ruff check`, and `mypy` all pass locally.
-4. Write a clear commit message describing **why** the change is needed.
-5. Open a PR against `main`. The CI pipeline will re-run all checks.
+4. Sign off every commit (`git commit -s`).
+5. Write a clear commit message describing **why** the change is needed.
+6. Open a PR against `main`. The CI pipeline will re-run all checks.
 
 ## Code Style
 
@@ -52,11 +76,30 @@ If your change affects a regulatory calculation:
 ## Reporting Issues
 
 Open an issue on [GitHub Issues](https://github.com/ankitjha67/baselkit/issues)
-with:
+using the appropriate template:
 
-- A clear description of the bug or feature request.
-- For bugs: steps to reproduce, expected vs. actual behavior.
-- For regulatory issues: cite the paragraph and your interpretation.
+- **Bug Report** -- steps to reproduce, expected vs. actual behavior.
+- **Feature Request** -- describe the problem and proposed solution.
+- **Regulatory Issues** -- cite the paragraph and your interpretation.
+
+## Governance
+
+### Roles
+
+| Role | Description |
+|------|-------------|
+| **Contributor** | Anyone who submits a pull request or files an issue |
+| **Maintainer** | Trusted contributors with merge rights (see [MAINTAINERS.md](MAINTAINERS.md)) |
+| **Lead Maintainer** | Overall project direction and FINOS liaison |
+
+### Becoming a Maintainer
+
+Maintainers are nominated by existing maintainers based on:
+
+- Sustained, high-quality contributions over time
+- Deep understanding of credit risk regulatory frameworks
+- Commitment to the project's goals and code quality standards
+- Adherence to the FINOS Code of Conduct
 
 ## License
 

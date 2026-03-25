@@ -1,0 +1,28 @@
+name: "\U0001F680 Feature Request"
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: |
+        Describe the problem you'd like solved. Use a Job Story format if possible:
+        "When [situation], I want to [motivation], so I can [expected outcome]."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see.
+    validations:
+      required: false
+  - type: textarea
+    id: regulatory
+    attributes:
+      label: Regulatory Reference
+      description: If this relates to a regulatory requirement, cite the relevant paragraph (e.g., BCBS CRE31.5, IFRS 9.5.5.3).
+    validations:
+      required: false
