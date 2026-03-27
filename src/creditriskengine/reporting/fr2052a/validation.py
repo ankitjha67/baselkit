@@ -17,6 +17,7 @@ References:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 
 from creditriskengine.reporting.fr2052a.products import (
@@ -155,15 +156,11 @@ def _validate_collateral_value(
     result: FR2052aValidationResult,
 ) -> None:
     """Check collateral value consistency."""
-    has_collateral_class = getattr(record, "collateral_class", None) is not None
-    has_collateral_value = getattr(record, "collateral_value", None) is not None
-
-    if has_collateral_class and has_collateral_value:
-        cv: object = getattr(record, "collateral_value", None)
-        if isinstance(cv, (int, float)) and cv < 0:
-            result.add_error(
-                f"{product.code}: Collateral value cannot be negative."
-            )
+    cv: object = getattr(record, "collateral_value", None)
+    if isinstance(cv, (int, float)) and cv < 0:
+        result.add_error(
+            f"{product.code}: Collateral value cannot be negative."
+        )
 
 
 def _validate_sub_product(
@@ -241,6 +238,16 @@ def validate_submission(
         result.add_error("Submission contains no records.")
         return result
 
+    # As-of date format validation (ISO YYYY-MM-DD)
+    iso_date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    for record in records:
+        if not iso_date_re.match(record.as_of_date):
+            result.add_error(
+                f"Invalid as-of date format '{record.as_of_date}'. "
+                f"Expected ISO format YYYY-MM-DD."
+            )
+            break
+
     # Submission-level consistency
     entities = {r.reporting_entity for r in records}
     if len(entities) > 1:
@@ -283,18 +290,24 @@ def validate_submission(
         for warn in rec_result.warnings:
             result.add_warning(f"Record {i}: {warn}")
 
-    # Table coverage check
+    # Table coverage check -- all 8 flow tables are expected in a
+    # complete FR 2052a submission.
     tables_present = {r.table for r in records}
-    core_tables = {
+    flow_tables = {
         FR2052aTable.INFLOWS_ASSETS,
+        FR2052aTable.INFLOWS_UNSECURED,
+        FR2052aTable.INFLOWS_SECURED,
+        FR2052aTable.INFLOWS_OTHER,
         FR2052aTable.OUTFLOWS_WHOLESALE,
+        FR2052aTable.OUTFLOWS_SECURED,
         FR2052aTable.OUTFLOWS_DEPOSITS,
+        FR2052aTable.OUTFLOWS_OTHER,
     }
-    missing_core = core_tables - tables_present
-    if missing_core:
+    missing_flow = flow_tables - tables_present
+    if missing_flow:
         result.add_warning(
-            f"Core tables missing from submission: "
-            f"{[t.value for t in missing_core]}. "
+            f"Flow tables missing from submission: "
+            f"{sorted(t.value for t in missing_flow)}. "
             f"Review whether these are applicable."
         )
 

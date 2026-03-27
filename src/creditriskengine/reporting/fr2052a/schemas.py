@@ -24,6 +24,7 @@ from creditriskengine.reporting.fr2052a.types import (
     FR2052aTable,
     FXSettlement,
     InsuredType,
+    LossAbsorbency,
     MaturityBucket,
     MaturityOptionality,
     SecuredSettlement,
@@ -260,9 +261,9 @@ class OutflowWholesaleRecord(FR2052aRecord):
     collateral_value: float | None = Field(
         default=None, description="Fair value of collateral."
     )
-    loss_absorbency: str | None = Field(
+    loss_absorbency: LossAbsorbency | None = Field(
         default=None,
-        description="'Capital' or 'TLAC' if applicable.",
+        description="Capital or TLAC per 12 CFR 217/252.",
     )
     maturity_optionality: MaturityOptionality | None = Field(
         default=None, description="Embedded optionality type."

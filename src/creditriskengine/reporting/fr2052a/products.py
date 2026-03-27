@@ -462,7 +462,7 @@ def _build_products() -> dict[str, FR2052aProduct]:
         (5, "Excess Balances in Operational Accounts"),
         (6, "Non-Operational Account Balances"),
         (7, "Operational Escrow Accounts"),
-        (8, "Non-Reciprocal Brokered Accounts"),
+        (8, "Non-Reciprocal Brokered Deposits"),
         (9, "Stable Affiliated Sweep Account Balances"),
         (10, "Less Stable Affiliated Sweep Account Balances"),
         (11, "Non-Affiliated Sweep Accounts"),
@@ -474,7 +474,7 @@ def _build_products() -> dict[str, FR2052aProduct]:
     for pid, pname in _od_products:
         products.append(FR2052aProduct(
             table=tbl_od, product_id=pid, name=pname,
-            counterparty_required=(pid <= 3),
+            counterparty_required=True,
             forward_start_excluded=True,
             regulatory_ref="FR 2052a p.55-58",
         ))
@@ -612,7 +612,7 @@ def _build_products() -> dict[str, FR2052aProduct]:
         (3, "Gross Client Wires Received"),
         (4, "Gross Client Wires Paid"),
         (5, "FRB 23A Capacity"),
-        (6, "Subsidiary Liquidity Not Transferrable"),
+        (6, "Subsidiary Liquidity Not Transferable"),
     ]
     for pid, pname in _si_products:
         products.append(FR2052aProduct(

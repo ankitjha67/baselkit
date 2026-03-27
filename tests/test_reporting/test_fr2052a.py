@@ -317,9 +317,9 @@ class TestSchemas:
     def test_outflow_wholesale_with_loss_absorbency(self) -> None:
         rec = _make_outflow_wholesale(
             product_id=11,
-            loss_absorbency="TLAC",
+            loss_absorbency=LossAbsorbency.TLAC,
         )
-        assert rec.loss_absorbency == "TLAC"
+        assert rec.loss_absorbency == LossAbsorbency.TLAC
 
     def test_outflow_secured_record(self) -> None:
         kwargs = _base_kwargs(FR2052aTable.OUTFLOWS_SECURED, 1)
@@ -683,10 +683,16 @@ class TestValidation:
         )
         assert not result.is_valid
 
-    def test_missing_core_tables_warning(self) -> None:
+    def test_missing_flow_tables_warning(self) -> None:
         records = [_make_inflow_asset()]
         result = validate_submission(records)
-        assert any("Core tables" in w for w in result.warnings)
+        assert any("Flow tables" in w for w in result.warnings)
+
+    def test_invalid_date_format(self) -> None:
+        r1 = _make_inflow_asset(as_of_date="2024/03/31")
+        result = validate_submission([r1])
+        assert not result.is_valid
+        assert any("date format" in e.lower() for e in result.errors)
 
     def test_validation_result_merge(self) -> None:
         r1 = FR2052aValidationResult()

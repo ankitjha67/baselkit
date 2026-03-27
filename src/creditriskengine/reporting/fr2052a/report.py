@@ -233,23 +233,31 @@ def generate_summary(
     # Product-level breakdown
     product_breakdown = aggregate_by_product(records)
 
-    # Maturity profile (within 30 days)
-    from creditriskengine.reporting.fr2052a.types import maturity_bucket_midpoint_days
+    # Maturity profile (within 30 days).
+    # "Open" buckets (demand deposits, revolving facilities) are callable
+    # on demand and therefore included in the 30-day horizon per FR 2052a.
+    from creditriskengine.reporting.fr2052a.types import (
+        MaturityBucket,
+        maturity_bucket_midpoint_days,
+    )
+
+    def _is_within_30d(bucket: MaturityBucket | None) -> bool:
+        if bucket is None:
+            return False
+        if bucket == MaturityBucket.OPEN:
+            return True
+        mp = maturity_bucket_midpoint_days(bucket)
+        return mp is not None and mp <= 30
+
     within_30d_inflows = sum(
         r.maturity_amount
         for r in records
-        if r.table in inflow_tables
-        and r.maturity_bucket is not None
-        and (mp := maturity_bucket_midpoint_days(r.maturity_bucket)) is not None
-        and mp <= 30
+        if r.table in inflow_tables and _is_within_30d(r.maturity_bucket)
     )
     within_30d_outflows = sum(
         r.maturity_amount
         for r in records
-        if r.table in outflow_tables
-        and r.maturity_bucket is not None
-        and (mp := maturity_bucket_midpoint_days(r.maturity_bucket)) is not None
-        and mp <= 30
+        if r.table in outflow_tables and _is_within_30d(r.maturity_bucket)
     )
 
     summary: dict[str, Any] = {
