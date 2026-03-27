@@ -1,6 +1,7 @@
 """Regulatory reporting and model documentation.
 
-Provides COREP, Pillar 3, FR Y-14, and model inventory report generation.
+Provides COREP, Pillar 3, FR Y-14, FR 2052a, and model inventory report
+generation.
 """
 
 from creditriskengine.reporting.pillar3 import (
