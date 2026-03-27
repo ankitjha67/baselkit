@@ -26,7 +26,7 @@ Production-grade open-source credit risk analytics library.
 - **Operational Risk** -- Standardised Measurement Approach (SMA) per OPE25
 - **Credit Risk Mitigation** -- Comprehensive and simple approaches, haircut framework per CRE22
 - **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI, Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
-- **Regulatory Reporting** -- COREP, Pillar 3 disclosure templates (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), and model inventory
+- **Regulatory Reporting** -- COREP, Pillar 3 disclosure templates (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), FR 2052a (Complex Institution Liquidity Monitoring), and model inventory
 - **Stress Testing** -- EBA, BoE ACS, US CCAR/DFAST, RBI frameworks, and reverse stress testing
 
 ## Installation
@@ -115,6 +115,48 @@ print(f"Gini:  {gini_coefficient(y_true, y_score):.4f}")
 print(f"KS:    {ks_statistic(y_true, y_score):.4f}")
 ```
 
+### FR 2052a Liquidity Report
+
+```python
+from creditriskengine.reporting.fr2052a import (
+    InflowAssetRecord, OutflowDepositRecord,
+    build_submission, validate_submission, generate_summary,
+    AssetCategory, CounterpartyType, InsuredType,
+    MaturityBucket, ReporterCategory,
+)
+
+# Build records for each schedule
+records = [
+    InflowAssetRecord(
+        reporting_entity="MegaBank", as_of_date="2024-06-30",
+        product_id=1,  # Unencumbered Assets
+        maturity_bucket=MaturityBucket.OPEN,
+        maturity_amount=5000.0,
+        collateral_class=AssetCategory.A_1_Q,  # US Treasury
+        market_value=5000.0, treasury_control=True,
+    ),
+    OutflowDepositRecord(
+        reporting_entity="MegaBank", as_of_date="2024-06-30",
+        product_id=1,  # Transactional Accounts
+        maturity_bucket=MaturityBucket.OPEN,
+        maturity_amount=3000.0,
+        counterparty=CounterpartyType.RETAIL,
+        insured=InsuredType.FDIC,
+    ),
+]
+
+# Validate and generate summary
+result = validate_submission(records, reporting_entity="MegaBank")
+print(f"Valid: {result.is_valid}")
+
+submission = build_submission(
+    "MegaBank", "2024-06-30", ReporterCategory.CATEGORY_I, records
+)
+summary = generate_summary(submission)
+print(f"Net liquidity: {summary['net_liquidity_position']:,.0f}M")
+# Net liquidity: 2,000M
+```
+
 ## Project Structure
 
 ```
@@ -144,6 +186,7 @@ src/creditriskengine/
     portfolio/          # Copula simulation, VaR, economic capital, stress testing, Vasicek ASRF
     validation/         # Discrimination, calibration, stability, backtesting, benchmarking
     reporting/          # COREP, Pillar 3 (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), model inventory
+        fr2052a/        # FR 2052a Complex Institution Liquidity Monitoring (OMB 7100-0361)
 ```
 
 ## Testing
