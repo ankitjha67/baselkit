@@ -15,9 +15,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: DCO Check
-        uses: codelytv/no-pull-requests-without-dco-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: tim-actions/dco@master
 
   test:
     runs-on: ubuntu-latest

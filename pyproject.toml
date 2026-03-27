@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "creditriskengine"
-version = "0.3.0"
+version = "0.4.0"
 description = "Production-grade open-source credit risk analytics: Basel III/CRR3 RWA, IFRS 9/CECL ECL, IRB modeling, and model validation"
 readme = "README.md"
 license = "Apache-2.0"
