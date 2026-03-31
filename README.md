@@ -288,6 +288,10 @@ ruff check src/ tests/   # Lint
 mypy src/                # Type check
 ```
 
+## Community Projects
+
+- [Basel Risk Dashboard](https://adipandey956.github.io/Basel-risk-dashboard/) by [@adipandey956](https://github.com/adipandey956) — ICAAP stress testing + jurisdiction RWA dashboard with IRB scenarios across BCBS, EU CRR3, UK PRA, and RBI
+
 ## License
 
 Apache 2.0 -- see [LICENSE](LICENSE) for details.
