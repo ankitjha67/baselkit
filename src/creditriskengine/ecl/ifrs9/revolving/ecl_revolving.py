@@ -234,3 +234,67 @@ def revolving_ecl_scenario_weighted(
         ccf_used=first_result.ccf_used,
         ead_profile=w_ead_profile,
     )
+
+
+def revolving_ecl_from_exposure(
+    exposure: object,
+    marginal_pds: np.ndarray | None = None,
+    lgd_curve: np.ndarray | None = None,
+) -> RevolvingECLResult:
+    """Calculate revolving ECL directly from an Exposure object.
+
+    Convenience function that extracts relevant fields from a
+    :class:`~creditriskengine.core.exposure.Exposure` and delegates
+    to :func:`calculate_revolving_ecl`.
+
+    Args:
+        exposure: An ``Exposure`` instance with ``is_revolving=True``
+            and populated revolving fields (``drawn_amount``,
+            ``undrawn_commitment``, ``ccf``, ``ifrs9_stage``, ``pd``/
+            ``current_pd``, ``lgd``, ``effective_interest_rate``,
+            ``behavioral_life_months``).
+        marginal_pds: Array of marginal PDs per period (required for
+            Stage 2/3/POCI).
+        lgd_curve: Optional per-period LGD array.
+
+    Returns:
+        :class:`RevolvingECLResult` with drawn/undrawn decomposition.
+
+    Raises:
+        ValueError: If required fields are missing on the exposure.
+    """
+    stage = getattr(exposure, "ifrs9_stage", None)
+    if stage is None:
+        raise ValueError("Exposure must have ifrs9_stage set.")
+
+    drawn = getattr(exposure, "drawn_amount", 0.0)
+    undrawn = getattr(exposure, "undrawn_commitment", 0.0)
+    ccf_val = getattr(exposure, "ccf", None)
+    if ccf_val is None:
+        raise ValueError("Exposure must have ccf set for revolving ECL.")
+
+    pd_val = getattr(exposure, "current_pd", None) or getattr(
+        exposure, "pd", None
+    )
+    if pd_val is None:
+        raise ValueError("Exposure must have pd or current_pd set.")
+
+    lgd_val = getattr(exposure, "lgd", None)
+    if lgd_val is None:
+        raise ValueError("Exposure must have lgd set.")
+
+    eir = getattr(exposure, "effective_interest_rate", None) or 0.0
+    life = getattr(exposure, "behavioral_life_months", None) or 36
+
+    return calculate_revolving_ecl(
+        stage=stage,
+        drawn=drawn,
+        undrawn=undrawn,
+        ccf=ccf_val,
+        pd_12m=pd_val,
+        lgd=lgd_val,
+        eir=eir,
+        marginal_pds=marginal_pds,
+        behavioral_life_months=life,
+        lgd_curve=lgd_curve,
+    )

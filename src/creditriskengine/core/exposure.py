@@ -97,6 +97,24 @@ class Exposure(BaseModel):
         default=None, ge=0, description="EIR for ECL discounting"
     )
 
+    # ---- Revolving Credit (IFRS 9 para 5.5.20) ----
+    is_revolving: bool = Field(
+        default=False,
+        description="True for revolving facilities (credit cards, overdrafts, HELOCs, etc.)",
+    )
+    credit_limit: float | None = Field(
+        default=None, ge=0,
+        description="Total credit limit (drawn + undrawn) for revolving facilities",
+    )
+    behavioral_life_months: int | None = Field(
+        default=None, ge=1,
+        description="Behavioral life per IFRS 9 B5.5.40 for revolving ECL",
+    )
+    ccf: float | None = Field(
+        default=None, ge=0, le=1,
+        description="Credit conversion factor for undrawn commitment",
+    )
+
     # ---- Flags ----
     is_defaulted: bool = False
     is_in_default_workout: bool = False

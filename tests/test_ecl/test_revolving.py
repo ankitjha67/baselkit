@@ -714,3 +714,68 @@ class TestIntegration:
             Jurisdiction.AUSTRALIA,
         )
         assert apra == 4 * bcbs
+
+    def test_exposure_object_integration(self) -> None:
+        """The module works with Exposure objects via convenience fn."""
+        from creditriskengine.core.exposure import Exposure
+        from creditriskengine.core.types import CreditRiskApproach
+        from creditriskengine.ecl.ifrs9.revolving.ecl_revolving import (
+            revolving_ecl_from_exposure,
+        )
+
+        exposure = Exposure(
+            exposure_id="CC-001",
+            counterparty_id="CUST-001",
+            ead=9200.0,
+            drawn_amount=6000.0,
+            undrawn_commitment=4000.0,
+            jurisdiction=Jurisdiction.BCBS,
+            approach=CreditRiskApproach.SA,
+            ifrs9_stage=IFRS9Stage.STAGE_1,
+            current_pd=0.03,
+            lgd=0.85,
+            effective_interest_rate=0.18,
+            is_revolving=True,
+            credit_limit=10000.0,
+            behavioral_life_months=36,
+            ccf=0.80,
+        )
+
+        result = revolving_ecl_from_exposure(exposure)
+        assert result.total_ecl > 0
+        assert result.ecl_drawn > 0
+        assert result.ecl_undrawn > 0
+        assert result.total_ecl == pytest.approx(
+            result.ecl_drawn + result.ecl_undrawn
+        )
+
+    def test_exposure_missing_ccf_raises(self) -> None:
+        """Exposure without CCF raises ValueError."""
+        from creditriskengine.core.exposure import Exposure
+        from creditriskengine.core.types import CreditRiskApproach
+        from creditriskengine.ecl.ifrs9.revolving.ecl_revolving import (
+            revolving_ecl_from_exposure,
+        )
+
+        exposure = Exposure(
+            exposure_id="CC-002",
+            counterparty_id="CUST-002",
+            ead=9200.0,
+            drawn_amount=6000.0,
+            undrawn_commitment=4000.0,
+            jurisdiction=Jurisdiction.BCBS,
+            approach=CreditRiskApproach.SA,
+            ifrs9_stage=IFRS9Stage.STAGE_1,
+            current_pd=0.03,
+            lgd=0.85,
+            is_revolving=True,
+        )
+        with pytest.raises(ValueError, match="ccf"):
+            revolving_ecl_from_exposure(exposure)
+
+    def test_parent_package_exports(self) -> None:
+        """Revolving module is importable from parent packages."""
+        from creditriskengine.ecl import calculate_revolving_ecl as fn1
+        from creditriskengine.ecl.ifrs9 import calculate_revolving_ecl as fn2
+
+        assert fn1 is fn2

@@ -37,6 +37,7 @@ from creditriskengine.ecl.ifrs9.revolving.ead_profile import (
 from creditriskengine.ecl.ifrs9.revolving.ecl_revolving import (
     RevolvingECLResult,
     calculate_revolving_ecl,
+    revolving_ecl_from_exposure,
     revolving_ecl_scenario_weighted,
 )
 from creditriskengine.ecl.ifrs9.revolving.product_config import (
@@ -83,6 +84,7 @@ __all__ = [
     # ECL engine
     "RevolvingECLResult",
     "calculate_revolving_ecl",
+    "revolving_ecl_from_exposure",
     "revolving_ecl_scenario_weighted",
     # Provision floors
     "ProvisionFloor",

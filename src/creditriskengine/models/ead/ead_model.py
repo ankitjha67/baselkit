@@ -27,6 +27,17 @@ SUPERVISORY_CCFS: dict[str, float] = {
     "direct_credit_substitutes": 1.00,
 }
 
+# Basel III / CRR3 Standardized Approach CCFs (BCBS d424 Table 2)
+# For SA capital calculation -- distinct from F-IRB supervisory CCFs above.
+SA_CCFS: dict[str, float] = {
+    "unconditionally_cancellable": 0.10,
+    "committed_any_maturity": 0.40,
+    "nif_ruf": 0.50,
+    "transaction_related": 0.50,
+    "trade_related": 0.20,
+    "direct_credit_substitutes": 1.00,
+}
+
 # A-IRB CCF floors per CRE32.33
 CCF_FLOOR_AIRB: float = 0.50
 
