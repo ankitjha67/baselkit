@@ -25,6 +25,8 @@ authoritative regulatory sources.
 | CRE32.25 | LGD floors (A-IRB) | `models/lgd/lgd_model.py` | `apply_lgd_floor()` |
 | CRE32.29-32 | Supervisory CCF (F-IRB) | `models/ead/ead_model.py` | `SUPERVISORY_CCFS`, `get_supervisory_ccf()` |
 | CRE32.33 | CCF floor (A-IRB) | `models/ead/ead_model.py` | `apply_ccf_floor()` |
+| CRE20 Table 2 | SA CCFs (Basel III/CRR3) | `models/ead/ead_model.py` | `SA_CCFS`, `get_sa_ccf()` |
+| CRE32.33 / CRR3 Art. 166(8b) | A-IRB CCF input floor (50% of SA) | `models/ead/ead_model.py` | `get_airb_ccf_floor()` |
 | CRE20.19-20.21 | Bank SCRA RW | `rwa/standardized/credit_risk_sa.py` | `get_bank_risk_weight(scra_grade=)` |
 | CRE22.35-22.39 | CRM simple approach | `rwa/crm.py` | `simple_approach()` |
 | CRE22.40-22.56 | CRM supervisory haircuts | `rwa/crm.py` | `supervisory_haircut()` |
@@ -47,6 +49,11 @@ authoritative regulatory sources.
 | IFRS 9.5.5.17(c) | Forward-looking info | `ecl/ifrs9/forward_looking.py` | `macro_adjustment_factor()` |
 | IFRS 9.B5.5.49-54 | Scenario weighting | `ecl/ifrs9/scenarios.py` | `weighted_ecl()` |
 | IFRS 9.5.4.1 | POCI treatment | `ecl/ifrs9/staging.py` | `assign_stage()` (POCI branch) |
+| IFRS 9.5.5.20 | Revolving credit ECL exception | `ecl/ifrs9/revolving/ecl_revolving.py` | `calculate_revolving_ecl()` |
+| IFRS 9.B5.5.39-40 | Behavioral life (3-factor) | `ecl/ifrs9/revolving/behavioral_life.py` | `determine_behavioral_life()` |
+| IFRS 9.B5.5.31 | Drawdown expectations (CCF) | `ecl/ifrs9/revolving/ccf.py` | `behavioral_ccf()`, `eadf_ccf()`, `ccf_pit_adjustment()` |
+| IFRS 7.B8E | Drawn/undrawn ECL split | `ecl/ifrs9/revolving/ecl_revolving.py` | `RevolvingECLResult.ecl_drawn`, `.ecl_undrawn` |
+| IFRS 9.5.5.17 | Scenario-weighted ECL | `ecl/ifrs9/revolving/ecl_revolving.py` | `revolving_ecl_scenario_weighted()` |
 
 ## ASC 326 (CECL)
 
@@ -64,6 +71,44 @@ authoritative regulatory sources.
 |---|---|---|---|
 | RBI Master Circular | 90 DPD NPA threshold | `ecl/ind_as109/ind_as_ecl.py` | `RBI_DEFAULT_DPD_THRESHOLD = 90` |
 | Ind AS 109 (= IFRS 9) | Stage assignment | `ecl/ind_as109/ind_as_ecl.py` | `assign_stage_ind_as()` |
+
+## Revolving Credit CCF -- Regulatory SA by Jurisdiction
+
+| Jurisdiction | Regulator | UCC CCF | Committed CCF | Module | Function |
+|---|---|---|---|---|---|
+| BCBS | Basel Committee | 10% | 40% | `ecl/ifrs9/revolving/ccf.py` | `regulatory_ccf_sa()` |
+| EU | EBA (CRR3) | 10% (0% transitional to 2029) | 40% | `ecl/ifrs9/revolving/ccf.py` | `regulatory_ccf_sa(use_crr3_transitional=)` |
+| Australia | APRA (APS 112) | **40%** | 40% | `ecl/ifrs9/revolving/ccf.py` | `regulatory_ccf_sa(jurisdiction=AUSTRALIA)` |
+
+References: BCBS d424 Table 2, CRR3 Art. 495d, APRA APS 112.
+
+## Revolving Credit Provision Floors
+
+| Jurisdiction | Stage | Floor | Basis | Module | Reference |
+|---|---|---|---|---|---|
+| UAE (CBUAE) | S1+S2 combined | 1.5% | CRWA | `ecl/ifrs9/revolving/provision_floors.py` | Circular 3/2024 |
+| India (RBI) | Stage 1 | 1.0% | EAD | `ecl/ifrs9/revolving/provision_floors.py` | Draft Directions Oct 2025 |
+| India (RBI) | Stage 2 | 5.0% | EAD | `ecl/ifrs9/revolving/provision_floors.py` | Draft Directions Oct 2025 |
+| Singapore (MAS) | Cross-stage | 1.0% | EAD | `ecl/ifrs9/revolving/provision_floors.py` | MAS Notice 612 |
+| Saudi Arabia (SAMA) | Cross-stage | 1.0% | CRWA | `ecl/ifrs9/revolving/provision_floors.py` | General provision |
+
+Floor configs loaded from `regulatory/provision_floors.yml`.
+
+## FR 2052a -- Complex Institution Liquidity Monitoring
+
+| FR 2052a Reference | Topic | Module | Function(s) |
+|---|---|---|---|
+| General Instructions | Submission container | `reporting/fr2052a/report.py` | `FR2052aSubmission`, `build_submission()` |
+| Field Definitions (pp. 16-32) | 23 enum types | `reporting/fr2052a/types.py` | `CounterpartyType`, `AssetCategory`, `MaturityBucket`, etc. |
+| Product Definitions (pp. 33-79) | 137 products | `reporting/fr2052a/products.py` | `ALL_PRODUCTS`, `get_product()` |
+| Appendix I | 13 table schemas | `reporting/fr2052a/schemas.py` | `InflowAssetRecord`, `OutflowDepositRecord`, etc. |
+| Appendix II-a | Sub-product requirements | `reporting/fr2052a/products.py` | `FR2052aProduct.sub_products` |
+| Appendix II-b | Counterparty requirements | `reporting/fr2052a/products.py` | `FR2052aProduct.counterparty_required` |
+| Appendix II-c | Collateral class requirements | `reporting/fr2052a/products.py` | `FR2052aProduct.collateral_required` |
+| Appendix II-d | Forward start exclusions | `reporting/fr2052a/products.py` | `FR2052aProduct.forward_start_excluded` |
+| Appendix III | Asset category table (91 codes) | `reporting/fr2052a/types.py` | `AssetCategory`, `HQLA_LEVEL_1/2A/2B` |
+| Appendix IV-a | Maturity bucket values (76) | `reporting/fr2052a/types.py` | `MaturityBucket` |
+| 12 CFR 249 (Reg WW) | LRM Standards | `reporting/fr2052a/validation.py` | `validate_record()`, `validate_submission()` |
 
 ## Jurisdiction Configs
 
@@ -99,3 +144,8 @@ authoritative regulatory sources.
 | EBA GL/2017/16 | PD/LGD estimation | `models/pd/scorecard.py`, `models/lgd/lgd_model.py` |
 | Gordy (2003) | Granularity Adjustment | `models/concentration/concentration.py` |
 | Merton (1974) / Vasicek (2002) | ASRF model | `portfolio/vasicek.py`, `ecl/ifrs9/ttc_to_pit.py` |
+| Araten & Jacobs (2001) | LEQ / behavioral CCF | `ecl/ifrs9/revolving/ccf.py` |
+| Tong et al. (2016) | Credit card CCF distribution | `ecl/ifrs9/revolving/product_config.py` |
+| PwC "In Depth" (Nov 2017) | Revolving ECL FAQs (B5.5.40) | `ecl/ifrs9/revolving/behavioral_life.py` |
+| IASB Feb 2017 staff paper | Shortest B5.5.40 factor rule | `ecl/ifrs9/revolving/behavioral_life.py` |
+| EBA/CP/2025/10 | CCF estimation guidelines | `ecl/ifrs9/revolving/ccf.py` |
