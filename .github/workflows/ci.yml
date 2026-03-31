@@ -15,7 +15,21 @@ jobs:
         with:
           fetch-depth: 0
       - name: DCO Check
-        uses: tim-actions/dco@master
+        run: |
+          base_sha=${{ github.event.pull_request.base.sha }}
+          head_sha=${{ github.event.pull_request.head.sha }}
+          missing=""
+          for sha in $(git rev-list "$base_sha".."$head_sha"); do
+            if ! git log -1 --format='%B' "$sha" | grep -qi 'Signed-off-by:'; then
+              missing="$missing $sha"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::The following commits are missing a DCO Signed-off-by line:$missing"
+            echo "Fix with: git commit --amend -s"
+            exit 1
+          fi
+          echo "All commits have DCO sign-off."
 
   test:
     runs-on: ubuntu-latest
