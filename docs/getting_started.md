@@ -77,6 +77,33 @@ ecl = calculate_ecl(
 print(f"Lifetime ECL: {ecl:,.0f}")
 ```
 
+### Revolving Credit ECL (Credit Cards, Overdrafts, HELOCs)
+
+```python
+from creditriskengine.ecl.ifrs9.revolving import (
+    calculate_revolving_ecl, determine_behavioral_life,
+    regulatory_ccf_sa, RevolvingProductType,
+)
+from creditriskengine.core.types import IFRS9Stage
+import numpy as np
+
+# Credit card: $10K limit, $6K drawn, $4K undrawn
+life = determine_behavioral_life(
+    product_type=RevolvingProductType.CREDIT_CARD
+)  # 36 months per B5.5.40
+marginal_pds = np.full(life, 0.0025)  # ~3% annual PD
+
+result = calculate_revolving_ecl(
+    stage=IFRS9Stage.STAGE_2,
+    drawn=6000, undrawn=4000, ccf=0.80,
+    pd_12m=0.03, lgd=0.85, eir=0.015,
+    marginal_pds=marginal_pds, behavioral_life_months=life,
+)
+print(f"Total ECL:       ${result.total_ecl:,.2f}")
+print(f"  Drawn (allow): ${result.ecl_drawn:,.2f}")
+print(f"  Undrawn (prov):${result.ecl_undrawn:,.2f}")
+```
+
 ### PD Scorecard
 
 ```python

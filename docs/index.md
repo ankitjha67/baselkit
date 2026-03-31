@@ -12,7 +12,7 @@ through regulatory reporting.
 | Domain | Capabilities |
 |--------|-------------|
 | **RWA Calculation** | SA (CRE20), F-IRB, A-IRB (CRE31-32), output floor (RBC25), CRM (CRE22) |
-| **ECL Engines** | IFRS 9 (staging, SICR, lifetime PD), CECL (ASC 326), Ind AS 109 |
+| **ECL Engines** | IFRS 9 (staging, SICR, lifetime PD, **revolving credit with drawn/undrawn split**), CECL (ASC 326), Ind AS 109 |
 | **PD/LGD/EAD** | Scorecard, calibration, master scale, workout/downturn LGD, CCF |
 | **Model Validation** | AUROC, Gini, KS, PSI, binomial test, Hosmer-Lemeshow, traffic light |
 | **Portfolio Risk** | Vasicek ASRF, copula Monte Carlo, Credit VaR, stress testing |

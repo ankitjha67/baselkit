@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "creditriskengine"
-version = "0.4.0"
-description = "Production-grade open-source credit risk analytics: Basel III/CRR3 RWA, IFRS 9/CECL ECL, IRB modeling, and model validation"
+version = "0.5.0"
+description = "Production-grade open-source credit risk analytics: Basel III/CRR3 RWA, IFRS 9/CECL ECL (including revolving credit), IRB modeling, FR 2052a liquidity reporting, and model validation"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
 authors = [
     {name = "Ankit Jha", email = "ankitjha67@github.com"},
 ]
-keywords = ["credit-risk", "basel-iii", "irb", "ifrs9", "cecl", "rwa", "ecl", "banking", "risk-management"]
+keywords = ["credit-risk", "basel-iii", "irb", "ifrs9", "cecl", "rwa", "ecl", "revolving-credit", "ccf", "fr2052a", "liquidity", "banking", "risk-management"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
