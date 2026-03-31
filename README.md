@@ -14,7 +14,7 @@ Production-grade open-source credit risk analytics library.
 ## Features
 
 - **RWA Calculation** -- Basel III/IV Standardized Approach and IRB (F-IRB / A-IRB) with output floor phase-in, double default (CRE32), and equity IRB (CRE33)
-- **ECL Engines** -- IFRS 9, US CECL (ASC 326), and Ind AS 109 with staging, SICR, lifetime PD, and scenario weighting
+- **ECL Engines** -- IFRS 9, US CECL (ASC 326), and Ind AS 109 with staging, SICR, lifetime PD, scenario weighting, and revolving credit ECL (credit cards, overdrafts, HELOCs, corporate revolvers) with behavioral life, multi-approach CCF, drawn/undrawn split, and multi-jurisdiction provision floors
 - **PD / LGD / EAD Modeling** -- Scorecard development, calibration (anchor-point & Bayesian), TTC-to-PIT conversion, term structures, Merton structural model, Altman Z-score, and transition matrix estimation
 - **Model Validation** -- Discrimination (AUROC, Gini, KS, IV), calibration (binomial, Hosmer-Lemeshow, traffic-light), stability (PSI, CSI, migration)
 - **Portfolio Risk** -- Vasicek ASRF, Gaussian copula Monte Carlo, parametric VaR, economic capital, and stress testing (including reverse stress)
@@ -115,6 +115,31 @@ print(f"Gini:  {gini_coefficient(y_true, y_score):.4f}")
 print(f"KS:    {ks_statistic(y_true, y_score):.4f}")
 ```
 
+### Revolving Credit ECL (Credit Card)
+
+```python
+from creditriskengine.ecl.ifrs9.revolving import (
+    calculate_revolving_ecl, regulatory_ccf_sa,
+    RevolvingProductType, determine_behavioral_life,
+)
+from creditriskengine.core.types import IFRS9Stage
+import numpy as np
+
+# Credit card: $10K limit, $6K drawn, $4K undrawn
+life = determine_behavioral_life(product_type=RevolvingProductType.CREDIT_CARD)
+ccf = 0.80  # Behavioral CCF (regulatory SA = 10%, but IFRS 9 uses PIT)
+marginal_pds = np.full(life, 0.0025)  # ~3% annual PD
+
+result = calculate_revolving_ecl(
+    stage=IFRS9Stage.STAGE_2, drawn=6000, undrawn=4000, ccf=ccf,
+    pd_12m=0.03, lgd=0.85, eir=0.015,
+    marginal_pds=marginal_pds, behavioral_life_months=life,
+)
+print(f"Total ECL: ${result.total_ecl:,.2f}")
+print(f"  Drawn (loss allowance): ${result.ecl_drawn:,.2f}")
+print(f"  Undrawn (provision):    ${result.ecl_undrawn:,.2f}")
+```
+
 ### FR 2052a Liquidity Report
 
 ```python
@@ -176,6 +201,7 @@ src/creditriskengine/
         crm.py          # Credit risk mitigation, haircuts (CRE22)
     ecl/
         ifrs9/          # Staging, SICR, lifetime PD, scenarios, TTC-to-PIT, ECL calc
+            revolving/  # Revolving credit ECL: behavioral life, CCF, drawn/undrawn split, provision floors
         cecl/           # PD*LGD, loss-rate, vintage, DCF, qualitative factors
         ind_as109/      # India-specific wrapper over IFRS 9
     models/
