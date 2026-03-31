@@ -61,3 +61,20 @@ exposures:
     pd: 0.02
     lgd: 0.80
     currency: EUR
+
+  # Revolving credit card -- uses IFRS 9 para 5.5.20 behavioral life
+  - exposure_id: "EXP005"
+    counterparty_id: "CP005"
+    ead: 9200.0
+    drawn_amount: 6000.0
+    undrawn_commitment: 4000.0
+    sa_exposure_class: retail
+    irb_asset_class: retail
+    irb_retail_subclass: qualifying_revolving_retail
+    pd: 0.03
+    lgd: 0.85
+    currency: EUR
+    is_revolving: true
+    credit_limit: 10000.0
+    behavioral_life_months: 36
+    ccf: 0.80

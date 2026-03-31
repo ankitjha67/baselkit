@@ -9,6 +9,8 @@ from creditriskengine.models.ead.ead_model import (
     calculate_ead,
     ead_term_structure,
     estimate_ccf,
+    get_airb_ccf_floor,
+    get_sa_ccf,
     get_supervisory_ccf,
 )
 
@@ -16,6 +18,8 @@ __all__ = [
     "calculate_ead",
     "estimate_ccf",
     "get_supervisory_ccf",
+    "get_sa_ccf",
+    "get_airb_ccf_floor",
     "apply_ccf_floor",
     "ead_term_structure",
 ]

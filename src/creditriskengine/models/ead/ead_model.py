@@ -7,8 +7,12 @@ EAD term structure generation for off-balance sheet exposures.
 References:
 - BCBS d424: CRE31 (EAD under IRB), CRE20 (EAD under SA)
 - CRE32.26-32.32: CCF parameters
+- CRR3 (EU Regulation 2024/1623), Art. 166(8b), Art. 495d
+- APRA APS 112 (40% CCF for unconditionally cancellable)
 - EBA GL/2017/16: EAD estimation for A-IRB
 """
+
+from __future__ import annotations
 
 import logging
 
@@ -17,7 +21,8 @@ from sklearn.base import BaseEstimator, RegressorMixin
 
 logger = logging.getLogger(__name__)
 
-# Supervisory CCFs for F-IRB per BCBS CRE32.29-32.32
+# ── Supervisory CCFs (F-IRB) per BCBS CRE32.29-32.32 ──────────────
+
 SUPERVISORY_CCFS: dict[str, float] = {
     "committed_unconditionally_cancellable": 0.40,
     "committed_other": 0.75,
@@ -27,8 +32,103 @@ SUPERVISORY_CCFS: dict[str, float] = {
     "direct_credit_substitutes": 1.00,
 }
 
-# A-IRB CCF floors per CRE32.33
+# ── Standardized Approach CCFs (BCBS d424 Table 2 / CRR3) ─────────
+
+SA_CCFS: dict[str, float] = {
+    "unconditionally_cancellable": 0.10,
+    "committed_any_maturity": 0.40,
+    "nif_ruf": 0.50,
+    "transaction_related": 0.50,
+    "trade_related": 0.20,
+    "direct_credit_substitutes": 1.00,
+}
+
+# Jurisdiction-specific SA CCF overrides.
+# Key = jurisdiction code (lowercase), value = facility → CCF override.
+SA_CCF_JURISDICTION_OVERRIDES: dict[str, dict[str, float]] = {
+    "australia": {
+        # APRA APS 112: no UCC category; all revolving = 40% CCF
+        "unconditionally_cancellable": 0.40,
+    },
+}
+
+# CRR3 transitional: 0% CCF for UCCs permitted until 31 Dec 2029
+# (Art. 495d, phasing to 10% by 2032-2033)
+CRR3_TRANSITIONAL_UCC_CCF: float = 0.0
+
+# ── A-IRB CCF floors per CRE32.33 / CRR3 Art. 166(8b) ────────────
+
 CCF_FLOOR_AIRB: float = 0.50
+# A-IRB input floor = 50% of applicable SA CCF
+AIRB_FLOOR_FACTOR: float = 0.50
+
+
+def get_sa_ccf(
+    facility_type: str,
+    jurisdiction: str = "bcbs",
+    use_crr3_transitional: bool = False,
+) -> float:
+    """Get the Standardized Approach CCF for a facility type.
+
+    Supports jurisdiction-specific overrides (e.g., APRA's 40% for
+    unconditionally cancellable commitments) and CRR3 transitional
+    provisions.
+
+    Args:
+        facility_type: Facility type key (see :data:`SA_CCFS`).
+        jurisdiction: Jurisdiction code (lowercase).  Defaults to
+            ``"bcbs"`` (baseline Basel standard).
+        use_crr3_transitional: If True and jurisdiction is ``"eu"``,
+            returns 0% for UCCs (CRR3 Art. 495d, valid until 2029).
+
+    Returns:
+        SA CCF value.
+
+    Raises:
+        KeyError: If facility type is not recognized.
+
+    References:
+        - BCBS d424 Table 2 (CRE20)
+        - APRA APS 112
+        - CRR3 Art. 495d
+    """
+    if (
+        use_crr3_transitional
+        and jurisdiction == "eu"
+        and facility_type == "unconditionally_cancellable"
+    ):
+        return CRR3_TRANSITIONAL_UCC_CCF
+
+    overrides = SA_CCF_JURISDICTION_OVERRIDES.get(jurisdiction, {})
+    if facility_type in overrides:
+        return overrides[facility_type]
+
+    if facility_type not in SA_CCFS:
+        raise KeyError(
+            f"Unknown SA facility type: {facility_type!r}. "
+            f"Valid types: {list(SA_CCFS.keys())}"
+        )
+    return SA_CCFS[facility_type]
+
+
+def get_airb_ccf_floor(
+    facility_type: str,
+    jurisdiction: str = "bcbs",
+) -> float:
+    """Get the A-IRB CCF input floor (50% of applicable SA CCF).
+
+    Per CRR3 Art. 166(8b), A-IRB own-estimate CCFs must be at least
+    50% of the applicable SA CCF.
+
+    Args:
+        facility_type: SA facility type key.
+        jurisdiction: Jurisdiction code (lowercase).
+
+    Returns:
+        Minimum permissible A-IRB CCF.
+    """
+    sa_ccf = get_sa_ccf(facility_type, jurisdiction)
+    return sa_ccf * AIRB_FLOOR_FACTOR
 
 
 def calculate_ead(
@@ -165,7 +265,7 @@ class EADModel(BaseEstimator, RegressorMixin):  # type: ignore[misc]
         self.mean_ccf_: float | None = None
         self.is_fitted_: bool = False
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "EADModel":  # noqa: N803
+    def fit(self, X: np.ndarray, y: np.ndarray) -> EADModel:  # noqa: N803
         """Fit EAD model. X = [drawn, undrawn], y = realized EAD."""
         y = np.asarray(y, dtype=np.float64)
         X = np.asarray(X, dtype=np.float64)  # noqa: N806

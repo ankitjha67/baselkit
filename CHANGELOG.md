@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-03-31
+
+### Added
+
+- **Revolving Credit ECL** -- Full IFRS 9 ECL engine for revolving facilities
+  (credit cards, overdrafts, HELOCs, corporate revolvers, working capital,
+  margin lending) with:
+  - Behavioral life determination per IFRS 9 B5.5.40 three-factor framework
+    (historical life, time-to-default, CRM actions -- shortest wins)
+  - Multi-approach CCF models: Regulatory SA (Basel III/CRR3 10% UCC, APRA
+    40%), F-IRB supervisory, behavioral LEQ, EADF, PIT macro adjustment
+  - Drawn/undrawn ECL decomposition per IFRS 7 B8E (loss allowance vs.
+    provision liability)
+  - Revolving EAD term structures with repayment/redraw dynamics
+  - Probability-weighted multi-scenario ECL
+  - Multi-jurisdiction provision floors loaded from YAML (CBUAE 1.5% CRWA,
+    RBI 1%/5% unsecured retail, MAS 1% MRLA, SAMA 1% CRWA)
+  - Product configs loaded from YAML (`regulatory/revolving_products.yml`)
+  - Convenience function `revolving_ecl_from_exposure()` accepting Exposure
+    objects directly
+  - Unified CCF architecture: `ead_model.get_sa_ccf()` is the single source
+    of truth; revolving module delegates via product-to-facility mapping
+  - Exposure model extended with `is_revolving`, `credit_limit`,
+    `behavioral_life_months`, `ccf` fields
+
+- **FR 2052a Complex Institution Liquidity Monitoring** -- Federal Reserve
+  FR 2052a reporting framework (OMB 7100-0361) with:
+  - 23 enumeration types (counterparties, asset categories, maturity buckets)
+  - 13 Pydantic schema models (one per FR 2052a schedule table)
+  - Complete catalog of 137 products across all 13 tables
+  - Record-level and submission-level validation engine
+  - Report generator with inflow/outflow aggregation and 30-day profiles
+
+- **FINOS-compatible governance files** -- DCO, NOTICE, MAINTAINERS.md,
+  SECURITY.md, CODE_OF_CONDUCT, issue templates, DCO CI check
+
+- **PyPI release workflow** -- Trusted publishing via GitHub Actions
+  (`release.yml`), triggered on GitHub Release events
+
+### Changed
+
+- `ead_model.py`: Added `get_sa_ccf()` and `get_airb_ccf_floor()` with
+  jurisdiction-aware lookups (APRA overrides, CRR3 transitional)
+- `core/exposure.py`: Extended with revolving credit fields
+- ECL `__init__.py` files: Export revolving module symbols
+- Tests: Parametrized CCF and provision floor tests via `pytest.mark.parametrize`
+- Test count: 1,786 → 1,960
+
 ## [0.3.0] - 2026-03-24
 
 ### Fixed
