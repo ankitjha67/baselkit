@@ -1,22 +1,37 @@
 """Multi-jurisdiction provision floors for revolving credit ECL.
 
-Different regulators impose varying minimum provision levels on top
-of IFRS 9's principle-based framework.  This module applies the
-applicable floor based on jurisdiction, stage, and product type.
+Loads from ``regulatory/provision_floors.yml`` at module import.
+Users can call :func:`load_provision_floors` with a custom YAML path
+to override defaults at runtime.
 
 References:
     - CBUAE Circular 3/2024 (1.5% CRWA floor, graduated Stage 3)
     - RBI Draft Directions October 2025 (1%/5% unsecured retail)
     - MAS Notice 612 (1% MRLA for D-SIBs)
-    - APRA APS 112 (40% CCF implicit floor)
-    - Basel III (general 1% Tier 2 provision)
+    - SAMA general provision (~1% CRWA)
 """
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 from creditriskengine.core.types import IFRS9Stage, Jurisdiction
+
+logger = logging.getLogger(__name__)
+
+_DEFAULT_YAML = (
+    Path(__file__).resolve().parents[3]
+    / "regulatory"
+    / "provision_floors.yml"
+)
+
+# Jurisdiction string → enum mapping
+_JURISDICTION_MAP: dict[str, Jurisdiction] = {j.value: j for j in Jurisdiction}
 
 
 @dataclass(frozen=True)
@@ -40,48 +55,62 @@ class ProvisionFloor:
     description: str
 
 
-_PROVISION_FLOORS: list[ProvisionFloor] = [
-    # CBUAE: 1.5% of CRWA for Stage 1 + Stage 2 combined
-    ProvisionFloor(
-        jurisdiction=Jurisdiction.UAE,
-        stage=None,
-        floor_rate=0.015,
-        floor_basis="crwa",
-        description="CBUAE Circular 3/2024: 1.5% CRWA floor (S1+S2)",
-    ),
-    # RBI: Stage 1 floor for unsecured retail (credit cards)
-    ProvisionFloor(
-        jurisdiction=Jurisdiction.INDIA,
-        stage=IFRS9Stage.STAGE_1,
-        floor_rate=0.01,
-        floor_basis="ead",
-        description="RBI Draft Oct 2025: 1% Stage 1 unsecured retail",
-    ),
-    # RBI: Stage 2 floor for unsecured retail (credit cards)
-    ProvisionFloor(
-        jurisdiction=Jurisdiction.INDIA,
-        stage=IFRS9Stage.STAGE_2,
-        floor_rate=0.05,
-        floor_basis="ead",
-        description="RBI Draft Oct 2025: 5% Stage 2 unsecured retail",
-    ),
-    # MAS: 1% MRLA for locally incorporated D-SIBs
-    ProvisionFloor(
-        jurisdiction=Jurisdiction.SINGAPORE,
-        stage=None,
-        floor_rate=0.01,
-        floor_basis="ead",
-        description="MAS Notice 612: 1% MRLA for D-SIBs",
-    ),
-    # SAMA: ~1% general provision floor
-    ProvisionFloor(
-        jurisdiction=Jurisdiction.SAUDI_ARABIA,
-        stage=None,
-        floor_rate=0.01,
-        floor_basis="crwa",
-        description="SAMA: ~1% CRWA general provision",
-    ),
-]
+def _parse_floor(data: dict[str, Any]) -> ProvisionFloor | None:
+    """Parse a single provision floor entry from YAML."""
+    jur_str = data.get("jurisdiction", "")
+    jur = _JURISDICTION_MAP.get(jur_str)
+    if jur is None:
+        logger.warning("Unknown jurisdiction in provision floor: %r", jur_str)
+        return None
+
+    stage_val = data.get("stage")
+    stage: IFRS9Stage | None = None
+    if stage_val is not None:
+        stage = IFRS9Stage(int(stage_val))
+
+    return ProvisionFloor(
+        jurisdiction=jur,
+        stage=stage,
+        floor_rate=float(data.get("floor_rate", 0.0)),
+        floor_basis=str(data.get("floor_basis", "ead")),
+        description=str(data.get("description", "")),
+    )
+
+
+def load_provision_floors(
+    yaml_path: Path | None = None,
+) -> list[ProvisionFloor]:
+    """Load provision floors from a YAML file.
+
+    Args:
+        yaml_path: Path to YAML file.  Defaults to the bundled
+            ``regulatory/provision_floors.yml``.
+
+    Returns:
+        List of :class:`ProvisionFloor` objects.
+    """
+    path = yaml_path or _DEFAULT_YAML
+    if not path.exists():
+        logger.warning(
+            "Provision floors YAML not found at %s; returning empty list",
+            path,
+        )
+        return []
+
+    with open(path) as f:
+        raw = yaml.safe_load(f)
+
+    floors_data: list[dict[str, Any]] = raw.get("floors", [])
+    result: list[ProvisionFloor] = []
+    for entry in floors_data:
+        floor = _parse_floor(entry)
+        if floor is not None:
+            result.append(floor)
+    return result
+
+
+# Module-level singleton loaded from bundled YAML
+_PROVISION_FLOORS: list[ProvisionFloor] = load_provision_floors()
 
 
 def get_provision_floors(
@@ -102,7 +131,11 @@ def get_provision_floors(
     for floor in _PROVISION_FLOORS:
         if floor.jurisdiction != jurisdiction:
             continue
-        if stage is not None and floor.stage is not None and floor.stage != stage:
+        if (
+            stage is not None
+            and floor.stage is not None
+            and floor.stage != stage
+        ):
             continue
         results.append(floor)
     return results

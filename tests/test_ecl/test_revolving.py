@@ -94,6 +94,29 @@ class TestProductConfig:
         assert cfg.is_collectively_managed is True
         assert cfg.has_draw_period is False
 
+    def test_configs_loaded_from_yaml(self) -> None:
+        """Product configs are loaded from revolving_products.yml."""
+        from creditriskengine.ecl.ifrs9.revolving.product_config import (
+            load_revolving_product_configs,
+        )
+
+        configs = load_revolving_product_configs()
+        assert len(configs) == 6
+        for pt in RevolvingProductType:
+            assert pt in configs
+
+    def test_provision_floors_loaded_from_yaml(self) -> None:
+        """Provision floors are loaded from provision_floors.yml."""
+        from creditriskengine.ecl.ifrs9.revolving.provision_floors import (
+            load_provision_floors,
+        )
+
+        floors = load_provision_floors()
+        assert len(floors) >= 5
+        jurisdictions = {f.jurisdiction for f in floors}
+        assert Jurisdiction.UAE in jurisdictions
+        assert Jurisdiction.INDIA in jurisdictions
+
     def test_heloc_has_draw_period(self) -> None:
         cfg = get_product_config(RevolvingProductType.HELOC)
         assert cfg.has_draw_period is True
@@ -184,50 +207,71 @@ class TestBehavioralLife:
 
 
 class TestCCF:
-    # --- Regulatory SA ---
-    def test_sa_ccf_credit_card_bcbs(self) -> None:
-        ccf = regulatory_ccf_sa(RevolvingProductType.CREDIT_CARD)
-        assert ccf == 0.10
+    # --- Regulatory SA (parametrized) ---
+    @pytest.mark.parametrize(
+        ("product", "jurisdiction", "transitional", "expected"),
+        [
+            (RevolvingProductType.CREDIT_CARD, Jurisdiction.BCBS, False, 0.10),
+            (RevolvingProductType.OVERDRAFT, Jurisdiction.BCBS, False, 0.10),
+            (RevolvingProductType.CREDIT_CARD, Jurisdiction.AUSTRALIA, False, 0.40),
+            (RevolvingProductType.CREDIT_CARD, Jurisdiction.EU, True, 0.0),
+            (RevolvingProductType.CORPORATE_REVOLVER, Jurisdiction.BCBS, False, 0.40),
+            (RevolvingProductType.HELOC, Jurisdiction.BCBS, False, 0.40),
+            (RevolvingProductType.WORKING_CAPITAL, Jurisdiction.BCBS, False, 0.40),
+        ],
+        ids=[
+            "card-bcbs-10pct",
+            "overdraft-bcbs-10pct",
+            "card-apra-40pct",
+            "card-eu-crr3-transitional-0pct",
+            "corp-revolver-bcbs-40pct",
+            "heloc-bcbs-40pct",
+            "working-capital-bcbs-40pct",
+        ],
+    )
+    def test_sa_ccf(
+        self,
+        product: RevolvingProductType,
+        jurisdiction: Jurisdiction,
+        transitional: bool,
+        expected: float,
+    ) -> None:
+        ccf = regulatory_ccf_sa(product, jurisdiction, transitional)
+        assert ccf == pytest.approx(expected)
 
-    def test_sa_ccf_credit_card_apra(self) -> None:
-        ccf = regulatory_ccf_sa(
-            RevolvingProductType.CREDIT_CARD,
-            jurisdiction=Jurisdiction.AUSTRALIA,
-        )
-        assert ccf == 0.40
+    # --- Regulatory F-IRB (parametrized) ---
+    @pytest.mark.parametrize(
+        ("product", "expected"),
+        [
+            (RevolvingProductType.CREDIT_CARD, 0.40),
+            (RevolvingProductType.OVERDRAFT, 0.40),
+            (RevolvingProductType.CORPORATE_REVOLVER, 0.75),
+            (RevolvingProductType.HELOC, 0.75),
+        ],
+        ids=["card-40pct", "overdraft-40pct", "corp-75pct", "heloc-75pct"],
+    )
+    def test_firb_ccf(
+        self, product: RevolvingProductType, expected: float,
+    ) -> None:
+        assert regulatory_ccf_firb(product) == pytest.approx(expected)
 
-    def test_sa_ccf_crr3_transitional(self) -> None:
-        ccf = regulatory_ccf_sa(
-            RevolvingProductType.CREDIT_CARD,
-            jurisdiction=Jurisdiction.EU,
-            use_crr3_transitional=True,
-        )
-        assert ccf == 0.0
-
-    def test_sa_ccf_corporate_revolver(self) -> None:
-        ccf = regulatory_ccf_sa(RevolvingProductType.CORPORATE_REVOLVER)
-        assert ccf == 0.40
-
-    # --- Regulatory F-IRB ---
-    def test_firb_ccf_credit_card(self) -> None:
-        ccf = regulatory_ccf_firb(RevolvingProductType.CREDIT_CARD)
-        assert ccf == 0.40
-
-    def test_firb_ccf_corporate_revolver(self) -> None:
-        ccf = regulatory_ccf_firb(RevolvingProductType.CORPORATE_REVOLVER)
-        assert ccf == 0.75
-
-    # --- A-IRB floor ---
-    def test_airb_floor_credit_card(self) -> None:
-        floor = airb_ccf_floor(RevolvingProductType.CREDIT_CARD)
-        assert floor == pytest.approx(0.05)
-
-    def test_airb_floor_apra(self) -> None:
-        floor = airb_ccf_floor(
-            RevolvingProductType.CREDIT_CARD,
-            jurisdiction=Jurisdiction.AUSTRALIA,
-        )
-        assert floor == pytest.approx(0.20)
+    # --- A-IRB floor (parametrized) ---
+    @pytest.mark.parametrize(
+        ("product", "jurisdiction", "expected"),
+        [
+            (RevolvingProductType.CREDIT_CARD, Jurisdiction.BCBS, 0.05),
+            (RevolvingProductType.CREDIT_CARD, Jurisdiction.AUSTRALIA, 0.20),
+            (RevolvingProductType.CORPORATE_REVOLVER, Jurisdiction.BCBS, 0.20),
+        ],
+        ids=["card-bcbs-5pct", "card-apra-20pct", "corp-bcbs-20pct"],
+    )
+    def test_airb_floor(
+        self,
+        product: RevolvingProductType,
+        jurisdiction: Jurisdiction,
+        expected: float,
+    ) -> None:
+        assert airb_ccf_floor(product, jurisdiction) == pytest.approx(expected)
 
     # --- Behavioral CCF ---
     def test_behavioral_ccf_basic(self) -> None:
@@ -537,18 +581,25 @@ class TestScenarioWeighting:
 
 
 class TestProvisionFloors:
-    def test_cbuae_floor(self) -> None:
-        floors = get_provision_floors(Jurisdiction.UAE)
-        assert len(floors) >= 1
-        assert any(f.floor_rate == 0.015 for f in floors)
-
-    def test_rbi_stage1_floor(self) -> None:
-        floors = get_provision_floors(Jurisdiction.INDIA, IFRS9Stage.STAGE_1)
-        assert any(f.floor_rate == 0.01 for f in floors)
-
-    def test_rbi_stage2_floor(self) -> None:
-        floors = get_provision_floors(Jurisdiction.INDIA, IFRS9Stage.STAGE_2)
-        assert any(f.floor_rate == 0.05 for f in floors)
+    @pytest.mark.parametrize(
+        ("jurisdiction", "stage", "expected_rate"),
+        [
+            (Jurisdiction.UAE, None, 0.015),
+            (Jurisdiction.INDIA, IFRS9Stage.STAGE_1, 0.01),
+            (Jurisdiction.INDIA, IFRS9Stage.STAGE_2, 0.05),
+            (Jurisdiction.SINGAPORE, None, 0.01),
+            (Jurisdiction.SAUDI_ARABIA, None, 0.01),
+        ],
+        ids=["cbuae-1.5pct", "rbi-s1-1pct", "rbi-s2-5pct", "mas-1pct", "sama-1pct"],
+    )
+    def test_floor_exists(
+        self,
+        jurisdiction: Jurisdiction,
+        stage: IFRS9Stage | None,
+        expected_rate: float,
+    ) -> None:
+        floors = get_provision_floors(jurisdiction, stage)
+        assert any(f.floor_rate == expected_rate for f in floors)
 
     def test_apply_floor_binding(self) -> None:
         ecl = apply_provision_floor(
@@ -779,3 +830,14 @@ class TestIntegration:
         from creditriskengine.ecl.ifrs9 import calculate_revolving_ecl as fn2
 
         assert fn1 is fn2
+
+    def test_ccf_single_source_of_truth(self) -> None:
+        """Revolving CCF delegates to ead_model.py, not its own tables."""
+        from creditriskengine.models.ead.ead_model import get_sa_ccf
+
+        # Both paths should return the same value
+        ead_ccf = get_sa_ccf("unconditionally_cancellable", "australia")
+        revolving_ccf = regulatory_ccf_sa(
+            RevolvingProductType.CREDIT_CARD, Jurisdiction.AUSTRALIA,
+        )
+        assert ead_ccf == revolving_ccf == 0.40

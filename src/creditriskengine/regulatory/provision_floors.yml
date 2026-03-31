@@ -1,0 +1,42 @@
+# Multi-jurisdiction provision floors for revolving credit ECL.
+#
+# Used by creditriskengine.ecl.ifrs9.revolving.provision_floors to populate
+# ProvisionFloor objects.  Override by passing a custom path to
+# load_provision_floors().
+#
+# References:
+#   - CBUAE Circular 3/2024 (1.5% CRWA floor)
+#   - RBI Draft Directions October 2025 (1%/5% unsecured retail)
+#   - MAS Notice 612 (1% MRLA for D-SIBs)
+#   - SAMA general provision (~1% CRWA)
+
+floors:
+  - jurisdiction: uae
+    stage: null  # cross-stage
+    floor_rate: 0.015
+    floor_basis: crwa
+    description: "CBUAE Circular 3/2024: 1.5% CRWA floor (S1+S2)"
+
+  - jurisdiction: india
+    stage: 1
+    floor_rate: 0.01
+    floor_basis: ead
+    description: "RBI Draft Oct 2025: 1% Stage 1 unsecured retail"
+
+  - jurisdiction: india
+    stage: 2
+    floor_rate: 0.05
+    floor_basis: ead
+    description: "RBI Draft Oct 2025: 5% Stage 2 unsecured retail"
+
+  - jurisdiction: singapore
+    stage: null
+    floor_rate: 0.01
+    floor_basis: ead
+    description: "MAS Notice 612: 1% MRLA for D-SIBs"
+
+  - jurisdiction: saudi_arabia
+    stage: null
+    floor_rate: 0.01
+    floor_basis: crwa
+    description: "SAMA: ~1% CRWA general provision"

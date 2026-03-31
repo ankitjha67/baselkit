@@ -1,17 +1,17 @@
 """Credit Conversion Factor models for revolving credit.
 
+Delegates regulatory CCF lookups to the canonical tables in
+:mod:`creditriskengine.models.ead.ead_model` and adds revolving-
+specific behavioral estimation and PIT adjustment on top.
+
 Supports four CCF approaches:
 
-1. **Regulatory SA** -- Basel III/CRR3 standardized CCFs with
-   jurisdiction-specific values (including APRA's 40% outlier).
-2. **Regulatory F-IRB** -- Supervisory CCFs per BCBS CRE32.29-32.32.
+1. **Regulatory SA** -- via :func:`ead_model.get_sa_ccf` with
+   jurisdiction overrides (APRA 40%, CRR3 transitional).
+2. **Regulatory F-IRB** -- via :func:`ead_model.get_supervisory_ccf`.
 3. **Behavioral** -- PIT bank-estimated CCFs from default-weighted
-   drawdown observations.
+   drawdown observations (LEQ method per Araten & Jacobs 2001).
 4. **EADF** -- EAD Factor approach avoiding LEQ singularity.
-
-IFRS 9 requires CCFs consistent with expectations of drawdowns
-(B5.5.31) and reflecting forward-looking conditions -- banks cannot
-simply adopt Basel regulatory CCFs without PIT adjustment.
 
 References:
     - BCBS d424 (December 2017), CRE32.29-32.32
@@ -30,56 +30,53 @@ from creditriskengine.ecl.ifrs9.revolving.types import (
     CCFMethod,
     RevolvingProductType,
 )
+from creditriskengine.models.ead.ead_model import (
+    get_airb_ccf_floor,
+    get_sa_ccf,
+    get_supervisory_ccf,
+)
 
 # -----------------------------------------------------------------------
-# Basel III / CRR3 Standardized CCFs (per BCBS d424 Table 2)
+# Product type → facility type mapping
 # -----------------------------------------------------------------------
 
-_SA_CCFS: dict[str, float] = {
-    "unconditionally_cancellable": 0.10,
-    "committed_any_maturity": 0.40,
-    "nif_ruf": 0.50,
-    "transaction_related": 0.50,
-    "trade_related": 0.20,
-    "direct_credit_substitutes": 1.00,
+_PRODUCT_TO_SA_FACILITY: dict[RevolvingProductType, str] = {
+    RevolvingProductType.CREDIT_CARD: "unconditionally_cancellable",
+    RevolvingProductType.OVERDRAFT: "unconditionally_cancellable",
+    RevolvingProductType.HELOC: "committed_any_maturity",
+    RevolvingProductType.CORPORATE_REVOLVER: "committed_any_maturity",
+    RevolvingProductType.WORKING_CAPITAL: "committed_any_maturity",
+    RevolvingProductType.MARGIN_LENDING: "committed_any_maturity",
 }
 
-# Jurisdiction-specific overrides
-_SA_CCF_OVERRIDES: dict[Jurisdiction, dict[str, float]] = {
-    Jurisdiction.AUSTRALIA: {
-        "unconditionally_cancellable": 0.40,
-    },
+_PRODUCT_TO_FIRB_FACILITY: dict[RevolvingProductType, str] = {
+    RevolvingProductType.CREDIT_CARD: "committed_unconditionally_cancellable",
+    RevolvingProductType.OVERDRAFT: "committed_unconditionally_cancellable",
+    RevolvingProductType.HELOC: "committed_other",
+    RevolvingProductType.CORPORATE_REVOLVER: "committed_other",
+    RevolvingProductType.WORKING_CAPITAL: "committed_other",
+    RevolvingProductType.MARGIN_LENDING: "committed_other",
 }
 
-# CRR3 transitional: 0% permitted until 31 Dec 2029 for UCCs
-_CRR3_TRANSITIONAL_UCC_CCF: float = 0.0
-
-# F-IRB supervisory CCFs (aligned with SA for revolving)
-_FIRB_CCFS: dict[str, float] = {
-    "unconditionally_cancellable": 0.40,
-    "committed_other": 0.75,
-    "transaction_related": 0.50,
-    "trade_related": 0.20,
-    "nif": 0.75,
-    "direct_credit_substitutes": 1.00,
+_JURISDICTION_TO_CODE: dict[Jurisdiction, str] = {
+    Jurisdiction.BCBS: "bcbs",
+    Jurisdiction.EU: "eu",
+    Jurisdiction.UK: "uk",
+    Jurisdiction.US: "us",
+    Jurisdiction.INDIA: "india",
+    Jurisdiction.SINGAPORE: "singapore",
+    Jurisdiction.HONG_KONG: "hong_kong",
+    Jurisdiction.JAPAN: "japan",
+    Jurisdiction.AUSTRALIA: "australia",
+    Jurisdiction.CANADA: "canada",
+    Jurisdiction.UAE: "uae",
+    Jurisdiction.SAUDI_ARABIA: "saudi_arabia",
 }
 
-# A-IRB CCF input floor: 50% of applicable SA CCF (CRR3 Art. 166(8b))
-AIRB_CCF_FLOOR_FACTOR: float = 0.50
 
-
-def _product_to_facility(product_type: RevolvingProductType) -> str:
-    """Map product type to SA facility classification."""
-    facility_map: dict[RevolvingProductType, str] = {
-        RevolvingProductType.CREDIT_CARD: "unconditionally_cancellable",
-        RevolvingProductType.OVERDRAFT: "unconditionally_cancellable",
-        RevolvingProductType.HELOC: "committed_any_maturity",
-        RevolvingProductType.CORPORATE_REVOLVER: "committed_any_maturity",
-        RevolvingProductType.WORKING_CAPITAL: "committed_any_maturity",
-        RevolvingProductType.MARGIN_LENDING: "committed_any_maturity",
-    }
-    return facility_map.get(product_type, "committed_any_maturity")
-
+# -----------------------------------------------------------------------
+# Regulatory CCF lookups (delegate to ead_model)
+# -----------------------------------------------------------------------
 
 def regulatory_ccf_sa(
     product_type: RevolvingProductType,
@@ -88,29 +85,23 @@ def regulatory_ccf_sa(
 ) -> float:
     """Return the Basel III / CRR3 Standardized Approach CCF.
 
+    Delegates to :func:`models.ead.ead_model.get_sa_ccf` -- the single
+    source of truth for SA CCF tables and jurisdiction overrides.
+
     Args:
         product_type: Revolving product classification.
-        jurisdiction: Reporting jurisdiction.  APRA uses 40% for UCCs.
+        jurisdiction: Reporting jurisdiction.
         use_crr3_transitional: If True and jurisdiction is EU, returns
-            the CRR3 transitional 0% CCF for UCCs (valid until 2029).
+            CRR3 transitional 0% CCF for UCCs (valid until 2029).
 
     Returns:
         Standardized CCF as a decimal (e.g., 0.10 = 10%).
     """
-    facility = _product_to_facility(product_type)
-
-    if (
-        use_crr3_transitional
-        and jurisdiction == Jurisdiction.EU
-        and facility == "unconditionally_cancellable"
-    ):
-        return _CRR3_TRANSITIONAL_UCC_CCF
-
-    overrides = _SA_CCF_OVERRIDES.get(jurisdiction, {})
-    if facility in overrides:
-        return overrides[facility]
-
-    return _SA_CCFS.get(facility, 0.40)
+    facility = _PRODUCT_TO_SA_FACILITY.get(
+        product_type, "committed_any_maturity"
+    )
+    jur_code = _JURISDICTION_TO_CODE.get(jurisdiction, "bcbs")
+    return get_sa_ccf(facility, jur_code, use_crr3_transitional)
 
 
 def regulatory_ccf_firb(
@@ -118,18 +109,18 @@ def regulatory_ccf_firb(
 ) -> float:
     """Return the Foundation IRB supervisory CCF.
 
+    Delegates to :func:`models.ead.ead_model.get_supervisory_ccf`.
+
     Args:
         product_type: Revolving product classification.
 
     Returns:
         F-IRB CCF as a decimal.
     """
-    facility = _product_to_facility(product_type)
-    firb_key = {
-        "unconditionally_cancellable": "unconditionally_cancellable",
-        "committed_any_maturity": "committed_other",
-    }.get(facility, "committed_other")
-    return _FIRB_CCFS.get(firb_key, 0.75)
+    facility = _PRODUCT_TO_FIRB_FACILITY.get(
+        product_type, "committed_other"
+    )
+    return get_supervisory_ccf(facility)
 
 
 def airb_ccf_floor(
@@ -138,8 +129,7 @@ def airb_ccf_floor(
 ) -> float:
     """Return the A-IRB CCF input floor (50% of SA CCF).
 
-    Per CRR3 Art. 166(8b), A-IRB own-estimate CCFs must be at least
-    50% of the applicable SA-CCF.
+    Delegates to :func:`models.ead.ead_model.get_airb_ccf_floor`.
 
     Args:
         product_type: Revolving product classification.
@@ -148,9 +138,16 @@ def airb_ccf_floor(
     Returns:
         Minimum permissible A-IRB CCF.
     """
-    sa_ccf = regulatory_ccf_sa(product_type, jurisdiction)
-    return sa_ccf * AIRB_CCF_FLOOR_FACTOR
+    facility = _PRODUCT_TO_SA_FACILITY.get(
+        product_type, "committed_any_maturity"
+    )
+    jur_code = _JURISDICTION_TO_CODE.get(jurisdiction, "bcbs")
+    return get_airb_ccf_floor(facility, jur_code)
 
+
+# -----------------------------------------------------------------------
+# Behavioral CCF estimation
+# -----------------------------------------------------------------------
 
 def behavioral_ccf(
     ead_at_default: np.ndarray,
@@ -201,8 +198,7 @@ def eadf_ccf(
 
     EADF = EAD_default / Limit_observation
 
-    This avoids the singularity problem in the LEQ approach when the
-    undrawn amount approaches zero.
+    Avoids the singularity problem in LEQ when undrawn approaches zero.
 
     Args:
         ead_at_default: Array of EAD amounts at default.
@@ -230,6 +226,10 @@ def eadf_ccf(
     return float(np.clip(np.mean(eadfs), 0.0, 1.0))
 
 
+# -----------------------------------------------------------------------
+# PIT adjustment
+# -----------------------------------------------------------------------
+
 def ccf_pit_adjustment(
     ttc_ccf: float,
     z_factor: float,
@@ -238,18 +238,14 @@ def ccf_pit_adjustment(
     """Convert a TTC CCF to a PIT CCF using macro conditions.
 
     IFRS 9 requires CCFs reflecting current and forecast conditions
-    (B5.5.31), not through-the-cycle averages.  This applies a simple
-    linear adjustment:
+    (B5.5.31), not through-the-cycle averages.
 
-        CCF_PIT = CCF_TTC × (1 + sensitivity × z_factor)
-
-    where z_factor > 0 indicates deteriorating conditions (higher
-    expected drawdowns) and z_factor < 0 indicates improving conditions.
+        CCF_PIT = CCF_TTC x (1 + sensitivity x z_factor)
 
     Args:
         ttc_ccf: Through-the-cycle CCF (e.g., 0.50).
         z_factor: Macroeconomic index (standard normal).  Positive
-            values indicate stress.
+            values indicate stress (higher expected drawdowns).
         sensitivity: Elasticity of CCF to macro conditions (default 0.5).
 
     Returns:
@@ -259,6 +255,10 @@ def ccf_pit_adjustment(
     return float(np.clip(pit, 0.0, 1.0))
 
 
+# -----------------------------------------------------------------------
+# Floor application
+# -----------------------------------------------------------------------
+
 def apply_ccf_with_floor(
     ccf: float,
     product_type: RevolvingProductType,
@@ -267,8 +267,9 @@ def apply_ccf_with_floor(
 ) -> float:
     """Apply jurisdiction-aware CCF floor.
 
-    For A-IRB behavioral estimates, the floor is 50% of the applicable
-    SA CCF.  For regulatory approaches, the CCF is returned unchanged.
+    For behavioral/EADF estimates, the floor is 50% of the applicable
+    SA CCF (A-IRB input floor per CRR3 Art. 166(8b)).  For regulatory
+    approaches, the CCF is returned unchanged.
 
     Args:
         ccf: Input CCF value.

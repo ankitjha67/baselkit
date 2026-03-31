@@ -1,0 +1,60 @@
+# Default parameters for revolving credit product types.
+#
+# Used by creditriskengine.ecl.ifrs9.revolving.product_config to populate
+# RevolvingProductConfig objects.  Override by passing a custom path to
+# load_revolving_product_configs().
+#
+# References:
+#   - IFRS 9 paragraphs 5.5.20, B5.5.39-40
+#   - PwC "In Depth" November 2017 (revolving ECL FAQs)
+#   - Tong et al. (2016) on credit card CCF distribution
+
+products:
+  credit_card:
+    default_behavioral_life_months: 36
+    behavioral_life_range: [24, 60]
+    typical_ccf_range: [0.50, 0.95]
+    typical_lgd: 0.85
+    is_collectively_managed: true
+    has_draw_period: false
+
+  overdraft:
+    default_behavioral_life_months: 24
+    behavioral_life_range: [12, 36]
+    typical_ccf_range: [0.50, 1.00]
+    typical_lgd: 0.70
+    is_collectively_managed: true
+    has_draw_period: false
+
+  heloc:
+    default_behavioral_life_months: 120
+    behavioral_life_range: [60, 180]
+    typical_ccf_range: [0.30, 0.75]
+    typical_lgd: 0.30
+    is_collectively_managed: true
+    has_draw_period: true
+    draw_period_months: 120
+
+  corporate_revolver:
+    default_behavioral_life_months: 48
+    behavioral_life_range: [36, 60]
+    typical_ccf_range: [0.50, 0.75]
+    typical_lgd: 0.40
+    is_collectively_managed: false
+    has_draw_period: false
+
+  working_capital:
+    default_behavioral_life_months: 24
+    behavioral_life_range: [12, 36]
+    typical_ccf_range: [0.40, 0.70]
+    typical_lgd: 0.45
+    is_collectively_managed: false
+    has_draw_period: false
+
+  margin_lending:
+    default_behavioral_life_months: 6
+    behavioral_life_range: [1, 12]
+    typical_ccf_range: [0.60, 0.90]
+    typical_lgd: 0.25
+    is_collectively_managed: false
+    has_draw_period: false
