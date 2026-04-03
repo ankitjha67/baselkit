@@ -23,6 +23,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +220,7 @@ def apply_overlays(
 
 def overlay_impact_summary(
     result: OverlayResult,
-) -> dict[str, float | int | str]:
+) -> dict[str, Any]:
     """Generate a governance summary of overlay impacts.
 
     Designed for inclusion in Pillar 3 disclosures, board reporting,
@@ -256,7 +257,7 @@ def overlay_impact_summary(
         "adjustment_pct": round(pct_impact, 2),
         "overlays_applied": len(result.applied_overlays),
         "overlays_skipped": len(result.skipped_overlays),
-        "impact_by_type": str(by_type),
+        "impact_by_type": by_type,
         "timestamp": result.timestamp.isoformat(),
     }
 
