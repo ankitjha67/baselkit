@@ -204,6 +204,15 @@ class TestSatelliteModelPredict:
         with pytest.raises(ValueError, match="same length"):
             satellite_model_predict(config, {"gdp": np.array([0.01])})
 
+    def test_invalid_link_raises(self) -> None:
+        config = SatelliteModelConfig(
+            variable_names=["gdp"],
+            coefficients=[-2.0],
+            link="logisitic",  # typo
+        )
+        with pytest.raises(ValueError, match="Unknown link function"):
+            satellite_model_predict(config, {"gdp": np.array([0.01])})
+
 
 class TestMeanReversionWeights:
     def test_within_forecast(self) -> None:

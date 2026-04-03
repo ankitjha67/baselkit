@@ -175,6 +175,14 @@ class TestRestructuredAccountStage:
         )
         assert stage == IFRS9Stage.STAGE_3
 
+    def test_at_point_of_restructuring_is_stage3(self) -> None:
+        # Per RBI norms: NPA at the point of restructuring
+        stage = restructured_account_stage(
+            days_past_due_post_restructure=0,
+            months_since_restructure=0,
+        )
+        assert stage == IFRS9Stage.STAGE_3
+
     def test_within_probation_period(self) -> None:
         stage = restructured_account_stage(
             days_past_due_post_restructure=0,

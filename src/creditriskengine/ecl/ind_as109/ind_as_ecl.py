@@ -291,7 +291,11 @@ def restructured_account_stage(
     if days_past_due_post_restructure >= RBI_DEFAULT_DPD_THRESHOLD:
         return IFRS9Stage.STAGE_3
 
-    # If satisfactory performance period not yet completed, Stage 2
+    # At point of restructuring (month 0), account is NPA → Stage 3
+    if months_since_restructure == 0:
+        return IFRS9Stage.STAGE_3
+
+    # Probation period: performing but not yet upgraded → Stage 2
     if months_since_restructure < satisfactory_performance_months:
         return IFRS9Stage.STAGE_2
 

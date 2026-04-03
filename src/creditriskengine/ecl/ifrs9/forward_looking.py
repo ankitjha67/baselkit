@@ -182,9 +182,13 @@ def satellite_model_predict(
         factors = 2.0 / (1.0 + np.exp(-z))
     elif config.link == "log":
         factors = np.exp(z)
-    else:
-        # Linear (identity) with floor at 0
+    elif config.link == "linear":
         factors = np.maximum(z, 0.0)
+    else:
+        raise ValueError(
+            f"Unknown link function '{config.link}'. "
+            "Supported: 'linear', 'logistic', 'log'"
+        )
 
     logger.debug(
         "Satellite model predict: link=%s, n_periods=%d, factor_range=[%.4f, %.4f]",
