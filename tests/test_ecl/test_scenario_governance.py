@@ -1,6 +1,6 @@
 """Tests for scenario governance metadata and sensitivity analysis."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import pytest
 

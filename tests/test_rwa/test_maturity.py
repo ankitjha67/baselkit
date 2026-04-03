@@ -1,6 +1,5 @@
 """Tests for IRB maturity module — CRE31.7, CRE32.44-32.47."""
 
-import pytest
 
 from creditriskengine.rwa.irb.maturity import (
     effective_maturity_airb,

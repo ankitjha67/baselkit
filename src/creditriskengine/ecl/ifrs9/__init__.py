@@ -11,14 +11,6 @@ from creditriskengine.ecl.ifrs9.lifetime_pd import (
     flat_pd_term_structure,
     marginal_pd_from_cumulative,
 )
-from creditriskengine.ecl.ifrs9.revolving import (
-    RevolvingECLResult,
-    RevolvingProductType,
-    calculate_revolving_ecl,
-    determine_behavioral_life,
-    regulatory_ccf_sa,
-    revolving_ecl_scenario_weighted,
-)
 from creditriskengine.ecl.ifrs9.overlays import (
     ManagementOverlay,
     OverlayResult,
@@ -26,6 +18,14 @@ from creditriskengine.ecl.ifrs9.overlays import (
     apply_overlays,
     overlay_impact_summary,
     validate_overlay,
+)
+from creditriskengine.ecl.ifrs9.revolving import (
+    RevolvingECLResult,
+    RevolvingProductType,
+    calculate_revolving_ecl,
+    determine_behavioral_life,
+    regulatory_ccf_sa,
+    revolving_ecl_scenario_weighted,
 )
 from creditriskengine.ecl.ifrs9.scenarios import (
     Scenario,

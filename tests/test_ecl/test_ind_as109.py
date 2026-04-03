@@ -5,9 +5,9 @@ import pytest
 
 from creditriskengine.core.types import IFRS9Stage
 from creditriskengine.ecl.ind_as109.ind_as_ecl import (
-    IRACAssetClass,
     RBI_AGRI_SHORT_CROP_DPD,
     RBI_DEFAULT_DPD_THRESHOLD,
+    IRACAssetClass,
     assign_stage_ind_as,
     calculate_ecl_ind_as,
     classify_irac,
