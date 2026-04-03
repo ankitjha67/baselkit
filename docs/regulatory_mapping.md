@@ -46,8 +46,13 @@ authoritative regulatory sources.
 | IFRS 9.5.5.9-9.5.5.12 | SICR assessment | `ecl/ifrs9/sicr.py` | `assess_sicr()` |
 | IFRS 9.5.5.15-9.5.5.16 | 12-month ECL (Stage 1) | `ecl/ifrs9/ecl_calc.py` | `ecl_12_month()` |
 | IFRS 9.5.5.3 | Lifetime ECL (Stage 2/3) | `ecl/ifrs9/ecl_calc.py` | `ecl_lifetime()` |
-| IFRS 9.5.5.17(c) | Forward-looking info | `ecl/ifrs9/forward_looking.py` | `macro_adjustment_factor()` |
+| IFRS 9.5.5.17(c) | Forward-looking info | `ecl/ifrs9/forward_looking.py` | `macro_adjustment_factor()`, `satellite_model_predict()` |
 | IFRS 9.B5.5.49-54 | Scenario weighting | `ecl/ifrs9/scenarios.py` | `weighted_ecl()` |
+| IFRS 9.B5.5.50 | Revert to historical beyond forecast | `ecl/ifrs9/forward_looking.py` | `mean_reversion_weights()`, `apply_fli_with_reversion()` |
+| IFRS 9.B5.5.51 | Macro-economic sensitivity | `ecl/ifrs9/forward_looking.py` | `SatelliteModelConfig`, `satellite_model_predict()` |
+| IFRS 9.B5.5.52 | Collateral value adjustments | `ecl/ifrs9/forward_looking.py` | `lgd_macro_overlay()` |
+| EBA/GL/2017/06 para 30-34 | Macro factor integration | `ecl/ifrs9/forward_looking.py` | `SatelliteModelConfig` |
+| ECB Guide Ch. 7 | Satellite model expectations | `ecl/ifrs9/forward_looking.py` | `satellite_model_predict()` |
 | IFRS 9.5.4.1 | POCI treatment | `ecl/ifrs9/staging.py` | `assign_stage()` (POCI branch) |
 | IFRS 9.5.5.20 | Revolving credit ECL exception | `ecl/ifrs9/revolving/ecl_revolving.py` | `calculate_revolving_ecl()` |
 | IFRS 9.B5.5.39-40 | Behavioral life (3-factor) | `ecl/ifrs9/revolving/behavioral_life.py` | `determine_behavioral_life()` |
@@ -89,6 +94,11 @@ authoritative regulatory sources.
 |---|---|---|---|
 | RBI Master Circular | 90 DPD NPA threshold | `ecl/ind_as109/ind_as_ecl.py` | `RBI_DEFAULT_DPD_THRESHOLD = 90` |
 | Ind AS 109 (= IFRS 9) | Stage assignment | `ecl/ind_as109/ind_as_ecl.py` | `assign_stage_ind_as()` |
+| RBI IRAC Norms para 2.1-2.5 | Asset classification (SMA/NPA) | `ecl/ind_as109/ind_as_ecl.py` | `classify_irac()`, `IRACAssetClass` |
+| RBI IRAC Norms para 4.2-4.5 | Minimum provisioning percentages | `ecl/ind_as109/ind_as_ecl.py` | `rbi_minimum_provision()`, `RBI_PROVISION_RATES` |
+| RBI/2019-20/170 | Ind AS provisioning (IRAC-IFRS9 mapping) | `ecl/ind_as109/ind_as_ecl.py` | `irac_to_ifrs9_stage()`, `calculate_ecl_ind_as()` |
+| RBI IRAC para 12-14 | Restructured advances treatment | `ecl/ind_as109/ind_as_ecl.py` | `restructured_account_stage()` |
+| RBI IRAC (agriculture) | Short-duration crop: 60 DPD | `ecl/ind_as109/ind_as_ecl.py` | `RBI_AGRI_SHORT_CROP_DPD = 60` |
 
 ## Revolving Credit CCF -- Regulatory SA by Jurisdiction
 
