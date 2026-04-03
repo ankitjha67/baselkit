@@ -5,6 +5,11 @@ and regulatory compliance.  Every RWA or ECL calculation can be recorded
 with its full input/output context so that supervisory reviews, model
 validation teams, and internal audit can trace any number back to its
 regulatory basis.
+
+Also provides :class:`OverlayAuditRecord` for tracking management
+overlay / post-model adjustment (PMA) lifecycle events, supporting
+the governance requirements of IFRS 9.B5.5.52, EBA/GL/2020/06,
+and PRA Dear CFO letter (Jul 2020).
 """
 
 from __future__ import annotations
@@ -35,6 +40,48 @@ class CalculationRecord:
     warnings: list[str] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class OverlayAuditRecord:
+    """Immutable record of a management overlay application event.
+
+    Captures the full lifecycle of a post-model adjustment for
+    regulatory and audit purposes.
+
+    Reference:
+        IFRS 9.B5.5.52 — adjustments for conditions and forecasts.
+        EBA/GL/2020/06 para 25-31 — overlay governance and disclosure.
+        PRA Dear CFO letter (Jul 2020) — overlay documentation expectations.
+
+    Attributes:
+        overlay_name: Descriptive name of the overlay.
+        overlay_type: Classification (e.g., "emerging_risk").
+        event: Lifecycle event (e.g., "applied", "approved", "expired",
+            "revoked", "reviewed").
+        model_ecl: ECL before overlay application.
+        overlay_ecl: ECL after overlay application.
+        adjustment: The overlay impact (overlay_ecl - model_ecl).
+        portfolio_scope: Description of affected exposures.
+        rationale: Why the overlay was applied/changed.
+        regulatory_basis: IFRS paragraph or regulator guidance.
+        approved_by: Approving authority.
+        timestamp: When this event occurred.
+        engine_version: Library version at time of recording.
+    """
+
+    overlay_name: str
+    overlay_type: str
+    event: str
+    model_ecl: float
+    overlay_ecl: float
+    adjustment: float
+    portfolio_scope: str = ""
+    rationale: str = ""
+    regulatory_basis: str = ""
+    approved_by: str = ""
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    engine_version: str = field(default_factory=lambda: creditriskengine.__version__)
+
+
 class AuditTrail:
     """Stores and queries :class:`CalculationRecord` entries.
 
@@ -46,6 +93,7 @@ class AuditTrail:
 
     def __init__(self, records: list[CalculationRecord] | None = None) -> None:
         self._records: list[CalculationRecord] = list(records) if records else []
+        self._overlay_records: list[OverlayAuditRecord] = []
 
     # -- mutators -------------------------------------------------------------
 
@@ -110,6 +158,96 @@ class AuditTrail:
             result = [r for r in result if r.approach == approach]
         return result
 
+    # -- overlay audit --------------------------------------------------------
+
+    def record_overlay(
+        self,
+        overlay_name: str,
+        overlay_type: str,
+        event: str,
+        model_ecl: float,
+        overlay_ecl: float,
+        portfolio_scope: str = "",
+        rationale: str = "",
+        regulatory_basis: str = "",
+        approved_by: str = "",
+    ) -> OverlayAuditRecord:
+        """Record a management overlay lifecycle event.
+
+        Args:
+            overlay_name: Descriptive name of the overlay.
+            overlay_type: Classification (e.g., ``"emerging_risk"``).
+            event: Lifecycle event (``"applied"``, ``"approved"``,
+                ``"expired"``, ``"revoked"``, ``"reviewed"``).
+            model_ecl: ECL before overlay.
+            overlay_ecl: ECL after overlay.
+            portfolio_scope: Affected exposures description.
+            rationale: Justification text.
+            regulatory_basis: Supporting regulatory reference.
+            approved_by: Approving authority identifier.
+
+        Returns:
+            The newly created :class:`OverlayAuditRecord`.
+        """
+        rec = OverlayAuditRecord(
+            overlay_name=overlay_name,
+            overlay_type=overlay_type,
+            event=event,
+            model_ecl=model_ecl,
+            overlay_ecl=overlay_ecl,
+            adjustment=overlay_ecl - model_ecl,
+            portfolio_scope=portfolio_scope,
+            rationale=rationale,
+            regulatory_basis=regulatory_basis,
+            approved_by=approved_by,
+        )
+        self._overlay_records.append(rec)
+        return rec
+
+    @property
+    def overlay_records(self) -> list[OverlayAuditRecord]:
+        """Return a shallow copy of overlay audit records."""
+        return list(self._overlay_records)
+
+    def get_overlay_records(
+        self,
+        overlay_name: str | None = None,
+        event: str | None = None,
+    ) -> list[OverlayAuditRecord]:
+        """Return overlay records matching the given filters.
+
+        Args:
+            overlay_name: Filter by overlay name.
+            event: Filter by lifecycle event.
+        """
+        result = self._overlay_records
+        if overlay_name is not None:
+            result = [r for r in result if r.overlay_name == overlay_name]
+        if event is not None:
+            result = [r for r in result if r.event == event]
+        return result
+
+    def overlay_summary(self) -> dict[str, Any]:
+        """Aggregate overlay audit statistics.
+
+        Returns:
+            ``{"by_type": {<type>: <count>}, "by_event": {<event>: <count>},
+            "total_adjustment": <float>}``
+        """
+        by_type: Counter[str] = Counter()
+        by_event: Counter[str] = Counter()
+        total_adj = 0.0
+        for rec in self._overlay_records:
+            by_type[rec.overlay_type] += 1
+            by_event[rec.event] += 1
+            if rec.event == "applied":
+                total_adj += rec.adjustment
+        return {
+            "by_type": dict(by_type),
+            "by_event": dict(by_event),
+            "total_adjustment": total_adj,
+        }
+
     # -- export / reporting ---------------------------------------------------
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -169,8 +307,28 @@ class AuditTrail:
                     "warnings": r.warnings,
                 }
             )
+        overlay_data = []
+        for ov in self._overlay_records:
+            overlay_data.append(
+                {
+                    "overlay_name": ov.overlay_name,
+                    "overlay_type": ov.overlay_type,
+                    "event": ov.event,
+                    "model_ecl": ov.model_ecl,
+                    "overlay_ecl": ov.overlay_ecl,
+                    "adjustment": ov.adjustment,
+                    "portfolio_scope": ov.portfolio_scope,
+                    "rationale": ov.rationale,
+                    "regulatory_basis": ov.regulatory_basis,
+                    "approved_by": ov.approved_by,
+                    "timestamp": ov.timestamp.isoformat(),
+                    "engine_version": ov.engine_version,
+                }
+            )
+
+        export = {"calculations": data, "overlays": overlay_data}
         with open(filepath, "w") as fh:
-            json.dump(data, fh, indent=2)
+            json.dump(export, fh, indent=2)
 
     def summary(self) -> dict[str, dict[str, int]]:
         """Aggregate statistics for the audit trail.

@@ -12,6 +12,7 @@ from creditriskengine.core.exceptions import (
     RegulatoryError,
     ValidationError,
 )
+from creditriskengine.core.audit import AuditTrail, CalculationRecord, OverlayAuditRecord
 from creditriskengine.core.exposure import Collateral, Exposure
 from creditriskengine.core.portfolio import Portfolio
 from creditriskengine.core.types import (
@@ -43,4 +44,7 @@ __all__ = [
     "Exposure",
     "Collateral",
     "Portfolio",
+    "AuditTrail",
+    "CalculationRecord",
+    "OverlayAuditRecord",
 ]

@@ -1,11 +1,17 @@
 """Expected Credit Loss (ECL) calculation package.
 
 Supports IFRS 9, US CECL (ASC 326), Ind AS 109, and revolving credit
-ECL with behavioral life, CCF models, and drawn/undrawn decomposition.
+ECL with behavioral life, CCF models, drawn/undrawn decomposition,
+management overlays, and scenario governance.
 """
 
 from creditriskengine.ecl.cecl import cecl_loss_rate, cecl_pd_lgd
 from creditriskengine.ecl.ifrs9 import assign_stage, calculate_ecl
+from creditriskengine.ecl.ifrs9.overlays import (
+    ManagementOverlay,
+    OverlayType,
+    apply_overlays,
+)
 from creditriskengine.ecl.ifrs9.revolving import (
     RevolvingECLResult,
     calculate_revolving_ecl,
@@ -22,4 +28,8 @@ __all__ = [
     # Revolving credit
     "calculate_revolving_ecl",
     "RevolvingECLResult",
+    # Management overlays
+    "ManagementOverlay",
+    "OverlayType",
+    "apply_overlays",
 ]
