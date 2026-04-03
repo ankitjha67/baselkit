@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 import creditriskengine
-from creditriskengine.core.audit import AuditTrail, CalculationRecord
+from creditriskengine.core.audit import AuditTrail, CalculationRecord, OverlayAuditRecord
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -251,8 +251,9 @@ class TestAuditTrailExportJson:
         trail.export_json(filepath)
 
         with open(filepath) as fh:
-            data = json.load(fh)
+            export = json.load(fh)
 
+        data = export["calculations"]
         assert len(data) == 1
         assert data[0]["exposure_id"] == "E1"
         assert data[0]["approach"] == "SA"
@@ -264,14 +265,16 @@ class TestAuditTrailExportJson:
         assert data[0]["warnings"] == []
         # Timestamp should be an ISO string
         datetime.fromisoformat(data[0]["timestamp"])
+        # Overlay section should be empty
+        assert export["overlays"] == []
 
     def test_export_json_empty(self, tmp_path) -> None:
         trail = AuditTrail()
         filepath = str(tmp_path / "empty.json")
         trail.export_json(filepath)
         with open(filepath) as fh:
-            data = json.load(fh)
-        assert data == []
+            export = json.load(fh)
+        assert export == {"calculations": [], "overlays": []}
 
     def test_export_json_multiple_records(self, tmp_path) -> None:
         trail = AuditTrail()
@@ -280,10 +283,38 @@ class TestAuditTrailExportJson:
         filepath = str(tmp_path / "multi.json")
         trail.export_json(filepath)
         with open(filepath) as fh:
-            data = json.load(fh)
+            export = json.load(fh)
+        data = export["calculations"]
         assert len(data) == 2
         assert data[0]["warnings"] == ["w1"]
         assert data[1]["warnings"] == []
+
+    def test_export_json_with_overlays(self, tmp_path) -> None:
+        trail = AuditTrail()
+        trail.record("E1", "SA", "EU", {}, {}, "CRE20")
+        trail.record_overlay(
+            overlay_name="CRE stress",
+            overlay_type="sector_specific",
+            event="applied",
+            model_ecl=100.0,
+            overlay_ecl=150.0,
+            rationale="CRE downturn",
+            regulatory_basis="IFRS 9.B5.5.52",
+            approved_by="CRO",
+        )
+        filepath = str(tmp_path / "with_overlays.json")
+        trail.export_json(filepath)
+        with open(filepath) as fh:
+            export = json.load(fh)
+        assert len(export["calculations"]) == 1
+        assert len(export["overlays"]) == 1
+        ov = export["overlays"][0]
+        assert ov["overlay_name"] == "CRE stress"
+        assert ov["overlay_type"] == "sector_specific"
+        assert ov["event"] == "applied"
+        assert ov["model_ecl"] == 100.0
+        assert ov["overlay_ecl"] == 150.0
+        assert ov["adjustment"] == 50.0
 
 
 # ---------------------------------------------------------------------------
@@ -312,3 +343,103 @@ class TestAuditTrailSummary:
         s = trail.summary()
         assert s["by_approach"] == {"AIRB": 1}
         assert s["by_jurisdiction"] == {"US": 1}
+
+
+# ---------------------------------------------------------------------------
+# OverlayAuditRecord
+# ---------------------------------------------------------------------------
+
+
+class TestOverlayAuditRecord:
+    def test_creation(self) -> None:
+        rec = OverlayAuditRecord(
+            overlay_name="CRE stress",
+            overlay_type="sector_specific",
+            event="applied",
+            model_ecl=100.0,
+            overlay_ecl=150.0,
+            adjustment=50.0,
+            rationale="CRE downturn",
+            regulatory_basis="IFRS 9.B5.5.52",
+            approved_by="CRO",
+        )
+        assert rec.overlay_name == "CRE stress"
+        assert rec.adjustment == 50.0
+        assert rec.event == "applied"
+
+    def test_frozen(self) -> None:
+        rec = OverlayAuditRecord(
+            overlay_name="Test",
+            overlay_type="emerging_risk",
+            event="applied",
+            model_ecl=100.0,
+            overlay_ecl=120.0,
+            adjustment=20.0,
+        )
+        with pytest.raises(AttributeError):
+            rec.overlay_name = "Changed"  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# AuditTrail — overlay audit methods
+# ---------------------------------------------------------------------------
+
+
+class TestAuditTrailOverlays:
+    def test_record_overlay(self) -> None:
+        trail = AuditTrail()
+        rec = trail.record_overlay(
+            overlay_name="Geopolitical risk",
+            overlay_type="emerging_risk",
+            event="applied",
+            model_ecl=100.0,
+            overlay_ecl=125.0,
+            rationale="Ukraine conflict impact",
+            approved_by="CRC",
+        )
+        assert isinstance(rec, OverlayAuditRecord)
+        assert rec.overlay_name == "Geopolitical risk"
+        assert rec.adjustment == 25.0
+        assert len(trail.overlay_records) == 1
+
+    def test_overlay_records_returns_copy(self) -> None:
+        trail = AuditTrail()
+        trail.record_overlay("Test", "emerging_risk", "applied", 100.0, 110.0)
+        records = trail.overlay_records
+        records.clear()
+        assert len(trail.overlay_records) == 1
+
+    def test_get_overlay_records_by_name(self) -> None:
+        trail = AuditTrail()
+        trail.record_overlay("A", "model_limitation", "applied", 100.0, 110.0)
+        trail.record_overlay("B", "sector_specific", "applied", 200.0, 250.0)
+        trail.record_overlay("A", "model_limitation", "reviewed", 110.0, 110.0)
+        recs = trail.get_overlay_records(overlay_name="A")
+        assert len(recs) == 2
+        assert all(r.overlay_name == "A" for r in recs)
+
+    def test_get_overlay_records_by_event(self) -> None:
+        trail = AuditTrail()
+        trail.record_overlay("A", "emerging_risk", "applied", 100.0, 120.0)
+        trail.record_overlay("A", "emerging_risk", "reviewed", 120.0, 120.0)
+        trail.record_overlay("A", "emerging_risk", "revoked", 120.0, 100.0)
+        recs = trail.get_overlay_records(event="applied")
+        assert len(recs) == 1
+
+    def test_overlay_summary(self) -> None:
+        trail = AuditTrail()
+        trail.record_overlay("A", "emerging_risk", "applied", 100.0, 125.0)
+        trail.record_overlay("B", "sector_specific", "applied", 200.0, 250.0)
+        trail.record_overlay("A", "emerging_risk", "reviewed", 125.0, 125.0)
+        s = trail.overlay_summary()
+        assert s["by_type"] == {"emerging_risk": 2, "sector_specific": 1}
+        assert s["by_event"] == {"applied": 2, "reviewed": 1}
+        # total_adjustment counts only "applied" events
+        assert s["total_adjustment"] == pytest.approx(75.0)
+
+    def test_overlay_summary_empty(self) -> None:
+        trail = AuditTrail()
+        s = trail.overlay_summary()
+        assert s["by_type"] == {}
+        assert s["by_event"] == {}
+        assert s["total_adjustment"] == 0.0

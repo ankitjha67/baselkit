@@ -19,7 +19,22 @@ from creditriskengine.ecl.ifrs9.revolving import (
     regulatory_ccf_sa,
     revolving_ecl_scenario_weighted,
 )
-from creditriskengine.ecl.ifrs9.scenarios import Scenario, weighted_ecl
+from creditriskengine.ecl.ifrs9.overlays import (
+    ManagementOverlay,
+    OverlayResult,
+    OverlayType,
+    apply_overlays,
+    overlay_impact_summary,
+    validate_overlay,
+)
+from creditriskengine.ecl.ifrs9.scenarios import (
+    Scenario,
+    ScenarioSetMetadata,
+    SensitivityResult,
+    scenario_sensitivity_analysis,
+    validate_scenario_governance,
+    weighted_ecl,
+)
 from creditriskengine.ecl.ifrs9.sicr import assess_sicr
 from creditriskengine.ecl.ifrs9.staging import assign_stage
 from creditriskengine.ecl.ifrs9.ttc_to_pit import ttc_to_pit_pd
@@ -36,6 +51,18 @@ __all__ = [
     "ttc_to_pit_pd",
     "Scenario",
     "weighted_ecl",
+    # Scenario governance
+    "ScenarioSetMetadata",
+    "SensitivityResult",
+    "validate_scenario_governance",
+    "scenario_sensitivity_analysis",
+    # Management overlays
+    "ManagementOverlay",
+    "OverlayType",
+    "OverlayResult",
+    "apply_overlays",
+    "overlay_impact_summary",
+    "validate_overlay",
     # Revolving credit ECL
     "calculate_revolving_ecl",
     "revolving_ecl_scenario_weighted",

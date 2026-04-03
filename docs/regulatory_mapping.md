@@ -55,6 +55,24 @@ authoritative regulatory sources.
 | IFRS 7.B8E | Drawn/undrawn ECL split | `ecl/ifrs9/revolving/ecl_revolving.py` | `RevolvingECLResult.ecl_drawn`, `.ecl_undrawn` |
 | IFRS 9.5.5.17 | Scenario-weighted ECL | `ecl/ifrs9/revolving/ecl_revolving.py` | `revolving_ecl_scenario_weighted()` |
 
+## Management Overlays & Governance Layer
+
+| Reference | Topic | Module | Function(s) |
+|---|---|---|---|
+| IFRS 9.B5.5.1 | Reasonable and supportable information | `ecl/ifrs9/overlays.py` | `ManagementOverlay` (rationale field) |
+| IFRS 9.B5.5.52 | Adjustments for current conditions and forecasts | `ecl/ifrs9/overlays.py` | `apply_overlays()` |
+| IFRS 9.5.5.17(c) | Forward-looking information requirement | `ecl/ifrs9/overlays.py` | `OverlayType.ECONOMIC_UNCERTAINTY` |
+| ECB "Letter to banks on IFRS 9" (Dec 2020) | COVID-19 overlay guidance | `ecl/ifrs9/overlays.py` | `OverlayType.TEMPORARY_EVENT` |
+| EBA/GL/2020/06 para 25-28 | Overlay governance and disclosure | `ecl/ifrs9/overlays.py` | `validate_overlay()` |
+| EBA/GL/2017/06 para 74-75 | Credit risk management and ECL accounting | `ecl/ifrs9/overlays.py`, `ecl/ifrs9/scenarios.py` | `validate_overlay()`, `validate_scenario_governance()` |
+| PRA Dear CFO letter (Jul 2020) | Overlay documentation expectations | `ecl/ifrs9/overlays.py` | `validate_overlay()` (expiry check) |
+| IFRS 7.35F-35L | Disclosure of ECL measurement | `ecl/ifrs9/overlays.py` | `overlay_impact_summary()` |
+| IFRS 9.B5.5.41-B5.5.43 | Range of possible outcomes / scenario design | `ecl/ifrs9/scenarios.py` | `ScenarioSetMetadata`, `validate_scenario_governance()` |
+| IFRS 9.B5.5.43 | Evaluation of range of scenarios | `ecl/ifrs9/scenarios.py` | `scenario_sensitivity_analysis()` |
+| BCBS "COVID-19 measures" (Apr 2020) | Overlay expectations | `ecl/ifrs9/overlays.py` | `OverlayType.TEMPORARY_EVENT` |
+| PRA SS1/23 | Model risk management expectations | `ecl/ifrs9/scenarios.py` | `validate_scenario_governance()` |
+| OCC 2011-12 / SR 11-7 | Model risk management — post-model adjustments | `core/audit.py` | `AuditTrail.record_overlay()`, `OverlayAuditRecord` |
+
 ## ASC 326 (CECL)
 
 | ASC Reference | Topic | Module | Function(s) |
