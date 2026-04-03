@@ -2,6 +2,81 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-04-03
+
+### Added
+
+- **ECL Governance Layer** -- Management overlays, scenario governance, and
+  overlay audit trail for the governance layer on top of model output:
+  - `ecl/ifrs9/overlays.py`: Management overlay (PMA) framework with 7
+    overlay types (model limitation, emerging risk, data gap, economic
+    uncertainty, sector-specific, regulatory, temporary event), effectiveness
+    dating, rate-based and absolute adjustments, governance validation
+    (rationale, approval, expiry), and Pillar 3 disclosure summary per
+    IFRS 9.B5.5.52, EBA/GL/2020/06, PRA Dear CFO letter (Jul 2020)
+  - `ecl/ifrs9/scenarios.py`: ScenarioSetMetadata for approval chain and
+    review cadence, validate_scenario_governance() per EBA/GL/2017/06,
+    scenario_sensitivity_analysis() quantifying ECL sensitivity to weight
+    perturbations per IFRS 9.B5.5.41-43
+  - `core/audit.py`: OverlayAuditRecord for immutable overlay lifecycle
+    tracking (applied/reviewed/revoked/expired), record_overlay(),
+    get_overlay_records(), overlay_summary(), JSON export with overlay section
+
+- **Advanced Forward-Looking Information** -- Multi-variable satellite
+  model framework replacing the basic linear approach:
+  - SatelliteModelConfig with configurable link functions (linear, logistic,
+    log) per ECB Guide to Internal Models Ch. 7
+  - Forecast-horizon mean-reversion per IFRS 9.B5.5.50 with configurable
+    reversion ramp
+  - LGD macro overlay driven by collateral index (HPI) changes per
+    EBA/GL/2017/16 Art. 181
+  - FLI impact summary for IFRS 7.35G disclosure
+
+- **Full RBI IRAC Norms for Ind AS 109** -- Comprehensive India-specific
+  implementation replacing the thin wrapper:
+  - IRACAssetClass enum: Standard, SMA-0/1/2, Substandard,
+    Doubtful-1/2/3, Loss per IRAC Norms para 2.1-2.5
+  - classify_irac() with agricultural sector DPD thresholds (60 DPD
+    short crop, 90 DPD long crop)
+  - RBI minimum provisioning percentages per IRAC para 4.2-4.5
+    (0.25%-100% by classification and sector)
+  - irac_to_ifrs9_stage() mapping per RBI/2019-20/170
+  - restructured_account_stage() per IRAC para 12-14
+  - calculate_ecl_ind_as() now applies RBI provisioning floor
+    (higher of model ECL and IRAC minimum)
+
+- **CECL Q-Factor Governance** -- Governance framework for qualitative
+  factors per OCC Bulletin 2020-49:
+  - Approval metadata (approved_by, approval_date, expiry_date, rationale)
+  - Per-category caps with warnings (DEFAULT_CATEGORY_CAPS_BPS)
+  - apply_q_factors_with_caps() enforcing governance guardrails
+  - validate_q_factors() checking 8-category coverage against
+    interagency guidance
+  - q_factor_summary() for governance reporting
+
+### Changed
+
+- `forward_looking.py`: Expanded from 62 to 390 lines with satellite
+  model, mean-reversion, and LGD overlay
+- `ind_as109/ind_as_ecl.py`: Expanded from 98 to 310 lines with full
+  IRAC norms
+- `cecl/qualitative.py`: Expanded from 71 to 230 lines with governance
+  framework
+- `core/__init__.py`: Exports AuditTrail, CalculationRecord,
+  OverlayAuditRecord
+- `ecl/ifrs9/__init__.py`: Exports overlay and scenario governance symbols
+- `ecl/ind_as109/__init__.py`: Exports IRAC classification symbols
+- `regulatory_mapping.md`: 33 new regulatory references (185+ total)
+- `core/audit.py`: export_json() now includes overlay records section
+
+### Tests
+- Test count: 1,960 → 2,068 (+108 new tests)
+- New test files: test_overlays.py, test_scenario_governance.py,
+  test_maturity.py (previously untested module)
+- Expanded: test_ind_as109.py (55 → 190 lines), test_ttc_pit_fli.py
+  (115 → 200 lines)
+- 100% line coverage, 0 mypy errors, 0 ruff errors
+
 ## [0.5.0] - 2026-03-31
 
 ### Added

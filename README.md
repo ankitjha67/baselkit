@@ -14,7 +14,8 @@ Production-grade open-source credit risk analytics library.
 ## Features
 
 - **RWA Calculation** -- Basel III/IV Standardized Approach and IRB (F-IRB / A-IRB) with output floor phase-in, double default (CRE32), and equity IRB (CRE33)
-- **ECL Engines** -- IFRS 9, US CECL (ASC 326), and Ind AS 109 with staging, SICR, lifetime PD, scenario weighting, and revolving credit ECL (credit cards, overdrafts, HELOCs, corporate revolvers) with behavioral life, multi-approach CCF, drawn/undrawn split, and multi-jurisdiction provision floors
+- **ECL Engines** -- IFRS 9, US CECL (ASC 326), and Ind AS 109 with staging, SICR, lifetime PD, scenario weighting, management overlays (post-model adjustments), and revolving credit ECL (credit cards, overdrafts, HELOCs, corporate revolvers) with behavioral life, multi-approach CCF, drawn/undrawn split, and multi-jurisdiction provision floors
+- **ECL Governance Layer** -- Management overlay framework (7 overlay types with approval/expiry/rationale tracking per EBA/GL/2020/06), scenario governance with sensitivity analysis (IFRS 9.B5.5.41-43), multi-variable satellite models with logistic/log link functions and mean-reversion (IFRS 9.B5.5.50), LGD macro overlays, CECL Q-factor governance with per-category caps (OCC 2020-49), and overlay audit trail with JSON export
 - **PD / LGD / EAD Modeling** -- Scorecard development, calibration (anchor-point & Bayesian), TTC-to-PIT conversion, term structures, Merton structural model, Altman Z-score, and transition matrix estimation
 - **Model Validation** -- Discrimination (AUROC, Gini, KS, IV), calibration (binomial, Hosmer-Lemeshow, traffic-light), stability (PSI, CSI, migration)
 - **Portfolio Risk** -- Vasicek ASRF, Gaussian copula Monte Carlo, parametric VaR, economic capital, and stress testing (including reverse stress)
@@ -25,7 +26,7 @@ Production-grade open-source credit risk analytics library.
 - **Securitisation** -- SEC-SA, SEC-ERBA, and SEC-IRBA per CRE40-45
 - **Operational Risk** -- Standardised Measurement Approach (SMA) per OPE25
 - **Credit Risk Mitigation** -- Comprehensive and simple approaches, haircut framework per CRE22
-- **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI, Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
+- **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI (full IRAC norms with SMA/NPA classification, provisioning floors, and restructured account handling), Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
 - **Regulatory Reporting** -- COREP, Pillar 3 disclosure templates (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), FR 2052a (Complex Institution Liquidity Monitoring), and model inventory
 - **Stress Testing** -- EBA, BoE ACS, US CCAR/DFAST, RBI frameworks, and reverse stress testing
 
@@ -142,6 +143,80 @@ print(f"  Drawn (loss allowance): ${result.ecl_drawn:,.2f}")
 print(f"  Undrawn (provision):    ${result.ecl_undrawn:,.2f}")
 ```
 
+### ECL Governance: Management Overlays & Scenario Sensitivity
+
+```python
+from creditriskengine.ecl.ifrs9.overlays import (
+    ManagementOverlay, OverlayType, apply_overlays, validate_overlay,
+)
+from creditriskengine.ecl.ifrs9.scenarios import (
+    Scenario, ScenarioSetMetadata, weighted_ecl,
+    scenario_sensitivity_analysis, validate_scenario_governance,
+)
+from datetime import datetime, UTC, timedelta
+
+# --- Management Overlays (post-model adjustments) ---
+overlay = ManagementOverlay(
+    name="CRE sector stress",
+    overlay_type=OverlayType.SECTOR_SPECIFIC,
+    adjustment_rate=0.15,  # +15% uplift on model ECL
+    rationale="Commercial real estate valuations declining in Q3",
+    regulatory_basis="IFRS 9.B5.5.52",
+    approved_by="Credit Risk Committee",
+    approval_date=datetime.now(UTC),
+    expiry_date=datetime.now(UTC) + timedelta(days=90),
+    portfolio_scope="UK CRE Stage 2 exposures",
+)
+
+# Validate governance completeness (auditor-ready)
+warnings = validate_overlay(overlay)  # [] = fully compliant
+
+# Apply overlay to model ECL
+result = apply_overlays(model_ecl=1_000_000, overlays=[overlay])
+print(f"Model ECL: {result.model_ecl:,.0f}")
+print(f"After overlay: {result.overlay_ecl:,.0f} (+{result.total_adjustment:,.0f})")
+
+# --- Scenario Sensitivity Analysis ---
+scenarios = [
+    Scenario("base", 0.50, 500_000),
+    Scenario("downside", 0.30, 900_000),
+    Scenario("severe", 0.20, 1_500_000),
+]
+ecl = weighted_ecl(scenarios)  # Probability-weighted ECL
+
+sensitivity = scenario_sensitivity_analysis(scenarios, shift_size=0.10)
+print(f"Most sensitive to: {sensitivity.max_sensitivity_scenario}")
+print(f"  ECL changes {sensitivity.max_sensitivity_pct:.1f}% per 10pp weight shift")
+```
+
+### Ind AS 109 with RBI IRAC Norms
+
+```python
+from creditriskengine.ecl.ind_as109 import (
+    classify_irac, irac_to_ifrs9_stage, rbi_minimum_provision,
+    calculate_ecl_ind_as, IRACAssetClass,
+)
+from creditriskengine.core.types import IFRS9Stage
+import numpy as np
+
+# Classify per RBI IRAC norms
+irac = classify_irac(days_past_due=95, months_as_npa=3)
+print(f"IRAC class: {irac.value}")  # "substandard"
+stage = irac_to_ifrs9_stage(irac)   # Stage 3
+
+# RBI minimum provision (15% for secured substandard)
+rbi_floor = rbi_minimum_provision(ead=1_000_000, irac_class=irac, is_secured=True)
+print(f"RBI floor: {rbi_floor:,.0f}")  # 150,000
+
+# ECL with RBI provisioning floor (higher of model ECL and RBI floor)
+ecl = calculate_ecl_ind_as(
+    stage=stage, pd_12m=0.10, lgd=0.45, ead=1_000_000,
+    marginal_pds=np.array([0.10, 0.08]),
+    irac_class=irac, is_secured=True,
+)
+print(f"ECL (with RBI floor): {ecl:,.0f}")
+```
+
 ### FR 2052a Liquidity Report
 
 ```python
@@ -204,8 +279,11 @@ src/creditriskengine/
     ecl/
         ifrs9/          # Staging, SICR, lifetime PD, scenarios, TTC-to-PIT, ECL calc
             revolving/  # Revolving credit ECL: behavioral life, CCF, drawn/undrawn split, provision floors
-        cecl/           # PD*LGD, loss-rate, vintage, DCF, qualitative factors
-        ind_as109/      # India-specific wrapper over IFRS 9
+            overlays.py # Management overlay / PMA framework (7 types, governance, audit)
+            forward_looking.py # Satellite models, mean-reversion, LGD macro overlay
+            scenarios.py # Probability-weighted ECL, governance metadata, sensitivity analysis
+        cecl/           # PD*LGD, loss-rate, vintage, DCF, Q-factors with governance caps
+        ind_as109/      # Ind AS 109 with full RBI IRAC norms (SMA/NPA classification, provisioning)
     models/
         pd/             # Scorecard, calibration, master scale, Vasicek PD, Merton, Z-score, transition matrices
         lgd/            # Workout LGD, downturn LGD, term structure, floors, cure rate
@@ -230,7 +308,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-1,960 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,068 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 
@@ -269,10 +347,12 @@ mkdocs serve
 
 ## Governance
 
-- **[Regulatory Mapping](docs/regulatory_mapping.md)**: Every function traced to its Basel/IFRS paragraph
+- **[Regulatory Mapping](docs/regulatory_mapping.md)**: Every function traced to its Basel/IFRS paragraph (185+ mappings)
 - **[Regulatory Disclaimers](docs/regulatory_disclaimers.md)**: Important caveats for production use
 - **[Config Versioning](docs/regulatory_versioning.md)**: How regulatory config changes are managed
-- **Audit Trail**: `AuditTrail` class records every calculation with inputs, outputs, timestamps, and regulatory references
+- **Audit Trail**: `AuditTrail` class records every calculation with inputs, outputs, timestamps, and regulatory references. Overlay audit records track post-model adjustment lifecycle events (applied, reviewed, revoked, expired)
+- **Management Overlay Governance**: Structured PMA framework with approval chain, expiry dates, rationale documentation, and governance validation per EBA/GL/2020/06 and PRA Dear CFO letter (Jul 2020)
+- **Scenario Governance**: Scenario weight approval metadata, review cadence tracking, methodology documentation, and sensitivity analysis per IFRS 9.B5.5.41-43
 - **Input Validation**: Schema validation for YAML configs and sanitization for exposure inputs
 
 ## Contributing

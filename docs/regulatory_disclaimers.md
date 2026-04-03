@@ -61,6 +61,35 @@ All calculations can be traced through the `AuditTrail` class which records:
 - Engine version and timestamp
 - Any warnings or overrides applied
 
+### Management Overlay Governance
+
+Post-model adjustments (management overlays) are tracked via
+`OverlayAuditRecord` with immutable lifecycle events:
+
+- Overlay name, type, and classification
+- Model ECL before and after overlay
+- Rationale and regulatory basis (e.g., IFRS 9.B5.5.52)
+- Approval authority and date
+- Effective and expiry dates
+- Portfolio scope
+
+The `validate_overlay()` function checks governance completeness against
+EBA/GL/2020/06 and PRA Dear CFO letter (Jul 2020) expectations, including:
+rationale, approval authority, expiry date, portfolio scope, and non-zero
+impact.
+
+### Scenario Weight Governance
+
+Scenario probability weights are governed via `ScenarioSetMetadata` which
+records approval chain, review cadence, calibration methodology, and data
+sources. The `validate_scenario_governance()` function checks compliance
+with IFRS 9.B5.5.41-43 and EBA/GL/2017/06 para 74, including minimum
+scenario count, weight sum, and review date scheduling.
+
+`scenario_sensitivity_analysis()` quantifies ECL dependence on individual
+scenario weights, supporting the "unbiased and probability-weighted"
+requirement in IFRS 9.5.5.17.
+
 ### Reporting Issues
 
 If you identify a discrepancy between this library's output and the regulatory
