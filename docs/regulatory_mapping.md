@@ -100,7 +100,7 @@ authoritative regulatory sources.
 | RBI IRAC para 12-14 | Restructured advances treatment | `ecl/ind_as109/ind_as_ecl.py` | `restructured_account_stage()` |
 | RBI IRAC (agriculture) | Short-duration crop: 60 DPD | `ecl/ind_as109/ind_as_ecl.py` | `RBI_AGRI_SHORT_CROP_DPD = 60` |
 
-## RBI ECL Master Direction 2026 (RBI/2026-27/34, effective April 1, 2027)
+## RBI ECL Master Direction 2026 (RBI/DOR/2026-27/398, effective April 1, 2027)
 
 | Paragraph | Topic | Module | Function(s) |
 |---|---|---|---|
@@ -147,8 +147,8 @@ References: BCBS d424 Table 2, CRR3 Art. 495d, APRA APS 112.
 | Jurisdiction | Stage | Floor | Basis | Module | Reference |
 |---|---|---|---|---|---|
 | UAE (CBUAE) | S1+S2 combined | 1.5% | CRWA | `ecl/ifrs9/revolving/provision_floors.py` | Circular 3/2024 |
-| India (RBI) | Stage 1 | 1.0% | EAD | `ecl/ifrs9/revolving/provision_floors.py` | Draft Directions Oct 2025 |
-| India (RBI) | Stage 2 | 5.0% | EAD | `ecl/ifrs9/revolving/provision_floors.py` | Draft Directions Oct 2025 |
+| India (RBI) | Stage 1 | 1.0% | EAD | `ecl/ifrs9/revolving/provision_floors.py` | Master Direction April 2026 (RBI/DOR/2026-27/398) |
+| India (RBI) | Stage 2 | 5.0% | EAD | `ecl/ifrs9/revolving/provision_floors.py` | Master Direction April 2026 (RBI/DOR/2026-27/398) |
 | Singapore (MAS) | Cross-stage | 1.0% | EAD | `ecl/ifrs9/revolving/provision_floors.py` | MAS Notice 612 |
 | Saudi Arabia (SAMA) | Cross-stage | 1.0% | CRWA | `ecl/ifrs9/revolving/provision_floors.py` | General provision |
 

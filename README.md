@@ -26,7 +26,7 @@ Production-grade open-source credit risk analytics library.
 - **Securitisation** -- SEC-SA, SEC-ERBA, and SEC-IRBA per CRE40-45
 - **Operational Risk** -- Standardised Measurement Approach (SMA) per OPE25
 - **Credit Risk Mitigation** -- Comprehensive and simple approaches, haircut framework per CRE22
-- **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI (full IRAC norms plus the **RBI ECL Master Direction 2026** (RBI/2026-27/34) — 20-category provisioning floor table, Stage 3 duration-dependent floors, PD 0.03% / LGD 65%-70%-30% backstops, borrower-level Stage 3 contagion, DCCO project finance provisioning, capital add-back phase-in, effective April 1, 2027), Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
+- **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI (full IRAC norms plus the **RBI ECL Master Direction 2026** (RBI/DOR/2026-27/398) — 20-category provisioning floor table, Stage 3 duration-dependent floors, PD 0.03% / LGD 65%-70%-30% backstops, borrower-level Stage 3 contagion, DCCO project finance provisioning, capital add-back phase-in, effective April 1, 2027), Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
 - **Regulatory Reporting** -- COREP, Pillar 3 disclosure templates (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), FR 2052a (Complex Institution Liquidity Monitoring), and model inventory
 - **Stress Testing** -- EBA, BoE ACS, US CCAR/DFAST, RBI frameworks, and reverse stress testing
 
@@ -357,7 +357,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,208 tests across all modules with **99%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,252 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

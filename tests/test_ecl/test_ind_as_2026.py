@@ -1,4 +1,4 @@
-"""Tests for RBI ECL Master Direction 2026 (RBI/2026-27/34).
+"""Tests for RBI ECL Master Direction 2026 (RBI/DOR/2026-27/398).
 
 Covers all 12 implementation areas:
     1. Exposure category enum and classifier
@@ -63,7 +63,7 @@ from creditriskengine.ecl.ind_as109 import (
 
 class TestStage12Floors:
     """Verify each of the 20 exposure categories returns the correct
-    Stage 1 and Stage 2 floor per RBI/2026-27/34 Paragraph 82.
+    Stage 1 and Stage 2 floor per RBI/DOR/2026-27/398 Paragraph 82.
 
     Floor amounts use EAD = ₹1,00,000 so the result equals the rate
     in basis points times 10 (e.g., 0.40% -> ₹400).

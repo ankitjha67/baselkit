@@ -12,7 +12,7 @@ Key India-specific elements:
       Loss per RBI Master Circular DBOD.No.BP.BC.94/21.06.001.
     - Minimum provisioning percentages per asset classification.
     - Restructured account treatment per RBI/2019-20/170.
-    - Ind AS provisioning floors per RBI Draft Directions Oct 2025.
+    - Ind AS provisioning floors per RBI Master Direction April 2026 (RBI/DOR/2026-27/398).
 
 References:
     - RBI Master Circular on IRAC Norms (DBOD.No.BP.BC.94/21.06.001)
@@ -21,7 +21,7 @@ References:
     - RBI Master Direction — Classification, Valuation and Operation
       of Investment Portfolio (DoR.MRG.46/21.04.141/2023-24)
     - RBI/2019-20/170 — Ind AS Provisioning
-    - RBI Draft Directions October 2025 — Provision floors
+    - RBI Master Direction April 2026 (RBI/DOR/2026-27/398) — Provision floors
     - Ind AS 109 (= IFRS 9) Financial Instruments
 """
 

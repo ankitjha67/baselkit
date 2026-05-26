@@ -24,8 +24,10 @@ class TestConstants:
         assert LAND_ADC_PRESOLD_RESIDENTIAL_RW == 100.0
 
     def test_cre_not_cashflow_table_structure(self) -> None:
-        assert len(CRE_NOT_CASHFLOW_RW) == 3
-        # First bucket 0-60%, second 60-80%, third 80+
+        # BCBS d424 CRE20.87-20.88: two buckets
+        #   LTV <= 60%: min(60%, counterparty_rw)
+        #   LTV >  60%: counterparty_rw
+        assert len(CRE_NOT_CASHFLOW_RW) == 2
         assert CRE_NOT_CASHFLOW_RW[0] == (0.0, 0.60, 60.0)
 
     def test_cre_ipre_table_structure(self) -> None:
@@ -46,12 +48,13 @@ class TestLookupLtvTable:
         assert rw == pytest.approx(40.0)
 
     def test_second_bucket(self) -> None:
-        # LTV=0.70 falls in (0.60, 0.80] -> rw=80
+        # BCBS d424 CRE20.88: LTV > 60% uses counterparty RW.
+        # LTV=0.70 falls in (0.60, inf] -> counterparty_rw
         rw = _lookup_ltv_table(CRE_NOT_CASHFLOW_RW, 0.70, 100.0)
-        assert rw == pytest.approx(80.0)
+        assert rw == pytest.approx(100.0)
 
     def test_third_bucket_sentinel(self) -> None:
-        # LTV=0.90 falls in (0.80, inf] -> sentinel -1, returns counterparty_rw
+        # LTV=0.90 also in (0.60, inf] -> counterparty_rw
         rw = _lookup_ltv_table(CRE_NOT_CASHFLOW_RW, 0.90, 120.0)
         assert rw == pytest.approx(120.0)
 
@@ -87,8 +90,9 @@ class TestLookupLtvTable:
         assert rw == pytest.approx(60.0)
 
     def test_ltv_exactly_at_second_boundary(self) -> None:
+        # LTV=0.80 (>0.60) -> counterparty RW per BCBS CRE20.88
         rw = _lookup_ltv_table(CRE_NOT_CASHFLOW_RW, 0.80, 100.0)
-        assert rw == pytest.approx(80.0)
+        assert rw == pytest.approx(100.0)
 
     def test_ltv_zero_with_sentinel_first_bucket(self) -> None:
         """When LTV <= 0 and first bucket has sentinel (-1), return counterparty_rw."""
@@ -186,10 +190,11 @@ class TestGetCRERiskWeight:
         assert rw == pytest.approx(70.0)
 
     def test_bcbs_jurisdiction_explicit(self) -> None:
+        # BCBS d424 CRE20.88: NIPC CRE with LTV > 60% uses counterparty RW
         rw = get_cre_risk_weight(
             ltv=0.70, counterparty_rw=100.0, jurisdiction=Jurisdiction.BCBS
         )
-        assert rw == pytest.approx(80.0)
+        assert rw == pytest.approx(100.0)
 
 
 class TestGetCRERiskWeightEU:

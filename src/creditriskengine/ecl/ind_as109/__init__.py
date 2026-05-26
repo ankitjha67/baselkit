@@ -52,6 +52,20 @@ from creditriskengine.ecl.ind_as109.nbfc_backstop import (
     nbfc_ul_standard_asset_provision,
     npa_dpd_threshold,
 )
+
+# Parallel run: legacy IRACP vs ECL 2026 framework
+from creditriskengine.ecl.ind_as109.parallel_run import (
+    ParallelRunResult,
+    parallel_run,
+    portfolio_parallel_run_summary,
+)
+
+# Regulatory parameter self-check (locks live values to published RBI text)
+from creditriskengine.ecl.ind_as109.parameter_assertions import (
+    RBIParameterMismatch,
+    assert_rbi_2026_parameters_match_published,
+    regulatory_self_check,
+)
 from creditriskengine.ecl.ind_as109.pd_lgd_floors import (
     RBI_LGD_BACKSTOP_SECURED,
     RBI_LGD_BACKSTOP_UNSECURED,
@@ -141,4 +155,12 @@ __all__ = [
     "apply_nbfc_backstop",
     "nbfc_ul_standard_asset_provision",
     "npa_dpd_threshold",
+    # Parameter self-check (published RBI values guard)
+    "RBIParameterMismatch",
+    "assert_rbi_2026_parameters_match_published",
+    "regulatory_self_check",
+    # Parallel-run comparator (IRACP vs ECL 2026)
+    "ParallelRunResult",
+    "parallel_run",
+    "portfolio_parallel_run_summary",
 ]

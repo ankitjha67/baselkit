@@ -4,9 +4,35 @@ All notable changes to this project will be documented in this file.
 
 ## [0.7.0] - 2026-05-27
 
+### Bug fixes (full-repo audit)
+
+A comprehensive audit of the entire codebase identified and corrected
+the following defects:
+
+- **`rwa/irb/advanced.py`**: A-IRB EAD calculation hardcoded the CCF
+  input to 0.0 before applying the 50% floor, ignoring any bank-
+  estimated `exposure.ccf`. The fix reads `exposure.ccf` (defaulting
+  to 0.0 when None) and applies the floor per CRR3 Art. 166(8b).
+  Material correction for all A-IRB exposures with undrawn commitments.
+- **`rwa/standardized/cre.py`**: CRE NOT-cashflow-dependent table had
+  a fixed 80% RW for the 60-80% LTV bucket. Per BCBS d424 CRE20.88,
+  LTV > 60% should use the counterparty risk weight directly. Table
+  reduced from 3 to 2 buckets, second bucket uses sentinel -1.0.
+
+### Added — Robustness tooling
+
+- **`parameter_assertions.py`**: Source-of-truth guard that locks all
+  RBI ECL 2026 parameters to published values. Any future edit that
+  perturbs a constant trips `RBIParameterMismatch`. Includes
+  `regulatory_self_check()` for audit packs.
+- **`parallel_run.py`**: Side-by-side comparator for legacy IRACP vs
+  ECL 2026 frameworks. Returns delta, percentage change, binding-floor
+  diagnostic, and CET1 transitional add-back amount per Paragraph 108.
+  Includes `portfolio_parallel_run_summary()` for board reporting.
+
 ### Added
 
-- **RBI ECL Master Direction 2026 (RBI/2026-27/34)** -- Full implementation
+- **RBI ECL Master Direction 2026 (RBI/DOR/2026-27/398)** -- Full implementation
   of the Reserve Bank of India's final ECL directions for commercial banks,
   effective April 1, 2027. Replaces the legacy IRAC provisioning framework
   with a stage-aware, exposure-category-keyed model:
@@ -69,7 +95,44 @@ automatic framework selection based on the reporting date.
   level contagion, DCCO provisioning, upgradation criteria,
   transition timeline, DLG adjustment, collateral revaluation,
   end-to-end ECL calculation, and date-based auto-dispatch.
-- Total test count: 2,068 -> 2,208. mypy --strict clean, ruff clean.
+- Total test count: 2,068 -> 2,241 (with audit-grade gap closures).
+  mypy --strict clean, ruff clean.
+
+### Audit-grade corrections (post-initial release)
+
+Following an independent audit-grade review against the official RBI
+Master Direction text, three factual corrections were applied and nine
+additional gaps were closed:
+
+- **Stage 3 Set A unsecured 0-1yr corrected**: 25% -> 40% per Paragraph
+  82(5) Set A (the "25/40%" notation denotes secured / unsecured).
+- **Other RE-secured Stage 3 schedule**: Added separate Set F schedule
+  (15/25/40/55/100% secured) for OTHER_RESIDENTIAL_RE and
+  OTHER_COMMERCIAL_RE per Paragraph 82(5) Set F (previously incorrectly
+  mapped to housing schedule).
+- **RBI reference corrected**: RBI/2026-27/34 -> RBI/DOR/2026-27/398;
+  DOR.STR.REC.No.6/21.06.011/2026-27 across all files.
+- **Wilful defaulter +5% surcharge**: New `is_wilful_defaulter` parameter
+  on the floor function per Paragraph 101(4).
+- **Sovereign / SLR carve-out**: New `is_sovereign_slr` parameter returns
+  zero ECL per Paragraphs 37-38.
+- **IRACP standard-asset provisioning** (`ecl/ind_as109/iracp.py`):
+  `StandardAssetSector` enum with 12 sectors and rates per Master Circular
+  DOR.STR.REC.9/21.04.048/2025-26 plus Project Finance Directions 2025.
+- **Resolution Framework 1.0/2.0 add-ons**: `resolution_framework_addon()`
+  applying 10% on restructured residual debt + 5% on slippage per
+  DOR.No.BP.BC/3/21.04.048/2020-21 and DOR.STR.REC.12/21.04.048/2021-22.
+- **Out-of-order CC/OD (3 conditions)**: `is_out_of_order()` per
+  DOR.STR.REC.68/21.04.048/2021-22.
+- **NBFC Ind AS 109 prudential backstop** (`ecl/ind_as109/nbfc_backstop.py`):
+  `apply_nbfc_backstop()` returning max(ECL, IRACP) plus Impairment Reserve
+  per DOR(NBFC).CC.PD.No.109/22.10.106/2019-20.
+- **SBR NPA glide-path**: `npa_dpd_threshold()` returning 180 -> 150 -> 120
+  -> 90 DPD by `as_of_date` per DOR.CRE.REC.No.60/03.10.001/2021-22.
+- **NBFC-UL differential standard-asset rates** per DOR.STR.REC.40/
+  21.04.048/2022-23.
+- **NBFC Layer enum** (Base/Middle/Upper/Top) per SBR Master Direction
+  October 19, 2023.
 
 ## [0.6.0] - 2026-04-03
 
