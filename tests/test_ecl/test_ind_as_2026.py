@@ -142,8 +142,8 @@ class TestStage3Floors:
             (3.0, True, 75_000.0),
             (4.0, True, 100_000.0),
             (10.0, True, 100_000.0),
-            # Standard unsecured: 25 / 100 / 100 / 100 / 100
-            (0.0, False, 25_000.0),
+            # Standard unsecured (Set A): 40 / 100 / 100 / 100 / 100
+            (0.0, False, 40_000.0),
             (1.0, False, 100_000.0),
             (5.0, False, 100_000.0),
         ],
@@ -972,3 +972,280 @@ class TestAutoDispatch:
         # Floor: 0.40% * 1,000,000 = 4,000
         # max(13000, 4000) = 13,000
         assert ecl == pytest.approx(13_000.0)
+
+
+# ============================================================================
+# Set F: other RE-secured floors per Paragraph 82(5) Set F
+# ============================================================================
+
+
+class TestStage3SetF:
+    EAD: float = 100_000.0
+
+    @pytest.mark.parametrize(
+        ("years", "is_secured", "expected"),
+        [
+            # Set F secured: 15/25/40/55/100
+            (0.0, True, 15_000.0),
+            (1.0, True, 25_000.0),
+            (2.0, True, 40_000.0),
+            (3.0, True, 55_000.0),
+            (4.0, True, 100_000.0),
+            # Set F unsecured: 25/100/100/100/100
+            (0.0, False, 25_000.0),
+            (2.0, False, 100_000.0),
+        ],
+    )
+    def test_other_residential_re(
+        self, years: float, is_secured: bool, expected: float
+    ) -> None:
+        assert rbi_ecl_floor_2026(
+            self.EAD,
+            IFRS9Stage.STAGE_3,
+            RBIExposureCategory.OTHER_RESIDENTIAL_RE,
+            is_secured=is_secured,
+            years_in_stage3=years,
+        ) == pytest.approx(expected)
+
+    def test_other_commercial_re_uses_set_f(self) -> None:
+        # Verify OTHER_COMMERCIAL_RE also uses Set F
+        assert rbi_ecl_floor_2026(
+            self.EAD,
+            IFRS9Stage.STAGE_3,
+            RBIExposureCategory.OTHER_COMMERCIAL_RE,
+            is_secured=True,
+            years_in_stage3=0.5,
+        ) == pytest.approx(15_000.0)
+
+
+# ============================================================================
+# Wilful defaulter +5% surcharge per Paragraph 101(4)
+# ============================================================================
+
+
+class TestWilfulDefaulter:
+    def test_stage1_wilful_defaulter_addon(self) -> None:
+        base = rbi_ecl_floor_2026(
+            1_000_000, IFRS9Stage.STAGE_1, RBIExposureCategory.CORPORATE
+        )
+        with_wd = rbi_ecl_floor_2026(
+            1_000_000, IFRS9Stage.STAGE_1, RBIExposureCategory.CORPORATE,
+            is_wilful_defaulter=True,
+        )
+        assert with_wd - base == pytest.approx(50_000.0)  # 5% of 1M
+
+    def test_stage3_wilful_defaulter_addon(self) -> None:
+        base = rbi_ecl_floor_2026(
+            100_000, IFRS9Stage.STAGE_3, RBIExposureCategory.CORPORATE,
+            is_secured=True, years_in_stage3=0.5,
+        )
+        with_wd = rbi_ecl_floor_2026(
+            100_000, IFRS9Stage.STAGE_3, RBIExposureCategory.CORPORATE,
+            is_secured=True, years_in_stage3=0.5, is_wilful_defaulter=True,
+        )
+        assert with_wd - base == pytest.approx(5_000.0)  # 5% of 100k
+
+
+# ============================================================================
+# Sovereign / SLR carve-out per Paragraphs 37-38
+# ============================================================================
+
+
+class TestSovereignCarveOut:
+    def test_sovereign_returns_zero(self) -> None:
+        ecl = calculate_ecl_ind_as_2026(
+            stage=IFRS9Stage.STAGE_1,
+            pd_12m=0.01, lgd=0.45, ead=10_000_000,
+            category=RBIExposureCategory.CORPORATE,
+            is_sovereign_slr=True,
+        )
+        assert ecl == 0.0
+
+    def test_non_sovereign_returns_positive(self) -> None:
+        ecl = calculate_ecl_ind_as_2026(
+            stage=IFRS9Stage.STAGE_1,
+            pd_12m=0.01, lgd=0.45, ead=10_000_000,
+            category=RBIExposureCategory.CORPORATE,
+            is_sovereign_slr=False,
+        )
+        assert ecl > 0
+
+
+# ============================================================================
+# IRACP standard-asset provisioning
+# ============================================================================
+
+
+class TestIRACPStandardAsset:
+    def test_agriculture_direct(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import (
+            StandardAssetSector,
+            standard_asset_provision,
+        )
+        prov = standard_asset_provision(1_000_000, StandardAssetSector.AGRICULTURE_DIRECT)
+        assert prov == pytest.approx(2500.0)  # 0.25%
+
+    def test_cre(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import (
+            StandardAssetSector,
+            standard_asset_provision,
+        )
+        prov = standard_asset_provision(1_000_000, StandardAssetSector.CRE)
+        assert prov == pytest.approx(10_000.0)  # 1.00%
+
+    def test_cre_rh(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import (
+            StandardAssetSector,
+            standard_asset_provision,
+        )
+        prov = standard_asset_provision(1_000_000, StandardAssetSector.CRE_RH)
+        assert prov == pytest.approx(7500.0)  # 0.75%
+
+    def test_housing_individual(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import (
+            StandardAssetSector,
+            standard_asset_provision,
+        )
+        prov = standard_asset_provision(1_000_000, StandardAssetSector.HOUSING_INDIVIDUAL)
+        assert prov == pytest.approx(2500.0)  # 0.25%
+
+    def test_teaser_pre_reset(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import (
+            StandardAssetSector,
+            standard_asset_provision,
+        )
+        prov = standard_asset_provision(1_000_000, StandardAssetSector.HOUSING_TEASER)
+        assert prov == pytest.approx(20_000.0)  # 2.00%
+
+    def test_teaser_post_reset(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import (
+            StandardAssetSector,
+            standard_asset_provision,
+        )
+        prov = standard_asset_provision(
+            1_000_000, StandardAssetSector.HOUSING_TEASER,
+            teaser_one_year_post_reset=True,
+        )
+        assert prov == pytest.approx(4000.0)  # 0.40%
+
+    def test_project_uc(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import (
+            StandardAssetSector,
+            standard_asset_provision,
+        )
+        prov = standard_asset_provision(
+            1_000_000, StandardAssetSector.PROJECT_UNDER_CONSTRUCTION
+        )
+        assert prov == pytest.approx(10_000.0)  # 1.00%
+
+    def test_project_uc_cre(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import (
+            StandardAssetSector,
+            standard_asset_provision,
+        )
+        prov = standard_asset_provision(
+            1_000_000, StandardAssetSector.PROJECT_UNDER_CONSTRUCTION_CRE
+        )
+        assert prov == pytest.approx(12_500.0)  # 1.25%
+
+
+# ============================================================================
+# Resolution Framework add-ons
+# ============================================================================
+
+
+class TestResolutionFrameworkAddon:
+    def test_restructured_addon(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import resolution_framework_addon
+        addon = resolution_framework_addon(residual_debt=1_000_000)
+        assert addon == pytest.approx(100_000.0)  # 10%
+
+    def test_slippage_addon(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import resolution_framework_addon
+        addon = resolution_framework_addon(residual_debt=1_000_000, has_slipped=True)
+        assert addon == pytest.approx(150_000.0)  # 10% + 5% = 15%
+
+
+# ============================================================================
+# Out-of-order CC/OD
+# ============================================================================
+
+
+class TestOutOfOrderCCOD:
+    def test_over_limit_90_days(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import is_out_of_order
+        assert is_out_of_order(
+            outstanding=120_000,
+            sanctioned_limit=100_000,
+            days_continuously_over_limit=91,
+        ) is True
+
+    def test_no_credits_90_days(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import is_out_of_order
+        assert is_out_of_order(
+            outstanding=50_000,
+            sanctioned_limit=100_000,
+            no_credits_for_days=91,
+        ) is True
+
+    def test_credits_less_than_interest(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import is_out_of_order
+        assert is_out_of_order(
+            outstanding=50_000,
+            sanctioned_limit=100_000,
+            credits_less_than_interest_debited=True,
+        ) is True
+
+    def test_performing_account(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import is_out_of_order
+        assert is_out_of_order(
+            outstanding=50_000,
+            sanctioned_limit=100_000,
+        ) is False
+
+
+# ============================================================================
+# NBFC backstop
+# ============================================================================
+
+
+class TestNBFCBackstop:
+    def test_ecl_above_iracp(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import apply_nbfc_backstop
+        r = apply_nbfc_backstop(ind_as_109_ecl=10_000, iracp_provision=8_000)
+        assert r.total_floor == 10_000
+        assert r.impairment_reserve_transfer == 0.0
+
+    def test_iracp_above_ecl(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import apply_nbfc_backstop
+        r = apply_nbfc_backstop(ind_as_109_ecl=8_000, iracp_provision=10_000)
+        assert r.total_floor == 10_000
+        assert r.impairment_reserve_transfer == 2_000
+        assert r.booked_to_pl == 8_000
+
+
+# ============================================================================
+# SBR NPA glide-path
+# ============================================================================
+
+
+class TestSBRGlidePath:
+    def test_already_on_90_day(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import npa_dpd_threshold
+        assert npa_dpd_threshold(date(2023, 1, 1), already_on_90_day_norm=True) == 90
+
+    def test_before_2024(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import npa_dpd_threshold
+        assert npa_dpd_threshold(date(2023, 6, 1)) == 180
+
+    def test_fy2024(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import npa_dpd_threshold
+        assert npa_dpd_threshold(date(2024, 6, 1)) == 150
+
+    def test_fy2025(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import npa_dpd_threshold
+        assert npa_dpd_threshold(date(2025, 6, 1)) == 120
+
+    def test_fy2026_onwards(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import npa_dpd_threshold
+        assert npa_dpd_threshold(date(2026, 6, 1)) == 90

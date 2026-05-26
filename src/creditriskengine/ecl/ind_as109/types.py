@@ -1,5 +1,5 @@
 """
-Type definitions for RBI ECL Master Direction 2026 (RBI/2026-27/34).
+Type definitions for RBI ECL Master Direction 2026 (RBI/DOR/2026-27/398).
 
 Reference: RBI Master Direction on Asset Classification, Provisioning
 and Income Recognition (Commercial Banks), April 27, 2026.
@@ -21,7 +21,7 @@ class RBIExposureCategory(StrEnum):
     These 20 categories drive the Stage 1 and Stage 2 prudential
     provisioning floors per Paragraph 82.
 
-    Reference: RBI/2026-27/34 Paragraph 82.
+    Reference: RBI/DOR/2026-27/398 Paragraph 82.
     """
 
     SECURED_RETAIL = "secured_retail"

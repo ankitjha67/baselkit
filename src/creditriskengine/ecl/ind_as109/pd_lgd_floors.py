@@ -1,7 +1,7 @@
 """
 RBI ECL Master Direction 2026 — PD and LGD regulatory floors and backstops.
 
-Reference: RBI/2026-27/34, Paragraphs 96-98.
+Reference: RBI/DOR/2026-27/398, Paragraphs 96-98.
 Effective: April 1, 2027.
 """
 
@@ -15,19 +15,19 @@ logger = logging.getLogger(__name__)
 RBI_PD_FLOOR: float = 0.0003
 """12-month PD regulatory floor of 0.03%.
 
-Reference: RBI/2026-27/34 Paragraph 96.
+Reference: RBI/DOR/2026-27/398 Paragraph 96.
 """
 
 RBI_LGD_BACKSTOP_SECURED: float = 0.65
 """LGD backstop for the secured portion of an exposure: 65%.
 
-Reference: RBI/2026-27/34 Paragraph 97.
+Reference: RBI/DOR/2026-27/398 Paragraph 97.
 """
 
 RBI_LGD_BACKSTOP_UNSECURED: float = 0.70
 """LGD backstop for the unsecured portion of an exposure: 70%.
 
-Reference: RBI/2026-27/34 Paragraph 97.
+Reference: RBI/DOR/2026-27/398 Paragraph 97.
 """
 
 RBI_LGD_ELIGIBLE_COLLATERAL: float = 0.30
@@ -36,14 +36,14 @@ RBI_LGD_ELIGIBLE_COLLATERAL: float = 0.30
 Eligible collateral includes cash, gold, government securities,
 LIC policy, KVP, NSC.
 
-Reference: RBI/2026-27/34 Paragraph 98.
+Reference: RBI/DOR/2026-27/398 Paragraph 98.
 """
 
 
 def apply_rbi_pd_floor(pd: float) -> float:
     """Apply the RBI PD floor of 0.03%.
 
-    Reference: RBI/2026-27/34 Paragraph 96.
+    Reference: RBI/DOR/2026-27/398 Paragraph 96.
 
     Args:
         pd: Model-estimated probability of default.

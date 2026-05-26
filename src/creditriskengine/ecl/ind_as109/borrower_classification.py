@@ -1,7 +1,7 @@
 """
 RBI ECL Master Direction 2026 — Borrower-level Stage 3 classification.
 
-Reference: RBI/2026-27/34 Paragraph 76 and Paragraph 8(9).
+Reference: RBI/DOR/2026-27/398 Paragraph 76 and Paragraph 8(9).
 
 Stage 3 classification is applied at the borrower level (contagion):
 if any one exposure to a borrower is classified as Stage 3, all
@@ -47,7 +47,7 @@ def apply_borrower_level_staging(
         New list of facility dicts with Stage 3 contagion applied.
 
     Reference:
-        RBI/2026-27/34 Paragraph 76, Paragraph 8(9).
+        RBI/DOR/2026-27/398 Paragraph 76, Paragraph 8(9).
     """
     # Identify borrowers with any Stage 3 facility
     stage3_borrowers: set[Any] = set()

@@ -401,7 +401,7 @@ def calculate_ecl_ind_as(
 
 
 # ---------------------------------------------------------------------------
-# RBI ECL Master Direction 2026 (RBI/2026-27/34) — effective April 1, 2027
+# RBI ECL Master Direction 2026 (RBI/DOR/2026-27/398) — effective April 1, 2027
 # ---------------------------------------------------------------------------
 
 # Re-export 2026 framework symbols at module level for convenience.
@@ -442,7 +442,7 @@ When the outstanding balance of a revolving facility remains
 continuously in excess of the sanctioned limit or drawing power
 for the specified period, SICR is presumed.
 
-Reference: RBI/2026-27/34 Paragraph 33.
+Reference: RBI/DOR/2026-27/398 Paragraph 33.
 """
 
 
@@ -482,7 +482,7 @@ def assess_sicr_rbi(
         ``True`` if SICR is identified per Paragraph 33.
 
     Reference:
-        RBI/2026-27/34 Paragraph 33.
+        RBI/DOR/2026-27/398 Paragraph 33.
     """
     if sicr_triggered_quantitative:
         return True
@@ -534,7 +534,7 @@ def determine_upgrade_eligibility(
         The stage the exposure is eligible to be classified at.
 
     Reference:
-        RBI/2026-27/34 Paragraphs 10, 77, 78, 79.
+        RBI/DOR/2026-27/398 Paragraphs 10, 77, 78, 79.
     """
     if current_stage == IFRS9Stage.STAGE_3:
         if not is_restructured:
@@ -572,9 +572,11 @@ def calculate_ecl_ind_as_2026(
     has_eligible_collateral: bool = False,
     years_in_stage3: float = 0.0,
     dlg_remaining_capacity: float = 0.0,
+    is_wilful_defaulter: bool = False,
+    is_sovereign_slr: bool = False,
     apply_pd_lgd_floors: bool = True,
 ) -> float:
-    """Calculate ECL per RBI ECL Master Direction 2026 (RBI/2026-27/34).
+    """Calculate ECL per RBI ECL Master Direction 2026 (RBI/DOR/2026-27/398).
 
     Pipeline:
         1. Apply PD floor of 0.03% (Paragraph 96).
@@ -603,15 +605,28 @@ def calculate_ecl_ind_as_2026(
             (used for Stage 3 duration-dependent floors).
         dlg_remaining_capacity: Remaining DLG cover available to
             absorb ECL per Paragraph 88. Set to 0.0 to disable.
+        is_wilful_defaulter: Whether the borrower is classified as
+            a wilful defaulter — attracts +5% surcharge on the
+            prudential floor per Paragraph 101(4).
+        is_sovereign_slr: Whether the exposure is SLR-eligible,
+            direct Central Government, Central-Government-guaranteed,
+            or zero-risk-weight foreign sovereign/MDB/BIS/IMF.
+            Per Paragraphs 37-38: no SICR test and no Stage 1 ECL.
         apply_pd_lgd_floors: Whether to apply the PD floor and LGD
             backstops to the inputs (default ``True``).
 
     Returns:
-        ECL amount: max(net model ECL, regulatory floor).
+        ECL amount: max(net model ECL, regulatory floor). Returns
+        0.0 for sovereign/SLR carve-out exposures per Paragraphs 37-38.
 
     Reference:
-        RBI/2026-27/34 Paragraphs 82, 88, 96-98.
+        RBI/DOR/2026-27/398; DOR.STR.REC.No.6/21.06.011/2026-27,
+        Paragraphs 37-38, 82, 88, 96-98, 101(4).
     """
+    # Sovereign / SLR carve-out per Paragraphs 37-38
+    if is_sovereign_slr:
+        return 0.0
+
     if apply_pd_lgd_floors:
         pd_12m = apply_rbi_pd_floor(pd_12m)
         lgd = apply_rbi_lgd_backstop(lgd, is_secured, has_eligible_collateral)
@@ -640,6 +655,7 @@ def calculate_ecl_ind_as_2026(
         category=category,
         is_secured=is_secured,
         years_in_stage3=years_in_stage3,
+        is_wilful_defaulter=is_wilful_defaulter,
     )
 
     return max(net_model_ecl, regulatory_floor)
@@ -694,7 +710,7 @@ def calculate_ecl_ind_as_auto(
         ECL amount per the applicable framework.
 
     Reference:
-        RBI/2026-27/34 Paragraph 2 (effective date dispatch).
+        RBI/DOR/2026-27/398 Paragraph 2 (effective date dispatch).
     """
     if is_ecl_framework_effective(reporting_date):
         return calculate_ecl_ind_as_2026(

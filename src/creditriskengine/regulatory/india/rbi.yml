@@ -123,13 +123,13 @@ reporting:
     - Basel III Monitoring
 
 # ============================================================================
-# RBI ECL Master Direction 2026 (RBI/2026-27/34)
+# RBI ECL Master Direction 2026 (RBI/DOR/2026-27/398)
 # Reserve Bank of India (Commercial Banks - Asset Classification,
 # Provisioning and Income Recognition) Directions, April 27, 2026.
 # Effective: April 1, 2027.
 # ============================================================================
 ecl_master_direction_2026:
-  reference: "RBI/2026-27/34"
+  reference: "RBI/DOR/2026-27/398"
   document: "Master Direction on Asset Classification, Provisioning and Income Recognition"
   issued_date: "2026-04-27"
   effective_date: "2027-04-01"
@@ -220,8 +220,8 @@ ecl_master_direction_2026:
 
   stage_3_floors:
     standard:
-      # Paragraph 82(1)
-      bracket_0_1y:  { secured: 0.25, unsecured: 0.25 }
+      # Paragraph 82(5) Set A
+      bracket_0_1y:  { secured: 0.25, unsecured: 0.40 }
       bracket_1_2y:  { secured: 0.40, unsecured: 1.00 }
       bracket_2_3y:  { secured: 0.55, unsecured: 1.00 }
       bracket_3_4y:  { secured: 0.75, unsecured: 1.00 }
@@ -237,10 +237,17 @@ ecl_master_direction_2026:
       # Paragraph 82(3)
       bracket_0_1y:  0.25
       bracket_1_plus: 1.00
-    housing_residential_re:
-      # Paragraph 82(4)
+    housing_cgtmse:
+      # Paragraph 82(2), (4) — Set B (housing individual, CGTMSE, deposits/LIC/gold/state)
       bracket_0_1y:  { secured: 0.10, unsecured: 0.25 }
       bracket_1_2y:  { secured: 0.20, unsecured: 1.00 }
       bracket_2_3y:  { secured: 0.30, unsecured: 1.00 }
       bracket_3_4y:  { secured: 0.40, unsecured: 1.00 }
+      bracket_4_plus: { secured: 1.00, unsecured: 1.00 }
+    other_re_secured:
+      # Paragraph 82(5) Set F — other claims secured by residential/commercial RE
+      bracket_0_1y:  { secured: 0.15, unsecured: 0.25 }
+      bracket_1_2y:  { secured: 0.25, unsecured: 1.00 }
+      bracket_2_3y:  { secured: 0.40, unsecured: 1.00 }
+      bracket_3_4y:  { secured: 0.55, unsecured: 1.00 }
       bracket_4_plus: { secured: 1.00, unsecured: 1.00 }

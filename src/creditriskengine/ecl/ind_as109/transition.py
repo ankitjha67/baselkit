@@ -1,7 +1,7 @@
 """
 RBI ECL Master Direction 2026 — Transition timeline support.
 
-Reference: RBI/2026-27/34, Paragraphs 2, 19-21, 108, 114.
+Reference: RBI/DOR/2026-27/398, Paragraphs 2, 19-21, 108, 114.
 
 Implements:
     - Effective date (April 1, 2027).
@@ -20,14 +20,14 @@ logger = logging.getLogger(__name__)
 RBI_ECL_EFFECTIVE_DATE: date = date(2027, 4, 1)
 """Date from which the RBI ECL Master Direction 2026 takes effect.
 
-Reference: RBI/2026-27/34 Paragraph 2.
+Reference: RBI/DOR/2026-27/398 Paragraph 2.
 """
 
 RBI_EIR_MIGRATION_DEADLINE: date = date(2030, 3, 31)
 """Final date by which all legacy exposures must transition to EIR
 method (Effective Interest Rate) for income recognition.
 
-Reference: RBI/2026-27/34 Paragraphs 21, 114.
+Reference: RBI/DOR/2026-27/398 Paragraphs 21, 114.
 """
 
 
@@ -44,7 +44,7 @@ For FY 2027-28 (ending March 2028), banks may add back 4/5 (80%) of
 the transitional adjustment to CET1 capital; this declines to 0%
 from FY 2031-32 onwards.
 
-Reference: RBI/2026-27/34 Paragraph 108.
+Reference: RBI/DOR/2026-27/398 Paragraph 108.
 """
 
 
@@ -58,7 +58,7 @@ def is_ecl_framework_effective(reporting_date: date) -> bool:
         ``True`` if ``reporting_date`` is on or after April 1, 2027.
 
     Reference:
-        RBI/2026-27/34 Paragraph 2.
+        RBI/DOR/2026-27/398 Paragraph 2.
     """
     return reporting_date >= RBI_ECL_EFFECTIVE_DATE
 
@@ -84,7 +84,7 @@ def capital_add_back_factor(reporting_fy: int) -> float:
         Add-back fraction in ``[0.0, 0.8]``.
 
     Reference:
-        RBI/2026-27/34 Paragraph 108.
+        RBI/DOR/2026-27/398 Paragraph 108.
     """
     return CAPITAL_ADD_BACK_SCHEDULE.get(reporting_fy, 0.0)
 
@@ -108,7 +108,7 @@ def eir_required(
         ``True`` if EIR is mandatory.
 
     Reference:
-        RBI/2026-27/34 Paragraphs 21, 50, 114.
+        RBI/DOR/2026-27/398 Paragraphs 21, 50, 114.
     """
     # New originations are subject to EIR immediately
     if origination_date >= RBI_ECL_EFFECTIVE_DATE:

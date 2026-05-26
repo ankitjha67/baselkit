@@ -1,7 +1,7 @@
 """
 RBI ECL Master Direction 2026 — Collateral valuation compliance checks.
 
-Reference: RBI/2026-27/34 Paragraph 55.
+Reference: RBI/DOR/2026-27/398 Paragraph 55.
 
 For Stage 3 exposures of ₹7.5 crore or more, collateral must be valued
 at the time of classification and at least once every two years
@@ -21,15 +21,15 @@ logger = logging.getLogger(__name__)
 
 RBI_COLLATERAL_REVALUATION_THRESHOLD_INR_CRORE: float = 7.5
 """Stage 3 exposure threshold (₹ crore) above which biennial revaluation
-applies. Reference: RBI/2026-27/34 Paragraph 55."""
+applies. Reference: RBI/DOR/2026-27/398 Paragraph 55."""
 
 RBI_STAGE3_REVALUATION_YEARS: float = 2.0
 """Maximum interval (years) between revaluations for large Stage 3
-exposures. Reference: RBI/2026-27/34 Paragraph 55."""
+exposures. Reference: RBI/DOR/2026-27/398 Paragraph 55."""
 
 RBI_STOCK_REVALUATION_YEARS: float = 1.0
 """Maximum interval (years) between revaluations for stock collateral.
-Reference: RBI/2026-27/34 Paragraph 55."""
+Reference: RBI/DOR/2026-27/398 Paragraph 55."""
 
 
 def _years_between(d1: date, d2: date) -> float:
@@ -61,7 +61,7 @@ def validate_collateral_revaluation(
         List of warning strings (empty if compliant).
 
     Reference:
-        RBI/2026-27/34 Paragraph 55.
+        RBI/DOR/2026-27/398 Paragraph 55.
     """
     warnings: list[str] = []
     years_since = _years_between(last_revaluation_date, reporting_date)

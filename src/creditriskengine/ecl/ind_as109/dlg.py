@@ -1,7 +1,7 @@
 """
 RBI ECL Master Direction 2026 — Default Loss Guarantee (DLG) treatment.
 
-Reference: RBI/2026-27/34, Paragraph 88, in conjunction with RBI Master
+Reference: RBI/DOR/2026-27/398, Paragraph 88, in conjunction with RBI Master
 Directions on DLG dated November 28, 2025.
 
 A bank may consider DLG cover when determining ECL provisions across
@@ -67,7 +67,7 @@ def ecl_with_dlg(
         :class:`DLGAdjustment` with absorbed, net, and remaining capacity.
 
     Reference:
-        RBI/2026-27/34 Paragraph 88.
+        RBI/DOR/2026-27/398 Paragraph 88.
     """
     if gross_ecl <= 0:
         return DLGAdjustment(

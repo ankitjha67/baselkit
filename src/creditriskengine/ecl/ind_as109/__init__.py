@@ -3,7 +3,7 @@
 Wraps IFRS 9 ECL functions with India-specific defaults (RBI norms),
 including IRAC asset classification, provisioning floors, restructured
 account handling, and the RBI ECL Master Direction 2026 framework
-(RBI/2026-27/34, effective April 1, 2027).
+(RBI/DOR/2026-27/398, effective April 1, 2027).
 """
 
 from creditriskengine.ecl.ind_as109.borrower_classification import (
@@ -30,6 +30,27 @@ from creditriskengine.ecl.ind_as109.ind_as_ecl import (
     irac_to_ifrs9_stage,
     rbi_minimum_provision,
     restructured_account_stage,
+)
+
+# IRACP standard-asset provisioning + Resolution Framework + Out-of-order CC/OD
+from creditriskengine.ecl.ind_as109.iracp import (
+    IRACP_STANDARD_RATES,
+    RF_RESTRUCTURED_ADDON_RATE,
+    RF_SLIPPAGE_ADDON_RATE,
+    StandardAssetSector,
+    is_out_of_order,
+    resolution_framework_addon,
+    standard_asset_provision,
+)
+
+# NBFC backstop + SBR glide-path + NBFC-UL rates
+from creditriskengine.ecl.ind_as109.nbfc_backstop import (
+    NBFC_UL_STANDARD_RATES,
+    NBFCBackstopResult,
+    NBFCLayer,
+    apply_nbfc_backstop,
+    nbfc_ul_standard_asset_provision,
+    npa_dpd_threshold,
 )
 from creditriskengine.ecl.ind_as109.pd_lgd_floors import (
     RBI_LGD_BACKSTOP_SECURED,
@@ -105,4 +126,19 @@ __all__ = [
     "determine_upgrade_eligibility",
     "calculate_ecl_ind_as_2026",
     "calculate_ecl_ind_as_auto",
+    # IRACP standard-asset provisioning
+    "StandardAssetSector",
+    "IRACP_STANDARD_RATES",
+    "standard_asset_provision",
+    "RF_RESTRUCTURED_ADDON_RATE",
+    "RF_SLIPPAGE_ADDON_RATE",
+    "resolution_framework_addon",
+    "is_out_of_order",
+    # NBFC backstop
+    "NBFCLayer",
+    "NBFCBackstopResult",
+    "NBFC_UL_STANDARD_RATES",
+    "apply_nbfc_backstop",
+    "nbfc_ul_standard_asset_provision",
+    "npa_dpd_threshold",
 ]

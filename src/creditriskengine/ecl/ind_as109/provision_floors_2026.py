@@ -3,7 +3,7 @@ RBI ECL Master Direction 2026 — Provisioning floor tables.
 
 Reference: RBI Master Direction on Asset Classification, Provisioning
 and Income Recognition (Commercial Banks), April 27, 2026.
-Effective: April 1, 2027. Document: RBI/2026-27/34.
+Effective: April 1, 2027. Document: RBI/DOR/2026-27/398.
 
 Implements Paragraph 82 prudential floor tables across all 20 exposure
 categories with duration-dependent Stage 3 floors per Paragraphs 82(1)-(4).
@@ -78,17 +78,18 @@ class Stage3FloorBracket:
     unsecured_floor: float
 
 
-# Standard Stage 3 schedule (most categories i-vi, x, xv default to this
-# pattern for secured; unsecured retail uses a separate flat schedule).
-# Per Paragraph 82(1): 25/40/55/75/100 secured; 25/100/100/100/100 unsecured.
+# Standard Stage 3 schedule (most categories i-vi, CRE-ADC, project finance,
+# restructured-standard, residual — Set A).
+# Per Paragraph 82(5): secured / unsecured by ageing band.
+# Reference: RBI/DOR/2026-27/398, Paragraph 82(5), Set A.
 STAGE3_STANDARD: tuple[Stage3FloorBracket, ...] = (
-    Stage3FloorBracket(max_years=1.0, secured_floor=0.25, unsecured_floor=0.25),
+    Stage3FloorBracket(max_years=1.0, secured_floor=0.25, unsecured_floor=0.40),
     Stage3FloorBracket(max_years=2.0, secured_floor=0.40, unsecured_floor=1.00),
     Stage3FloorBracket(max_years=3.0, secured_floor=0.55, unsecured_floor=1.00),
     Stage3FloorBracket(max_years=4.0, secured_floor=0.75, unsecured_floor=1.00),
     Stage3FloorBracket(max_years=float("inf"), secured_floor=1.00, unsecured_floor=1.00),
 )
-"""Standard Stage 3 floors per Paragraph 82(1)."""
+"""Standard Stage 3 floors per Paragraph 82(5), Set A."""
 
 # Lower-floor Stage 3 schedule for deposits/LIC/KVP/gold/state govt
 # (Categories vii, viii, ix). Per Paragraph 82(2).
@@ -116,7 +117,24 @@ STAGE3_HOUSING_RESIDENTIAL_RE: tuple[Stage3FloorBracket, ...] = (
     Stage3FloorBracket(max_years=4.0, secured_floor=0.40, unsecured_floor=1.00),
     Stage3FloorBracket(max_years=float("inf"), secured_floor=1.00, unsecured_floor=1.00),
 )
-"""Housing and residential RE Stage 3 floors per Paragraph 82(4)."""
+"""Housing, CGTMSE, deposits/LIC/gold/state govt Stage 3 floors per
+Paragraph 82(2), (4) — Set B."""
+
+# Other RE-secured (xi)(c)/(d) Stage 3 schedule per Paragraph 82(4) — Set F.
+# Per gap analysis: 15/25/40/55/100% secured; 25/100/100/100/100% unsecured.
+# Reference: RBI/DOR/2026-27/398, Paragraph 82(5), Set F.
+STAGE3_OTHER_RE_SECURED: tuple[Stage3FloorBracket, ...] = (
+    Stage3FloorBracket(max_years=1.0, secured_floor=0.15, unsecured_floor=0.25),
+    Stage3FloorBracket(max_years=2.0, secured_floor=0.25, unsecured_floor=1.00),
+    Stage3FloorBracket(max_years=3.0, secured_floor=0.40, unsecured_floor=1.00),
+    Stage3FloorBracket(max_years=4.0, secured_floor=0.55, unsecured_floor=1.00),
+    Stage3FloorBracket(max_years=float("inf"), secured_floor=1.00, unsecured_floor=1.00),
+)
+"""Other RE-secured Stage 3 floors per Paragraph 82(5), Set F.
+
+Applies to: other claims secured by residential RE (xi)(c),
+other claims secured by commercial RE (xi)(d).
+"""
 
 
 # Mapping from exposure category to its applicable Stage 3 schedule
@@ -134,8 +152,8 @@ _STAGE3_SCHEDULE_MAP: dict[RBIExposureCategory, tuple[Stage3FloorBracket, ...]] 
     RBIExposureCategory.HOUSING_LOANS_INDIVIDUALS: STAGE3_HOUSING_RESIDENTIAL_RE,
     RBIExposureCategory.CRE_ADC_150: STAGE3_STANDARD,
     RBIExposureCategory.CRE_RH_ADC: STAGE3_STANDARD,
-    RBIExposureCategory.OTHER_RESIDENTIAL_RE: STAGE3_HOUSING_RESIDENTIAL_RE,
-    RBIExposureCategory.OTHER_COMMERCIAL_RE: STAGE3_HOUSING_RESIDENTIAL_RE,
+    RBIExposureCategory.OTHER_RESIDENTIAL_RE: STAGE3_OTHER_RE_SECURED,
+    RBIExposureCategory.OTHER_COMMERCIAL_RE: STAGE3_OTHER_RE_SECURED,
     RBIExposureCategory.PROJECT_FINANCE_PRE_OPERATIONAL: STAGE3_STANDARD,
     RBIExposureCategory.PROJECT_FINANCE_OPERATIONAL: STAGE3_STANDARD,
     RBIExposureCategory.CENTRAL_GOVT_GUARANTEED: STAGE3_HOUSING_RESIDENTIAL_RE,
@@ -151,14 +169,14 @@ _STAGE3_SCHEDULE_MAP: dict[RBIExposureCategory, tuple[Stage3FloorBracket, ...]] 
 RBI_DCCO_INFRA_QUARTERLY_RATE: float = 0.00375
 """0.375% per quarter of deferment for infrastructure project finance.
 
-Reference: Paragraph 82(4) Note 1, RBI/2026-27/34.
+Reference: Paragraph 82(4) Note 1, RBI/DOR/2026-27/398.
 """
 
 RBI_DCCO_NON_INFRA_QUARTERLY_RATE: float = 0.005625
 """0.5625% per quarter of deferment for non-infrastructure project finance
 and CRE(ADC)/CRE-RH(ADC) accounts.
 
-Reference: Paragraph 82(4) Note 1, RBI/2026-27/34.
+Reference: Paragraph 82(4) Note 1, RBI/DOR/2026-27/398.
 """
 
 
@@ -186,12 +204,14 @@ def rbi_ecl_floor_2026(
     category: RBIExposureCategory,
     is_secured: bool = True,
     years_in_stage3: float = 0.0,
+    is_wilful_defaulter: bool = False,
 ) -> float:
     """Calculate the RBI ECL Master Direction 2026 prudential floor.
 
     Returns the minimum provision amount per Paragraph 82 of
-    RBI/2026-27/34, applied as a regulatory backstop to the
-    model-computed ECL.
+    RBI/DOR/2026-27/398, applied as a regulatory backstop to the
+    model-computed ECL. Includes the wilful defaulter surcharge of
+    +5% on top of the floor per Paragraph 101(4).
 
     Args:
         ead: Exposure at default (in same currency unit as the return).
@@ -200,28 +220,36 @@ def rbi_ecl_floor_2026(
         is_secured: Whether the exposure is secured (Stage 3 only).
         years_in_stage3: Years elapsed since Stage 3 classification.
             Only used when stage is Stage 3.
+        is_wilful_defaulter: Whether the borrower is classified as a
+            wilful defaulter per Paragraph 101(4). If True, an
+            additional 5% of EAD is added to the floor.
 
     Returns:
         Minimum provision amount as a decimal amount of EAD.
 
     Reference:
-        RBI/2026-27/34 Paragraph 82(1)-(4).
+        RBI/DOR/2026-27/398; DOR.STR.REC.No.6/21.06.011/2026-27,
+        Paragraphs 82(1)-(5), 101(4).
     """
     if ead <= 0:
         return 0.0
 
     if stage == IFRS9Stage.STAGE_1:
         floor_rate, _ = RBI_ECL_FLOOR_STAGE_1_2[category]
-        return ead * floor_rate
-
-    if stage == IFRS9Stage.STAGE_2:
+        floor = ead * floor_rate
+    elif stage == IFRS9Stage.STAGE_2:
         _, floor_rate = RBI_ECL_FLOOR_STAGE_1_2[category]
-        return ead * floor_rate
+        floor = ead * floor_rate
+    else:
+        # Stage 3 or POCI: duration-dependent floor
+        schedule = _STAGE3_SCHEDULE_MAP[category]
+        floor_rate = _stage3_floor_for_duration(schedule, years_in_stage3, is_secured)
+        floor = ead * floor_rate
 
-    # Stage 3 or POCI: duration-dependent floor
-    schedule = _STAGE3_SCHEDULE_MAP[category]
-    floor_rate = _stage3_floor_for_duration(schedule, years_in_stage3, is_secured)
-    return ead * floor_rate
+    if is_wilful_defaulter:
+        floor += ead * 0.05
+
+    return floor
 
 
 def dcco_additional_provision(
@@ -248,7 +276,7 @@ def dcco_additional_provision(
         Additional provision amount.
 
     Reference:
-        RBI/2026-27/34 Paragraph 82(4) Note 1.
+        RBI/DOR/2026-27/398 Paragraph 82(4) Note 1.
     """
     if ead <= 0 or quarters_of_deferment <= 0:
         return 0.0
