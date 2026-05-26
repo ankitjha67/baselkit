@@ -121,3 +121,126 @@ reporting:
     - DSB Return
     - ALM Returns
     - Basel III Monitoring
+
+# ============================================================================
+# RBI ECL Master Direction 2026 (RBI/2026-27/34)
+# Reserve Bank of India (Commercial Banks - Asset Classification,
+# Provisioning and Income Recognition) Directions, April 27, 2026.
+# Effective: April 1, 2027.
+# ============================================================================
+ecl_master_direction_2026:
+  reference: "RBI/2026-27/34"
+  document: "Master Direction on Asset Classification, Provisioning and Income Recognition"
+  issued_date: "2026-04-27"
+  effective_date: "2027-04-01"
+  scope: "Commercial banks (excl. SFBs, payments banks, LABs), SBI"
+
+  pd_lgd_floors:
+    # Paragraph 96
+    pd_floor: 0.0003
+    # Paragraph 97
+    lgd_backstop_secured: 0.65
+    lgd_backstop_unsecured: 0.70
+    # Paragraph 98
+    lgd_eligible_collateral: 0.30
+    eligible_collateral_types:
+      - cash
+      - gold
+      - government_securities
+      - lic_policy
+      - kvp
+      - nsc
+
+  sicr:
+    # Paragraph 33
+    dpd_backstop: 30
+    revolving_overlimit_days: 60
+    rebuttable: true
+
+  eir:
+    # Paragraph 21
+    mandatory_from: "2027-04-01"
+    legacy_migration_deadline: "2030-03-31"
+
+  transition:
+    effective_date: "2027-04-01"
+    fair_valuation_date: "2027-04-01"
+    # Paragraph 108: capital add-back phase-in
+    capital_add_back_phase_in:
+      "2028": 0.80  # FY 2027-28: 4/5
+      "2029": 0.60  # FY 2028-29: 3/5
+      "2030": 0.40  # FY 2029-30: 2/5
+      "2031": 0.20  # FY 2030-31: 1/5
+
+  collateral_revaluation:
+    # Paragraph 55
+    stage3_threshold_inr_crore: 7.5
+    stage3_revaluation_years: 2
+    stock_revaluation_years: 1
+
+  governance:
+    # Paragraphs 56-57
+    board_oversight_required: true
+    committee_includes: [CFO, CRO]
+    model_risk_management_tiers: 3
+    independent_validation: true
+
+  project_finance_dcco:
+    # Paragraph 82(4) Note 1
+    infrastructure_quarterly_rate: 0.00375
+    non_infrastructure_quarterly_rate: 0.005625
+
+  borrower_level_classification:
+    # Paragraphs 8(9), 76
+    stage_3_contagion: true
+    stage_2_facility_level: true
+
+  # Stage 1 and Stage 2 provisioning floors per Paragraph 82
+  provisioning_floors:
+    secured_retail:        { stage_1: 0.0040, stage_2: 0.05 }
+    corporate:             { stage_1: 0.0040, stage_2: 0.05 }
+    small_micro_enterprise: { stage_1: 0.0025, stage_2: 0.05 }
+    medium_enterprise:     { stage_1: 0.0040, stage_2: 0.05 }
+    farm_credit_agricultural: { stage_1: 0.0025, stage_2: 0.05 }
+    banks_nbfcs_regulated_fis: { stage_1: 0.0040, stage_2: 0.05 }
+    loans_against_deposits_lic_kvp: { stage_1: 0.0040, stage_2: 0.0040 }
+    gold_loans:            { stage_1: 0.0040, stage_2: 0.015 }
+    state_govt_guaranteed: { stage_1: 0.0040, stage_2: 0.025 }
+    unsecured_retail:      { stage_1: 0.01,   stage_2: 0.05 }
+    housing_loans_individuals: { stage_1: 0.0025, stage_2: 0.015 }
+    cre_adc_150:           { stage_1: 0.0125, stage_2: 0.05 }
+    cre_rh_adc:            { stage_1: 0.01,   stage_2: 0.05 }
+    other_residential_re:  { stage_1: 0.0040, stage_2: 0.015 }
+    other_commercial_re:   { stage_1: 0.0040, stage_2: 0.025 }
+    project_finance_pre_operational: { stage_1: 0.01, stage_2: 0.05 }
+    project_finance_operational: { stage_1: 0.0040, stage_2: 0.05 }
+    central_govt_guaranteed: { stage_1: 0.0025, stage_2: 0.0025 }
+    natural_calamity_restructured: { stage_1: 0.05, stage_2: 0.10 }
+    other:                 { stage_1: 0.0040, stage_2: 0.05 }
+
+  stage_3_floors:
+    standard:
+      # Paragraph 82(1)
+      bracket_0_1y:  { secured: 0.25, unsecured: 0.25 }
+      bracket_1_2y:  { secured: 0.40, unsecured: 1.00 }
+      bracket_2_3y:  { secured: 0.55, unsecured: 1.00 }
+      bracket_3_4y:  { secured: 0.75, unsecured: 1.00 }
+      bracket_4_plus: { secured: 1.00, unsecured: 1.00 }
+    deposits_gold_state:
+      # Paragraph 82(2) - lower floors for deposits/LIC/gold/state govt
+      bracket_0_1y:  { secured: 0.10, unsecured: 0.25 }
+      bracket_1_2y:  { secured: 0.20, unsecured: 1.00 }
+      bracket_2_3y:  { secured: 0.30, unsecured: 1.00 }
+      bracket_3_4y:  { secured: 0.40, unsecured: 1.00 }
+      bracket_4_plus: { secured: 1.00, unsecured: 1.00 }
+    unsecured_retail:
+      # Paragraph 82(3)
+      bracket_0_1y:  0.25
+      bracket_1_plus: 1.00
+    housing_residential_re:
+      # Paragraph 82(4)
+      bracket_0_1y:  { secured: 0.10, unsecured: 0.25 }
+      bracket_1_2y:  { secured: 0.20, unsecured: 1.00 }
+      bracket_2_3y:  { secured: 0.30, unsecured: 1.00 }
+      bracket_3_4y:  { secured: 0.40, unsecured: 1.00 }
+      bracket_4_plus: { secured: 1.00, unsecured: 1.00 }

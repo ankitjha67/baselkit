@@ -100,6 +100,38 @@ authoritative regulatory sources.
 | RBI IRAC para 12-14 | Restructured advances treatment | `ecl/ind_as109/ind_as_ecl.py` | `restructured_account_stage()` |
 | RBI IRAC (agriculture) | Short-duration crop: 60 DPD | `ecl/ind_as109/ind_as_ecl.py` | `RBI_AGRI_SHORT_CROP_DPD = 60` |
 
+## RBI ECL Master Direction 2026 (RBI/2026-27/34, effective April 1, 2027)
+
+| Paragraph | Topic | Module | Function(s) |
+|---|---|---|---|
+| Para 2 | Effective date April 1, 2027 | `ecl/ind_as109/transition.py` | `RBI_ECL_EFFECTIVE_DATE`, `is_ecl_framework_effective()` |
+| Para 8(9), 76 | Borrower-level Stage 3 contagion | `ecl/ind_as109/borrower_classification.py` | `apply_borrower_level_staging()` |
+| Para 10 | Upgradation from Stage 3 (all arrears repaid) | `ecl/ind_as109/ind_as_ecl.py` | `determine_upgrade_eligibility()` |
+| Para 21, 50, 114 | EIR migration deadline March 31, 2030 | `ecl/ind_as109/transition.py` | `RBI_EIR_MIGRATION_DEADLINE`, `eir_required()` |
+| Para 25 | Stage 1/2/3 classification rules | `ecl/ind_as109/ind_as_ecl.py` | `assign_stage_ind_as()` |
+| Para 33 | SICR: 30 DPD + 60-day revolving overlimit | `ecl/ind_as109/ind_as_ecl.py` | `assess_sicr_rbi()`, `RBI_REVOLVING_SICR_OVERLIMIT_DAYS` |
+| Para 55 | Collateral revaluation (₹7.5 cr, biennial, annual stock) | `ecl/ind_as109/collateral_valuation.py` | `validate_collateral_revaluation()` |
+| Para 56-57 | Board governance, CFO/CRO committee | `regulatory/india/rbi.yml` | `ecl_master_direction_2026.governance` |
+| Para 76 | Stage 3 borrower-level / Stage 2 facility-level | `ecl/ind_as109/borrower_classification.py` | `apply_borrower_level_staging()` |
+| Para 77-79 | Upgrade paths (restructured / non-restructured) | `ecl/ind_as109/ind_as_ecl.py` | `determine_upgrade_eligibility()` |
+| Para 82(1) | Stage 1/2 floors — standard categories | `ecl/ind_as109/provision_floors_2026.py` | `RBI_ECL_FLOOR_STAGE_1_2`, `rbi_ecl_floor_2026()` |
+| Para 82(1) | Stage 3 standard schedule (25/40/55/75/100) | `ecl/ind_as109/provision_floors_2026.py` | `STAGE3_STANDARD` |
+| Para 82(2) | Stage 3 lower floors (deposits/LIC/gold/state) | `ecl/ind_as109/provision_floors_2026.py` | `STAGE3_DEPOSITS_GOLD_STATE` |
+| Para 82(3) | Stage 3 unsecured retail schedule | `ecl/ind_as109/provision_floors_2026.py` | `STAGE3_UNSECURED_RETAIL` |
+| Para 82(4) | Stage 3 housing / residential RE schedule | `ecl/ind_as109/provision_floors_2026.py` | `STAGE3_HOUSING_RESIDENTIAL_RE` |
+| Para 82(4) Note 1 | DCCO additional quarterly provisioning | `ecl/ind_as109/provision_floors_2026.py` | `dcco_additional_provision()` |
+| Para 88 | Default Loss Guarantee (DLG) treatment | `ecl/ind_as109/dlg.py` | `ecl_with_dlg()`, `DLGAdjustment` |
+| Para 96 | PD floor 0.03% | `ecl/ind_as109/pd_lgd_floors.py` | `RBI_PD_FLOOR`, `apply_rbi_pd_floor()` |
+| Para 97 | LGD backstop 65% (secured) / 70% (unsecured) | `ecl/ind_as109/pd_lgd_floors.py` | `RBI_LGD_BACKSTOP_SECURED`, `RBI_LGD_BACKSTOP_UNSECURED` |
+| Para 98 | LGD 30% for eligible collateral | `ecl/ind_as109/pd_lgd_floors.py` | `RBI_LGD_ELIGIBLE_COLLATERAL` |
+| Para 108 | Capital add-back phase-in (4/5 → 1/5) | `ecl/ind_as109/transition.py` | `capital_add_back_factor()`, `CAPITAL_ADD_BACK_SCHEDULE` |
+| Combined | End-to-end ECL with all floors | `ecl/ind_as109/ind_as_ecl.py` | `calculate_ecl_ind_as_2026()` |
+| Combined | Auto-dispatch by reporting date | `ecl/ind_as109/ind_as_ecl.py` | `calculate_ecl_ind_as_auto()` |
+
+YAML configuration: `regulatory/india/rbi.yml` -> `ecl_master_direction_2026`
+section (PD/LGD floors, SICR thresholds, transition timeline, governance,
+DCCO rates, 20-category provisioning floor table, 4 Stage 3 schedules).
+
 ## Revolving Credit CCF -- Regulatory SA by Jurisdiction
 
 | Jurisdiction | Regulator | UCC CCF | Committed CCF | Module | Function |
