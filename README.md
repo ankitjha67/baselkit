@@ -16,7 +16,9 @@ Production-grade open-source credit risk analytics library.
 - **RWA Calculation** -- Basel III/IV Standardized Approach and IRB (F-IRB / A-IRB) with output floor phase-in, double default (CRE32), and equity IRB (CRE33)
 - **ECL Engines** -- IFRS 9, US CECL (ASC 326), and Ind AS 109 with staging, SICR, lifetime PD, scenario weighting, management overlays (post-model adjustments), and revolving credit ECL (credit cards, overdrafts, HELOCs, corporate revolvers) with behavioral life, multi-approach CCF, drawn/undrawn split, and multi-jurisdiction provision floors
 - **ECL Governance Layer** -- Management overlay framework (7 overlay types with approval/expiry/rationale tracking per EBA/GL/2020/06), scenario governance with sensitivity analysis (IFRS 9.B5.5.41-43), multi-variable satellite models with logistic/log link functions and mean-reversion (IFRS 9.B5.5.50), LGD macro overlays, CECL Q-factor governance with per-category caps (OCC 2020-49), and overlay audit trail with JSON export
-- **PD / LGD / EAD Modeling** -- Scorecard development, calibration (anchor-point & Bayesian), TTC-to-PIT conversion, term structures, Merton structural model, Altman Z-score, and transition matrix estimation
+- **PD / LGD / EAD Modeling** -- Scorecard development, calibration (anchor-point & Bayesian), TTC-to-PIT conversion, term structures, Merton structural model, Altman Z-score, transition matrix estimation, Cox proportional-hazards survival analysis (Kaplan-Meier, Nelson-Aalen, Weibull), Pluto-Tasche low-default-portfolio PD, CDS-implied PD (Q→P conversion), and behavioural scoring with early-warning triggers
+- **Advanced LGD** -- Workout/downturn LGD, cure rate, recovery-curve modeling (Weibull/lognormal/gamma) with discounted workout LGD, and beta-distribution LGD with downturn quantiles
+- **Retail Loss Forecasting** -- Delinquency-bucket Markov roll-rate matrices and multi-period charge-off projection
 - **Model Validation** -- Discrimination (AUROC, Gini, KS, IV), calibration (binomial, Hosmer-Lemeshow, traffic-light), stability (PSI, CSI, migration)
 - **Portfolio Risk** -- Vasicek ASRF, Gaussian copula Monte Carlo, parametric VaR, economic capital, and stress testing (including reverse stress)
 - **Concentration Risk** -- Single-name, sector-level, and granularity adjustment analytics
@@ -359,7 +361,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,305 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,368 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

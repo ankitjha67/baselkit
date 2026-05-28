@@ -4,6 +4,12 @@ Provides logistic scorecard building, WoE/IV binning, master scale
 construction, and PD calibration utilities.
 """
 
+from creditriskengine.models.pd.behavioural import (
+    BehaviouralAttributes,
+    behavioural_pd,
+    behavioural_score,
+    early_warning_flag,
+)
 from creditriskengine.models.pd.binning import (
     BinResult,
     apply_woe_transform,
@@ -12,6 +18,16 @@ from creditriskengine.models.pd.binning import (
     monotonic_binning,
     optimal_binning,
     quantile_binning,
+)
+from creditriskengine.models.pd.cds_implied import (
+    cds_implied_hazard_rate,
+    cds_implied_pd,
+    cds_pd_term_structure,
+    risk_neutral_to_real_world,
+)
+from creditriskengine.models.pd.ldp import (
+    pluto_tasche_multi_grade,
+    pluto_tasche_single,
 )
 from creditriskengine.models.pd.scorecard import (
     ScorecardBuilder,
@@ -24,6 +40,13 @@ from creditriskengine.models.pd.structural import (
     distance_to_default,
     implied_asset_value,
     merton_default_probability,
+)
+from creditriskengine.models.pd.survival import (
+    CoxPH,
+    discrete_hazard_to_pd_curve,
+    kaplan_meier,
+    nelson_aalen,
+    weibull_survival,
 )
 from creditriskengine.models.pd.term_structure import (
     forward_pd,
@@ -78,4 +101,23 @@ __all__ = [
     "altman_z_score_private",
     "altman_z_score_emerging",
     "z_score_zone",
+    # Survival analysis
+    "kaplan_meier",
+    "nelson_aalen",
+    "weibull_survival",
+    "discrete_hazard_to_pd_curve",
+    "CoxPH",
+    # Low-default portfolio
+    "pluto_tasche_single",
+    "pluto_tasche_multi_grade",
+    # CDS-implied PD
+    "cds_implied_hazard_rate",
+    "cds_implied_pd",
+    "cds_pd_term_structure",
+    "risk_neutral_to_real_world",
+    # Behavioural scoring
+    "BehaviouralAttributes",
+    "behavioural_score",
+    "behavioural_pd",
+    "early_warning_flag",
 ]
