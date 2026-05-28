@@ -329,8 +329,11 @@ class AdvancedIRBCalculator(BaseRWACalculator):
             return max(exposure.ead_model, 0.0)
 
         if exposure.undrawn_commitment > 0:
-            # Apply 50% CCF floor (CRE32.33)
-            ccf = apply_ccf_floor(0.0)  # bank CCF not on model -> use floor
+            # Apply 50% CCF input floor per CRE32.33 / CRR3 Art. 166(8b).
+            # If the bank has an own-estimated CCF on the exposure, floor it;
+            # otherwise the floor itself (0.50) is the binding input.
+            bank_ccf = exposure.ccf if exposure.ccf is not None else 0.0
+            ccf = apply_ccf_floor(bank_ccf)
             ead = exposure.drawn_amount + ccf * exposure.undrawn_commitment
         else:
             ead = exposure.drawn_amount

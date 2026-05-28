@@ -18,12 +18,13 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # BCBS CRE20 Table 14 — CRE NOT dependent on cashflows
 # ============================================================
-# Whole-loan approach: (ltv_lower, ltv_upper, risk_weight)
-# For LTV <= 60 % the RW is min(60 %, counterparty_rw) — CRE20.87
+# Whole-loan approach (BCBS d424, CRE20.87-20.88):
+#   LTV <= 60%: min(60%, RW of counterparty)
+#   LTV > 60%:  RW of counterparty
+# Sentinel -1.0 indicates "use counterparty RW".
 CRE_NOT_CASHFLOW_RW: Final[list[tuple[float, float, float]]] = [
-    (0.0, 0.60, 60.0),   # min(60%, counterparty_rw) per CRE20.87
-    (0.60, 0.80, 80.0),  # Whole-loan approach — CRE20.89
-    (0.80, float("inf"), -1.0),  # sentinel: use counterparty RW
+    (0.0, 0.60, 60.0),           # min(60%, counterparty_rw) per CRE20.87
+    (0.60, float("inf"), -1.0),  # counterparty RW per CRE20.88
 ]
 
 # ============================================================

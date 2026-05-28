@@ -2,6 +2,138 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2026-05-27
+
+### Bug fixes (full-repo audit)
+
+A comprehensive audit of the entire codebase identified and corrected
+the following defects:
+
+- **`rwa/irb/advanced.py`**: A-IRB EAD calculation hardcoded the CCF
+  input to 0.0 before applying the 50% floor, ignoring any bank-
+  estimated `exposure.ccf`. The fix reads `exposure.ccf` (defaulting
+  to 0.0 when None) and applies the floor per CRR3 Art. 166(8b).
+  Material correction for all A-IRB exposures with undrawn commitments.
+- **`rwa/standardized/cre.py`**: CRE NOT-cashflow-dependent table had
+  a fixed 80% RW for the 60-80% LTV bucket. Per BCBS d424 CRE20.88,
+  LTV > 60% should use the counterparty risk weight directly. Table
+  reduced from 3 to 2 buckets, second bucket uses sentinel -1.0.
+
+### Added — Robustness tooling
+
+- **`parameter_assertions.py`**: Source-of-truth guard that locks all
+  RBI ECL 2026 parameters to published values. Any future edit that
+  perturbs a constant trips `RBIParameterMismatch`. Includes
+  `regulatory_self_check()` for audit packs.
+- **`parallel_run.py`**: Side-by-side comparator for legacy IRACP vs
+  ECL 2026 frameworks. Returns delta, percentage change, binding-floor
+  diagnostic, and CET1 transitional add-back amount per Paragraph 108.
+  Includes `portfolio_parallel_run_summary()` for board reporting.
+
+### Added
+
+- **RBI ECL Master Direction 2026 (RBI/DOR/2026-27/398)** -- Full implementation
+  of the Reserve Bank of India's final ECL directions for commercial banks,
+  effective April 1, 2027. Replaces the legacy IRAC provisioning framework
+  with a stage-aware, exposure-category-keyed model:
+
+  - `ecl/ind_as109/types.py` -- `RBIExposureCategory` (20 categories) and
+    `RBICollateralCategory` enums per Paragraph 82.
+  - `ecl/ind_as109/provision_floors_2026.py` -- Stage 1 / Stage 2 floor
+    table for all 20 categories per Paragraphs 82(1)-(4) (ranging from
+    0.25% to 1.25% Stage 1, 0.25% to 10% Stage 2). Four Stage 3 duration-
+    dependent schedules: standard (25/40/55/75/100), deposits-gold-state
+    (10/20/30/40/100), unsecured retail (25 / 100), housing-residential
+    RE (10/20/30/40/100). Plus `rbi_ecl_floor_2026()`,
+    `classify_rbi_exposure_category()`, and DCCO project-finance
+    additional provisioning (0.375% / 0.5625% per quarter).
+  - `ecl/ind_as109/pd_lgd_floors.py` -- PD floor 0.03% (Paragraph 96),
+    LGD backstops 65% secured / 70% unsecured / 30% eligible collateral
+    (Paragraphs 97-98) with `apply_rbi_pd_floor()` and
+    `apply_rbi_lgd_backstop()`.
+  - `ecl/ind_as109/borrower_classification.py` -- Borrower-level Stage 3
+    contagion per Paragraphs 8(9), 76. `apply_borrower_level_staging()`
+    elevates all facilities of a borrower to Stage 3 if any one is
+    Stage 3 (Stage 2 remains facility-level).
+  - `ecl/ind_as109/transition.py` -- April 1, 2027 effective date,
+    March 31, 2030 EIR migration deadline, capital add-back phase-in
+    schedule (4/5 -> 3/5 -> 2/5 -> 1/5) per Paragraph 108. Includes
+    `is_ecl_framework_effective()`, `capital_add_back_factor()`,
+    `eir_required()`.
+  - `ecl/ind_as109/dlg.py` -- Default Loss Guarantee adjustment per
+    Paragraph 88. `ecl_with_dlg()` and `DLGAdjustment` dataclass with
+    capacity tracking after invocation.
+  - `ecl/ind_as109/collateral_valuation.py` -- Collateral revaluation
+    compliance per Paragraph 55: Stage 3 exposures >= INR 7.5 crore must
+    be revalued every 2 years; stock collateral annually.
+  - `ind_as_ecl.py` extended with `assess_sicr_rbi()` (30 DPD backstop
+    plus 60-day revolving overlimit per Paragraph 33),
+    `determine_upgrade_eligibility()` (Paragraphs 77-79 upgrade paths),
+    `calculate_ecl_ind_as_2026()` (end-to-end pipeline applying PD/LGD
+    floors, model ECL, DLG, and regulatory floor), and
+    `calculate_ecl_ind_as_auto()` (date-based dispatch between legacy
+    IRAC and 2026 frameworks).
+
+- **Updated `regulatory/india/rbi.yml`** -- New `ecl_master_direction_2026`
+  section with PD/LGD floors, SICR thresholds, transition timeline,
+  governance requirements, DCCO rates, full 20-category Stage 1/2
+  floor table, and all 4 Stage 3 duration schedules.
+
+### Backward Compatibility
+
+The legacy IRAC framework (`IRACAssetClass`, `classify_irac()`,
+`rbi_minimum_provision()`, `calculate_ecl_ind_as()`) is preserved
+unchanged. Use `calculate_ecl_ind_as_auto(reporting_date, ...)` for
+automatic framework selection based on the reporting date.
+
+### Tests
+
+- 140 new tests in `tests/test_ecl/test_ind_as_2026.py` covering all
+  12 implementation areas: category enum and classifier, Stage 1/2
+  floors (all 20 categories), Stage 3 duration-dependent schedules,
+  PD/LGD floors, SICR rules (DPD + revolving overlimit), borrower-
+  level contagion, DCCO provisioning, upgradation criteria,
+  transition timeline, DLG adjustment, collateral revaluation,
+  end-to-end ECL calculation, and date-based auto-dispatch.
+- Total test count: 2,068 -> 2,241 (with audit-grade gap closures).
+  mypy --strict clean, ruff clean.
+
+### Audit-grade corrections (post-initial release)
+
+Following an independent audit-grade review against the official RBI
+Master Direction text, three factual corrections were applied and nine
+additional gaps were closed:
+
+- **Stage 3 Set A unsecured 0-1yr corrected**: 25% -> 40% per Paragraph
+  82(5) Set A (the "25/40%" notation denotes secured / unsecured).
+- **Other RE-secured Stage 3 schedule**: Added separate Set F schedule
+  (15/25/40/55/100% secured) for OTHER_RESIDENTIAL_RE and
+  OTHER_COMMERCIAL_RE per Paragraph 82(5) Set F (previously incorrectly
+  mapped to housing schedule).
+- **RBI reference corrected**: RBI/2026-27/34 -> RBI/DOR/2026-27/398;
+  DOR.STR.REC.No.6/21.06.011/2026-27 across all files.
+- **Wilful defaulter +5% surcharge**: New `is_wilful_defaulter` parameter
+  on the floor function per Paragraph 101(4).
+- **Sovereign / SLR carve-out**: New `is_sovereign_slr` parameter returns
+  zero ECL per Paragraphs 37-38.
+- **IRACP standard-asset provisioning** (`ecl/ind_as109/iracp.py`):
+  `StandardAssetSector` enum with 12 sectors and rates per Master Circular
+  DOR.STR.REC.9/21.04.048/2025-26 plus Project Finance Directions 2025.
+- **Resolution Framework 1.0/2.0 add-ons**: `resolution_framework_addon()`
+  applying 10% on restructured residual debt + 5% on slippage per
+  DOR.No.BP.BC/3/21.04.048/2020-21 and DOR.STR.REC.12/21.04.048/2021-22.
+- **Out-of-order CC/OD (3 conditions)**: `is_out_of_order()` per
+  DOR.STR.REC.68/21.04.048/2021-22.
+- **NBFC Ind AS 109 prudential backstop** (`ecl/ind_as109/nbfc_backstop.py`):
+  `apply_nbfc_backstop()` returning max(ECL, IRACP) plus Impairment Reserve
+  per DOR(NBFC).CC.PD.No.109/22.10.106/2019-20.
+- **SBR NPA glide-path**: `npa_dpd_threshold()` returning 180 -> 150 -> 120
+  -> 90 DPD by `as_of_date` per DOR.CRE.REC.No.60/03.10.001/2021-22.
+- **NBFC-UL differential standard-asset rates** per DOR.STR.REC.40/
+  21.04.048/2022-23.
+- **NBFC Layer enum** (Base/Middle/Upper/Top) per SBR Master Direction
+  October 19, 2023.
+
 ## [0.6.0] - 2026-04-03
 
 ### Added

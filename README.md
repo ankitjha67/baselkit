@@ -26,7 +26,7 @@ Production-grade open-source credit risk analytics library.
 - **Securitisation** -- SEC-SA, SEC-ERBA, and SEC-IRBA per CRE40-45
 - **Operational Risk** -- Standardised Measurement Approach (SMA) per OPE25
 - **Credit Risk Mitigation** -- Comprehensive and simple approaches, haircut framework per CRE22
-- **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI (full IRAC norms with SMA/NPA classification, provisioning floors, and restructured account handling), Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
+- **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI (full IRAC norms plus the **RBI ECL Master Direction 2026** (RBI/DOR/2026-27/398) — 20-category provisioning floor table, Stage 3 duration-dependent floors, PD 0.03% / LGD 65%-70%-30% backstops, borrower-level Stage 3 contagion, DCCO project finance provisioning, capital add-back phase-in, effective April 1, 2027), Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
 - **Regulatory Reporting** -- COREP, Pillar 3 disclosure templates (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), FR 2052a (Complex Institution Liquidity Monitoring), and model inventory
 - **Stress Testing** -- EBA, BoE ACS, US CCAR/DFAST, RBI frameworks, and reverse stress testing
 
@@ -217,6 +217,55 @@ ecl = calculate_ecl_ind_as(
 print(f"ECL (with RBI floor): {ecl:,.0f}")
 ```
 
+### RBI ECL Master Direction 2026 (effective April 1, 2027)
+
+```python
+from datetime import date
+from creditriskengine.ecl.ind_as109 import (
+    RBIExposureCategory, calculate_ecl_ind_as_2026,
+    apply_borrower_level_staging, assess_sicr_rbi,
+    capital_add_back_factor, is_ecl_framework_effective,
+    dcco_additional_provision,
+)
+from creditriskengine.core.types import IFRS9Stage
+import numpy as np
+
+# 1. ECL with all RBI 2026 floors applied
+ecl = calculate_ecl_ind_as_2026(
+    stage=IFRS9Stage.STAGE_2,
+    pd_12m=0.05, lgd=0.30, ead=1_000_000,
+    marginal_pds=np.array([0.05, 0.04, 0.03]),
+    category=RBIExposureCategory.UNSECURED_RETAIL,
+    is_secured=False,
+)
+# PD floored at 0.03%, LGD floored at 70% (unsecured), regulatory
+# floor 5% of EAD = 50,000 binds if model ECL falls below.
+
+# 2. Borrower-level Stage 3 contagion (Paragraph 76)
+facilities = [
+    {"counterparty_id": "B1", "facility_id": "F1", "stage": IFRS9Stage.STAGE_3},
+    {"counterparty_id": "B1", "facility_id": "F2", "stage": IFRS9Stage.STAGE_1},
+]
+contagion = apply_borrower_level_staging(facilities)
+# Both facilities now Stage 3
+
+# 3. Revolving SICR backstop (60 days over limit, Paragraph 33)
+sicr = assess_sicr_rbi(is_revolving=True, days_over_limit=75)
+# True
+
+# 4. DCCO additional provisioning for project finance (Paragraph 82(4))
+extra = dcco_additional_provision(ead=10_000_000, quarters_of_deferment=4,
+                                   is_infrastructure=True)
+# 4 * 0.375% * 10M = 150,000
+
+# 5. Transition phase-in: capital add-back factor (Paragraph 108)
+add_back = capital_add_back_factor(reporting_fy=2028)
+# 0.80 (4/5 add-back in FY 2027-28)
+
+# 6. Effective-date dispatch
+print(is_ecl_framework_effective(date(2027, 4, 1)))  # True
+```
+
 ### FR 2052a Liquidity Report
 
 ```python
@@ -308,7 +357,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,068 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,252 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 
