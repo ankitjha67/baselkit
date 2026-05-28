@@ -22,6 +22,8 @@ Production-grade open-source credit risk analytics library.
 - **Model Validation** -- Discrimination (AUROC, Gini, KS, IV), calibration (binomial, Hosmer-Lemeshow, traffic-light), stability (PSI, CSI, migration)
 - **Portfolio Risk** -- Vasicek ASRF, Gaussian copula Monte Carlo, parametric VaR, economic capital, and stress testing (including reverse stress)
 - **Concentration Risk** -- Single-name, sector-level, and granularity adjustment analytics
+- **Counterparty Credit Risk** -- EPE/EEPE/PFE exposure profiles from simulated paths, netting-set aggregation, IMM EAD (alpha=1.4), and wrong-way risk (general alpha adjustment + specific WWR flagging) per CRE52/53
+- **Risk-Based Pricing & Capital Allocation** -- RAROC, Economic Value Added (EVA), break-even spread, all-in risk-based loan rate, and portfolio capital allocation (marginal, Euler/VaR, Expected-Shortfall contributions per Tasche 2008)
 - **Capital Adequacy** -- Capital buffers (CConB, CCyB, G-SIB/D-SIB), leverage ratio (CRE80), and MDA framework
 - **CVA Risk** -- BA-CVA (CVA25) and SA-CVA delta risk charge (CVA26) with supervisory parameters
 - **Market Risk** -- FRTB credit spread SbM (MAR21), Default Risk Charge (MAR22), and RRAO (MAR23)
@@ -361,7 +363,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,368 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,405 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 
