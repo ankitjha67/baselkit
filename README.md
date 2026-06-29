@@ -40,6 +40,7 @@ Production-grade open-source credit risk analytics library.
 - **Regulatory Reporting** -- COREP, Pillar 3 disclosure templates (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), FR 2052a (Complex Institution Liquidity Monitoring), and model inventory
 - **Stress Testing** -- EBA, BoE ACS, US CCAR/DFAST, RBI frameworks, and reverse stress testing
 - **Climate & ESG Risk** -- NGFS Phase V scenario library (6 scenarios), physical risk PD/LGD adjustments (flood, wildfire, drought, sea-level rise, storm, extreme heat), transition risk PD multiplier with sector-specific elasticities and CBAM flagging, PCAF financed emissions (attribution factor, data quality score 1-5), EU Green Asset Ratio (GAR/BTAR), and BCBS SCO60 crypto-asset capital (Group 1a/1b/2a/2b, 1250% RW, Tier 1 limit monitoring)
+- **Climate Scenario Analysis (EBA/GL/2025/02)** -- Portfolio-level climate ECL projection under NGFS scenarios: per-exposure stressed PD (transition carbon-cost multiplier × physical-hazard multiplier) and stressed LGD (physical collateral haircut), with horizon-interpolated carbon prices and a transition-vs-physical decomposition of the aggregate ECL uplift
 - **AI/ML Model Governance** -- Algorithmic fairness (disparate impact 4/5 rule, demographic parity, equal opportunity per EU AI Act / CFPB / MAS FEAT), drift detection (PSI with regulatory thresholds per SR 11-7 / PRA SS1/23), and model risk classification
 
 ## Installation
@@ -369,7 +370,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,667 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,681 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

@@ -7,6 +7,7 @@ Modules:
     financed_emissions : PCAF methodology for Scope 1/2/3.
     green_asset_ratio  : EBA GAR and BTAR calculation.
     crypto           : BCBS SCO60 crypto-asset capital.
+    scenario_analysis : EBA/GL/2025/02 portfolio climate ECL projection.
 
 References:
     - NGFS Climate Scenarios, Phase V (November 2024).
@@ -34,6 +35,13 @@ from creditriskengine.climate.ngfs_scenarios import (
     list_ngfs_scenarios,
 )
 from creditriskengine.climate.physical_risk import physical_risk_lgd_haircut
+from creditriskengine.climate.scenario_analysis import (
+    ClimateExposure,
+    ClimateExposureResult,
+    ClimateScenarioResult,
+    project_climate_ecl,
+    scenario_carbon_price,
+)
 from creditriskengine.climate.transition_risk import transition_risk_pd_multiplier
 
 __all__ = [
@@ -48,4 +56,9 @@ __all__ = [
     "CryptoAssetGroup",
     "CryptoCapitalResult",
     "crypto_asset_rwa",
+    "ClimateExposure",
+    "ClimateExposureResult",
+    "ClimateScenarioResult",
+    "project_climate_ecl",
+    "scenario_carbon_price",
 ]

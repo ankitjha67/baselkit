@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.0] - 2026-06-29
+
+### Added — Climate scenario analysis (EBA/GL/2025/02)
+
+New `climate/scenario_analysis.py` orchestrates the existing NGFS,
+transition-risk and physical-risk building blocks into a portfolio-level
+projection of climate-adjusted ECL.
+
+- `project_climate_ecl(exposures, scenario, horizon_year)` — for each
+  exposure computes a stressed PD (baseline PD × transition carbon-cost
+  multiplier × physical-hazard multiplier) and stressed LGD (baseline LGD
+  + physical collateral haircut), then aggregates the baseline-vs-stressed
+  ECL uplift with a transition/physical decomposition. Returns
+  `ClimateScenarioResult` with per-exposure detail.
+- `scenario_carbon_price(scenario, horizon_year)` — horizon carbon price,
+  linearly interpolated between the NGFS 2030 and 2050 anchors.
+- `ClimateExposure` input dataclass with validation.
+
 ## [0.16.1] - 2026-06-29
 
 ### Tests — 100% line coverage restored
