@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.0] - 2026-06-29
+
+### Added — Full SA-CCR engine (CRE52)
+
+Replaces the thin ``alpha * (RC + PFE)`` leverage-ratio wrapper with a
+complete trade-level SA-CCR EAD engine in ``ccr/sa_ccr.py``:
+
+- ``sa_ccr_ead(trades, net_mtm, collateral, ...)`` computes
+  ``EAD = alpha * (RC + multiplier * AddOn)`` from first principles.
+- Adjusted notionals with the supervisory duration (CRE52.34); supervisory
+  deltas for linear trades, options (Black-Scholes with supervisory vol)
+  and CDO tranches (CRE52.34-52.40); maturity factors for unmargined and
+  margined sets (CRE52.48/52.50).
+- Asset-class add-ons with the correct hedging-set aggregation: interest-
+  rate per-currency maturity buckets (CRE52.52), FX currency pairs, and the
+  single-factor systematic/idiosyncratic structure for credit, equity and
+  commodity (CRE52.55-52.70).
+- ``pfe_multiplier`` (CRE52.23) and unmargined/margined ``replacement_cost``
+  (CRE52.10/52.18). Validated against a hand-computed single-swap example.
+
+### Fixed — SEC-IRBA / SEC-SA supervisory formula (CRE44)
+
+The securitisation SSFA was previously simplified and produced incorrect
+risk weights. Now corrected and validated against the BCBS d374 worked
+examples (Tranche A 30-100% -> 28.78 %; Tranche B 5-30% -> 1056.94 %):
+
+- SEC-IRBA supervisory parameter ``p`` now uses the full CRE44.13
+  five-coefficient table ``p = max(0.3, A + B/N + C*KIRB + D*LGD + E*MT)``,
+  keyed on exposure type (retail/wholesale), seniority and granularity
+  (N >= 25), replacing the previous fixed-``p``-with-ad-hoc-adjustment.
+- ``KSSFA`` corrected to the CRE44.14 form with KIRB-adjusted bounds
+  ``u = D - KIRB``, ``l = max(A - KIRB, 0)``.
+- Risk-weight assembly corrected to the CRE44.15 three-region form
+  (1250 % below KA, ``12.5 * KSSFA`` above, exposure-weighted when the
+  tranche straddles KA), removing an erroneous tranche-thickness division.
+- SEC-SA now applies the CRE42.2 delinquency adjustment
+  ``KA = (1 - W) * KSA + W * 0.5`` via a ``delinquency_ratio`` argument.
+- ``SecuritisationPool`` gains an ``is_retail`` flag.
+
 ## [0.14.0] - 2026-06-29
 
 ### Added — ESG risk management per EBA/GL/2025/01

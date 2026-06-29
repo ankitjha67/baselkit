@@ -22,7 +22,7 @@ Production-grade open-source credit risk analytics library.
 - **Model Validation** -- Discrimination (AUROC, Gini, KS, IV), calibration (binomial, Hosmer-Lemeshow, traffic-light), stability (PSI, CSI, migration)
 - **Portfolio Risk** -- Vasicek ASRF, Gaussian copula Monte Carlo, parametric VaR, economic capital, and stress testing (including reverse stress)
 - **Concentration Risk** -- Single-name, sector-level, and granularity adjustment analytics
-- **Counterparty Credit Risk** -- EPE/EEPE/PFE exposure profiles from simulated paths, netting-set aggregation, IMM EAD (alpha=1.4), and wrong-way risk (general alpha adjustment + specific WWR flagging) per CRE52/53
+- **Counterparty Credit Risk** -- Full SA-CCR EAD engine (CRE52): trade-level adjusted notionals with supervisory duration, supervisory deltas (incl. Black-Scholes option and CDO-tranche deltas), maturity factors, asset-class add-ons with the correct hedging-set aggregation (IR maturity buckets, FX pairs, single-factor systematic credit/equity/commodity), the PFE multiplier, and unmargined/margined replacement cost. Plus EPE/EEPE/PFE exposure profiles from simulated paths, netting-set aggregation, IMM EAD (alpha=1.4), and wrong-way risk (general alpha adjustment + specific WWR flagging) per CRE52/53
 - **Risk-Based Pricing & Capital Allocation** -- RAROC, Economic Value Added (EVA), break-even spread, all-in risk-based loan rate, and portfolio capital allocation (marginal, Euler/VaR, Expected-Shortfall contributions per Tasche 2008)
 - **Capital Adequacy** -- Capital buffers (CConB, CCyB, G-SIB/D-SIB), leverage ratio (CRE80), and MDA framework
 - **CVA Risk** -- BA-CVA (CVA25) and SA-CVA delta risk charge (CVA26) with supervisory parameters
@@ -369,7 +369,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,531 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,564 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 
