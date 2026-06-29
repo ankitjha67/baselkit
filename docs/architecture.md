@@ -77,7 +77,8 @@ creditriskengine/
 │   ├── transition_risk.py # Transition PD multipliers, CBAM
 │   ├── financed_emissions.py # PCAF financed emissions
 │   ├── green_asset_ratio.py  # EU GAR / BTAR
-│   └── crypto.py          # BCBS SCO60 crypto-asset capital
+│   ├── crypto.py          # BCBS SCO60 crypto-asset capital
+│   └── scenario_analysis.py  # EBA/GL/2025/02 portfolio climate ECL projection
 │
 ├── esg/                # ESG ratings & risk management
 │   ├── ratings.py         # Vendor-agnostic ESG rating -> PD overlay
