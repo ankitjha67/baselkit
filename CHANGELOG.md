@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.16.0] - 2026-06-29
+
+### Changed — Replace remaining simplified calculations with full implementations
+
+A sweep to remove the last simplified/heuristic calculations in favour of
+the full regulatory or theoretical formulas.
+
+- **`rwa/frtb_ima.py` — full Default Risk Charge (MAR22)**: the previous
+  single-bucket DRC is replaced by ``default_risk_charge`` implementing the
+  complete MAR22.18-22.33 methodology — obligor-level JTD netting, the
+  MAR22.24 default risk-weight table, the book-wide hedge-benefit ratio
+  (WtS), and per-bucket aggregation with no cross-bucket diversification.
+  Adds ``DRCPosition`` and ``drc_default_risk_weight``;
+  ``default_risk_charge_ima`` now delegates to the full engine.
+- **`rwa/securitisation.py` — full SEC-ERBA (CRE43)**: the simplified
+  ``RW * (1 + 0.4*(MT-1))`` maturity factor is replaced by the CRE43
+  Table 2 two-column (1-year / 5-year) risk weights with proper linear
+  maturity interpolation (CRE43.5), the non-senior tranche-thickness
+  adjustment ``RW * (1 - min(D-A, 0.5))`` (CRE43.6), and the 15 % floor.
+- **`models/concentration/concentration.py` — rigorous granularity
+  adjustment**: replaces the ad-hoc ``0.5 * HHI * (1-rho)`` heuristic with
+  the Martin-Wilde (2002) / Gordy (2003) second-order granularity
+  adjustment for the single-factor Vasicek ASRF model, evaluated at the
+  99.9 % quantile.
+
 ## [0.15.0] - 2026-06-29
 
 ### Added — Full SA-CCR engine (CRE52)

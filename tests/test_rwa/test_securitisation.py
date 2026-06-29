@@ -241,16 +241,44 @@ class TestSecERBAEdgeCases:
         with pytest.raises(ValueError, match="no external rating"):
             sec_erba_risk_weight(tranche)
 
-    def test_thin_tranche_uses_thin_table(self) -> None:
-        """Line 451: non-senior thin tranche (thickness < 0.03)."""
+    def test_thin_non_senior_floored_at_15pct(self) -> None:
+        """Thin non-senior CQS1 @ 1y: table 15%, thickness adj, floored 15%."""
         tranche = SecuritisationTranche(
             tranche_id="T_thin", attachment_point=0.05, detachment_point=0.07,
             notional=20_000, external_rating=1, is_senior=False,
             maturity_years=1.0,
         )
         rw = sec_erba_risk_weight(tranche)
-        # Thin table CQS 1 = 0.25
-        assert rw == pytest.approx(0.25)
+        # RW_1y = 15%; thickness adj 15%*(1-0.02)=14.7% -> floored to 15%.
+        assert rw == pytest.approx(0.15)
+
+    def test_maturity_interpolation_senior(self) -> None:
+        """Senior CQS6 @ MT=3y: interpolate 50% (1y) and 65% (5y) -> 57.5%."""
+        tranche = SecuritisationTranche(
+            tranche_id="T_mat", attachment_point=0.20, detachment_point=1.00,
+            notional=800_000, external_rating=6, is_senior=True,
+            maturity_years=3.0,
+        )
+        rw = sec_erba_risk_weight(tranche)
+        # 0.50 + (0.65-0.50)*(3-1)/4 = 0.50 + 0.075 = 0.575
+        assert rw == pytest.approx(0.575)
+
+    def test_non_senior_thickness_reduction(self) -> None:
+        """Thick non-senior reduces toward 50% off the thin table value."""
+        thin = SecuritisationTranche(
+            tranche_id="thin", attachment_point=0.20, detachment_point=0.22,
+            notional=20_000, external_rating=10, is_senior=False,
+            maturity_years=1.0,
+        )
+        thick = SecuritisationTranche(
+            tranche_id="thick", attachment_point=0.20, detachment_point=0.80,
+            notional=600_000, external_rating=10, is_senior=False,
+            maturity_years=1.0,
+        )
+        # CQS10 non-senior 1y = 330%. Thin (T=0.02): 330%*0.98=323.4%.
+        # Thick (T=0.60->cap 0.5): 330%*0.5=165%.
+        assert sec_erba_risk_weight(thin) == pytest.approx(3.234, abs=1e-3)
+        assert sec_erba_risk_weight(thick) == pytest.approx(1.65, abs=1e-3)
 
     def test_unknown_cqs_returns_1250(self) -> None:
         """Lines 457-463: CQS not in table returns RW_CAP."""
