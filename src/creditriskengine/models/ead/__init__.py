@@ -5,9 +5,11 @@ structure generation.
 """
 
 from creditriskengine.models.ead.ead_model import (
+    amortising_balance_schedule,
     apply_ccf_floor,
     calculate_ead,
     ead_term_structure,
+    ead_term_structure_from_schedule,
     estimate_ccf,
     get_airb_ccf_floor,
     get_sa_ccf,
@@ -22,4 +24,6 @@ __all__ = [
     "get_airb_ccf_floor",
     "apply_ccf_floor",
     "ead_term_structure",
+    "amortising_balance_schedule",
+    "ead_term_structure_from_schedule",
 ]

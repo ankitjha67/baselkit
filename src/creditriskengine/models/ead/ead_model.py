@@ -241,6 +241,147 @@ def ead_term_structure(
     return eads
 
 
+# ── Contractual amortisation schedules (term loans) ───────────────
+
+
+def amortising_balance_schedule(
+    principal: float,
+    annual_rate: float,
+    n_periods: int,
+    periods_per_year: int = 1,
+    balloon_fraction: float = 0.0,
+) -> np.ndarray:
+    """Outstanding-balance path for an equal-instalment (annuity) loan.
+
+    Models a fully- or partially-amortising term loan where each period
+    pays a constant instalment covering interest plus principal. The
+    returned array is the balance *outstanding at the end of* each
+    period t = 1..n_periods (i.e., the exposure that would be at risk
+    in the marginal-PD bucket for that period).
+
+    The constant instalment solves::
+
+        A = P * (i / (1 - (1 + i)^-n))            (i > 0)
+        A = P / n                                  (i = 0)
+
+    where ``i`` is the per-period rate. A ``balloon_fraction`` keeps a
+    fixed share of principal outstanding until maturity (bullet/balloon
+    structures), with the annuity amortising only the remainder.
+
+    Args:
+        principal: Current outstanding principal (drawn balance).
+        annual_rate: Contractual nominal annual interest rate.
+        n_periods: Number of remaining repayment periods.
+        periods_per_year: Payment frequency (1=annual, 4=quarterly,
+            12=monthly).
+        balloon_fraction: Fraction of principal repaid only at maturity
+            (0.0 = fully amortising, 1.0 = pure bullet). Must be in
+            ``[0, 1]``.
+
+    Returns:
+        Array of end-of-period outstanding balances (length n_periods),
+        non-increasing and floored at 0. The final element is the
+        balloon balance (0 for a fully-amortising loan).
+
+    Raises:
+        ValueError: If inputs are out of range.
+
+    Reference:
+        Standard annuity amortisation; supports IFRS 9.B5.5.28-29 EAD
+        term structure for non-revolving exposures.
+    """
+    if principal < 0:
+        raise ValueError("principal must be non-negative")
+    if n_periods < 1:
+        raise ValueError("n_periods must be >= 1")
+    if periods_per_year < 1:
+        raise ValueError("periods_per_year must be >= 1")
+    if not 0.0 <= balloon_fraction <= 1.0:
+        raise ValueError("balloon_fraction must be in [0, 1]")
+
+    if principal == 0:
+        return np.zeros(n_periods, dtype=np.float64)
+
+    balloon = principal * balloon_fraction
+    amortising_principal = principal - balloon
+    i = annual_rate / periods_per_year
+
+    balances = np.empty(n_periods, dtype=np.float64)
+
+    if amortising_principal == 0:
+        # Pure bullet: balance held until maturity, repaid at the end.
+        balances[:] = principal
+        balances[-1] = 0.0
+        return balances
+
+    # Constant instalment on the amortising portion (interest accrues on
+    # the full outstanding balance including the balloon).
+    if i > 0:
+        instalment = amortising_principal * (i / (1.0 - (1.0 + i) ** (-n_periods)))
+    else:
+        instalment = amortising_principal / n_periods
+
+    balance = principal
+    for t in range(n_periods):
+        interest = balance * i
+        principal_paid = instalment - interest
+        balance = max(balance - principal_paid, balloon)
+        balances[t] = balance
+
+    # Balloon repaid at maturity.
+    balances[-1] = 0.0
+    return balances
+
+
+def ead_term_structure_from_schedule(
+    principal: float,
+    annual_rate: float,
+    n_periods: int,
+    undrawn_commitment: float = 0.0,
+    ccf: float = 0.0,
+    periods_per_year: int = 1,
+    balloon_fraction: float = 0.0,
+) -> np.ndarray:
+    """EAD term structure derived from a contractual repayment schedule.
+
+    Combines the annuity/balloon principal path from
+    :func:`amortising_balance_schedule` with a (constant) CCF-weighted
+    undrawn commitment, producing a per-period EAD profile suitable for
+    direct use as the ``ead_curve`` argument to
+    :func:`creditriskengine.ecl.ifrs9.ecl_calc.calculate_ecl`.
+
+    Unlike :func:`ead_term_structure` (which applies a flat geometric
+    amortisation rate), this derives the exact contractual balance path
+    from the loan's rate, term and structure — so the answer to "does
+    EAD follow the amortisation profile?" is fully automated rather than
+    requiring a hand-supplied rate or curve.
+
+    Args:
+        principal: Current outstanding principal (drawn balance).
+        annual_rate: Contractual nominal annual rate.
+        n_periods: Number of remaining repayment periods.
+        undrawn_commitment: Undrawn committed amount (held constant).
+        ccf: Credit conversion factor applied to the undrawn portion.
+        periods_per_year: Payment frequency.
+        balloon_fraction: Fraction of principal repaid only at maturity.
+
+    Returns:
+        Array of per-period EAD values (length n_periods).
+
+    Reference:
+        IFRS 9.B5.5.28-29 (EAD term structure for amortising exposures).
+    """
+    drawn_path = amortising_balance_schedule(
+        principal=principal,
+        annual_rate=annual_rate,
+        n_periods=n_periods,
+        periods_per_year=periods_per_year,
+        balloon_fraction=balloon_fraction,
+    )
+    undrawn_ead = ccf * undrawn_commitment
+    return np.maximum(drawn_path + undrawn_ead, 0.0)
+
+
 # ── Sklearn-compatible Estimator ──────────────────────────────────
 
 
