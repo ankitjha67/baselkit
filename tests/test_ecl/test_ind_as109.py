@@ -158,6 +158,14 @@ class TestRBIMinimumProvision:
         prov = rbi_minimum_provision(100_000.0, IRACAssetClass.DOUBTFUL_1, is_secured=False)
         assert prov == pytest.approx(100_000.0)  # 100%
 
+    def test_doubtful_2_secured(self) -> None:
+        prov = rbi_minimum_provision(100_000.0, IRACAssetClass.DOUBTFUL_2, is_secured=True)
+        assert prov == pytest.approx(40_000.0)  # 40%
+
+    def test_doubtful_2_unsecured(self) -> None:
+        prov = rbi_minimum_provision(100_000.0, IRACAssetClass.DOUBTFUL_2, is_secured=False)
+        assert prov == pytest.approx(100_000.0)  # 100%
+
     def test_doubtful_3(self) -> None:
         prov = rbi_minimum_provision(100_000.0, IRACAssetClass.DOUBTFUL_3)
         assert prov == pytest.approx(100_000.0)  # 100%

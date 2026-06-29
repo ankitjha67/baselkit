@@ -12,6 +12,7 @@ from creditriskengine.models.ead.ead_model import (
     ead_term_structure,
     ead_term_structure_from_schedule,
     estimate_ccf,
+    get_sa_ccf,
     get_supervisory_ccf,
 )
 
@@ -139,6 +140,17 @@ class TestAmortisingBalanceSchedule:
             amortising_balance_schedule(100.0, 0.05, 0)
         with pytest.raises(ValueError, match="balloon_fraction"):
             amortising_balance_schedule(100.0, 0.05, 4, balloon_fraction=1.5)
+        with pytest.raises(ValueError, match="periods_per_year must be"):
+            amortising_balance_schedule(100.0, 0.05, 4, periods_per_year=0)
+
+
+class TestGetSACCF:
+    def test_baseline_lookup(self) -> None:
+        assert get_sa_ccf("unconditionally_cancellable") == pytest.approx(0.10)
+
+    def test_unknown_facility_raises(self) -> None:
+        with pytest.raises(KeyError, match="Unknown SA facility type"):
+            get_sa_ccf("not_a_real_facility")
 
 
 class TestEADTermStructureFromSchedule:

@@ -704,6 +704,36 @@ class TestValidation:
         assert len(r1.errors) == 1
         assert len(r1.warnings) == 1
 
+    def test_validation_result_merge_invalid_other(self) -> None:
+        # Merging an invalid result must propagate is_valid = False
+        r1 = FR2052aValidationResult()
+        r2 = FR2052aValidationResult()
+        r2.add_error("Error from other")
+        r1.merge(r2)
+        assert not r1.is_valid
+        assert len(r1.errors) == 1
+
+    def test_missing_required_counterparty(self) -> None:
+        # O.O.4 requires a counterparty; omitting it is an error.
+        kwargs = _base_kwargs(FR2052aTable.OUTFLOWS_OTHER, 4)
+        rec = OutflowOtherRecord(**kwargs)
+        result = validate_record(rec)
+        assert not result.is_valid
+        assert any("Counterparty is required" in e for e in result.errors)
+
+    def test_submission_propagates_record_errors_and_warnings(self) -> None:
+        # An invalid record inside a submission gets its errors and warnings
+        # re-prefixed with the record index.
+        bad = _make_inflow_asset(
+            maturity_bucket=None,
+            forward_start_bucket=MaturityBucket.DAY_5,
+            forward_start_amount=10.0,
+        )
+        result = validate_submission([bad])
+        assert not result.is_valid
+        assert any(e.startswith("Record 0:") for e in result.errors)
+        assert any(w.startswith("Record 0:") for w in result.warnings)
+
 
 # =====================================================================
 # 5. Report Generation Tests
@@ -808,6 +838,35 @@ class TestReportGeneration:
         sub = self._build_test_submission()
         assert sub.metadata["record_count"] == 4
         assert "I.A" in sub.metadata["tables_covered"]
+
+    def test_sum_table_amounts(self) -> None:
+        from creditriskengine.reporting.fr2052a.report import _sum_table_amounts
+
+        records = [
+            _make_inflow_asset(maturity_amount=500.0),
+            _make_inflow_asset(maturity_amount=200.0),
+            _make_outflow_deposit(maturity_amount=300.0),
+        ]
+        assert _sum_table_amounts(records, FR2052aTable.INFLOWS_ASSETS) == 700.0
+        assert (
+            _sum_table_amounts(records, FR2052aTable.OUTFLOWS_DEPOSITS) == 300.0
+        )
+
+    def test_summary_excludes_none_maturity_bucket(self) -> None:
+        # A record with no maturity bucket is excluded from the 30-day horizon
+        sub = build_submission(
+            reporting_entity="TestBank",
+            as_of_date="2024-03-31",
+            reporter_category=ReporterCategory.CATEGORY_I,
+            records=[
+                _make_inflow_asset(
+                    maturity_bucket=None, maturity_amount=500.0
+                ),
+            ],
+        )
+        summary = generate_summary(sub)
+        assert summary["total_inflows"] == 500.0
+        assert summary["within_30d_inflows"] == 0.0
 
 
 # =====================================================================

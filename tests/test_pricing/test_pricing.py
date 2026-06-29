@@ -142,3 +142,17 @@ class TestCapitalAllocation:
             marginal_contributions(self._scenarios(), 1.5)
         with pytest.raises(ValueError, match="confidence_level"):
             expected_shortfall_contributions(self._scenarios(), 0.0)
+
+    def test_euler_invalid_confidence_raises(self) -> None:
+        with pytest.raises(ValueError, match="confidence_level"):
+            euler_var_contributions(self._scenarios(), 1.5)
+
+    def test_euler_empty_band_falls_back_to_nearest(self) -> None:
+        # band=0 -> tolerance ~0, so no scenario lies within the band and
+        # the function falls back to the single nearest scenario.
+        scenarios = self._scenarios()
+        contribs = euler_var_contributions(scenarios, 0.99, band=0.0)
+        total = scenarios.sum(axis=1)
+        var = np.quantile(total, 0.99)
+        idx = np.argmin(np.abs(total - var))
+        assert contribs == pytest.approx(scenarios[idx])

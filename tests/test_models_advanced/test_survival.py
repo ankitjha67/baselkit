@@ -58,6 +58,13 @@ class TestNelsonAalen:
         times, cumhaz = nelson_aalen(durations, events)
         assert cumhaz[0] == pytest.approx(0.2)  # 1/5
 
+    def test_no_events_returns_zero(self) -> None:
+        durations = np.array([1.0, 2.0, 3.0])
+        events = np.array([0, 0, 0])
+        times, cumhaz = nelson_aalen(durations, events)
+        np.testing.assert_array_equal(times, np.array([0.0]))
+        np.testing.assert_array_equal(cumhaz, np.array([0.0]))
+
 
 class TestWeibullSurvival:
     def test_at_scale_is_exp_neg1(self) -> None:
@@ -140,3 +147,18 @@ class TestCoxPH:
         model = CoxPH()
         with pytest.raises(RuntimeError, match="must be fitted"):
             model.predict_survival(np.array([[1.0]]), t=1.0)
+
+    def test_fit_and_predict_with_1d_covariate(self) -> None:
+        # 1-D covariate arrays should be reshaped to (n, 1) internally.
+        rng = np.random.default_rng(11)
+        n = 100
+        x = rng.normal(0, 1, n)  # 1-D
+        durations = rng.exponential(1.0, n)
+        events = np.ones(n, dtype=int)
+        model = CoxPH().fit(x, durations, events)
+        assert model.coefficients is not None
+        assert len(model.coefficients) == 1
+        # Predict with a 1-D covariate vector as well.
+        surv = model.predict_survival(x[:5], t=1.0)
+        assert np.all(surv >= 0.0)
+        assert np.all(surv <= 1.0)

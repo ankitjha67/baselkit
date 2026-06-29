@@ -772,8 +772,48 @@ class TestClassifyRBIExposureCategory:
             == RBIExposureCategory.CORPORATE
         )
 
+    def test_state_govt_guaranteed(self) -> None:
+        assert (
+            classify_rbi_exposure_category(is_state_govt_guaranteed=True)
+            == RBIExposureCategory.STATE_GOVT_GUARANTEED
+        )
+
+    def test_cre_rh_adc(self) -> None:
+        assert (
+            classify_rbi_exposure_category(is_cre_rh_adc=True)
+            == RBIExposureCategory.CRE_RH_ADC
+        )
+
+    def test_cre_other_commercial(self) -> None:
+        assert (
+            classify_rbi_exposure_category(is_cre=True)
+            == RBIExposureCategory.OTHER_COMMERCIAL_RE
+        )
+
+    def test_other_residential_re_by_sector(self) -> None:
+        assert (
+            classify_rbi_exposure_category(sector="residential_re")
+            == RBIExposureCategory.OTHER_RESIDENTIAL_RE
+        )
+
+    def test_bank_nbfc_fi(self) -> None:
+        assert (
+            classify_rbi_exposure_category(is_bank_nbfc_fi=True)
+            == RBIExposureCategory.BANKS_NBFCS_REGULATED_FIS
+        )
+
     def test_other_fallback(self) -> None:
         assert classify_rbi_exposure_category() == RBIExposureCategory.OTHER
+
+
+class TestStage3FloorForDurationFallthrough:
+    def test_empty_schedule_returns_full_floor(self) -> None:
+        # Directly exercise the unreachable-in-practice fallthrough by
+        # passing an empty schedule (no bracket matches the duration).
+        from creditriskengine.ecl.ind_as109.provision_floors_2026 import (
+            _stage3_floor_for_duration,
+        )
+        assert _stage3_floor_for_duration((), 0.5, is_secured=True) == 1.00
 
 
 # ============================================================================
@@ -1148,6 +1188,14 @@ class TestIRACPStandardAsset:
         )
         assert prov == pytest.approx(12_500.0)  # 1.25%
 
+    def test_non_positive_outstanding(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import (
+            StandardAssetSector,
+            standard_asset_provision,
+        )
+        assert standard_asset_provision(0.0, StandardAssetSector.CRE) == 0.0
+        assert standard_asset_provision(-100.0, StandardAssetSector.CRE) == 0.0
+
 
 # ============================================================================
 # Resolution Framework add-ons
@@ -1164,6 +1212,11 @@ class TestResolutionFrameworkAddon:
         from creditriskengine.ecl.ind_as109.iracp import resolution_framework_addon
         addon = resolution_framework_addon(residual_debt=1_000_000, has_slipped=True)
         assert addon == pytest.approx(150_000.0)  # 10% + 5% = 15%
+
+    def test_non_positive_residual_debt(self) -> None:
+        from creditriskengine.ecl.ind_as109.iracp import resolution_framework_addon
+        assert resolution_framework_addon(residual_debt=0.0) == 0.0
+        assert resolution_framework_addon(residual_debt=-1_000.0, has_slipped=True) == 0.0
 
 
 # ============================================================================
@@ -1222,6 +1275,38 @@ class TestNBFCBackstop:
         assert r.total_floor == 10_000
         assert r.impairment_reserve_transfer == 2_000
         assert r.booked_to_pl == 8_000
+
+
+class TestNBFCULStandardAssetProvision:
+    def test_non_positive_outstanding(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import (
+            nbfc_ul_standard_asset_provision,
+        )
+        assert nbfc_ul_standard_asset_provision(0.0) == 0.0
+        assert nbfc_ul_standard_asset_provision(-500.0, sector="cre") == 0.0
+
+    def test_teaser_post_reset(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import (
+            nbfc_ul_standard_asset_provision,
+        )
+        prov = nbfc_ul_standard_asset_provision(
+            1_000_000, sector="housing_teaser", teaser_one_year_post_reset=True
+        )
+        assert prov == pytest.approx(4000.0)  # 0.40%
+
+    def test_known_sector(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import (
+            nbfc_ul_standard_asset_provision,
+        )
+        prov = nbfc_ul_standard_asset_provision(1_000_000, sector="cre")
+        assert prov == pytest.approx(10_000.0)  # 1.00%
+
+    def test_unknown_sector_falls_back_to_other(self) -> None:
+        from creditriskengine.ecl.ind_as109.nbfc_backstop import (
+            nbfc_ul_standard_asset_provision,
+        )
+        prov = nbfc_ul_standard_asset_provision(1_000_000, sector="nonexistent")
+        assert prov == pytest.approx(4000.0)  # 0.40% (other)
 
 
 # ============================================================================

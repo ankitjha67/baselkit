@@ -176,6 +176,109 @@ class TestNettingAndOffsetting:
         assert combined > aggregate_addon([a])
 
 
+class TestAssetClassesAndBranches:
+    def test_fx_adjusted_notional_is_notional(self) -> None:
+        t = SACCRTrade(AssetClass.FX, 100.0, 0.0, 1.0, 1, "EURUSD")
+        assert adjusted_notional(t) == pytest.approx(100.0)
+
+    def test_sold_call_and_bought_put_deltas(self) -> None:
+        sc = SACCRTrade(
+            AssetClass.EQUITY, 100.0, 0.0, 1.0,
+            option_type=OptionType.SOLD_CALL, strike=100.0,
+            underlying_price=100.0, option_expiry=1.0,
+        )
+        bp = SACCRTrade(
+            AssetClass.EQUITY, 100.0, 0.0, 1.0,
+            option_type=OptionType.BOUGHT_PUT, strike=100.0,
+            underlying_price=100.0, option_expiry=1.0,
+        )
+        assert supervisory_delta(sc) < 0.0
+        assert supervisory_delta(bp) < 0.0
+
+    def test_option_requires_positive_price(self) -> None:
+        t = SACCRTrade(
+            AssetClass.EQUITY, 100.0, 0.0, 1.0,
+            option_type=OptionType.BOUGHT_CALL, strike=100.0,
+            underlying_price=0.0, option_expiry=1.0,
+        )
+        with pytest.raises(ValueError, match="underlying_price and strike"):
+            supervisory_delta(t)
+
+    def test_credit_index_supervisory_factor(self) -> None:
+        # IG credit index SF = 0.38%.
+        t = SACCRTrade(
+            AssetClass.CREDIT, 100.0, 0.0, 5.0, 1,
+            reference="IDX", credit_rating="IG", is_index=True,
+        )
+        addon = aggregate_addon([t])
+        sd = adjusted_notional(t)
+        assert addon == pytest.approx(0.0038 * sd, rel=1e-6)
+
+    def test_equity_addon(self) -> None:
+        # Equity single name SF = 32%.
+        t = SACCRTrade(AssetClass.EQUITY, 100.0, 0.0, 1.0, 1, reference="ACME")
+        addon = aggregate_addon([t])
+        assert addon > 0.0
+
+    def test_commodity_addon_multiple_types(self) -> None:
+        oil = SACCRTrade(AssetClass.COMMODITY, 100.0, 0.0, 1.0, 1, "oil_gas")
+        power = SACCRTrade(AssetClass.COMMODITY, 100.0, 0.0, 1.0, 1, "electricity")
+        addon = aggregate_addon([oil, power])
+        # Electricity SF (40%) > oil/gas SF (18%): combined add-on positive.
+        assert addon > aggregate_addon([oil])
+
+    def test_ir_maturity_buckets(self) -> None:
+        short = SACCRTrade(AssetClass.INTEREST_RATE, 100.0, 0.0, 0.5, 1, "USD")
+        mid = SACCRTrade(AssetClass.INTEREST_RATE, 100.0, 0.0, 3.0, 1, "USD")
+        long = SACCRTrade(AssetClass.INTEREST_RATE, 100.0, 0.0, 10.0, 1, "USD")
+        # Different buckets within a currency aggregate with correlation;
+        # the combined add-on is positive and below the naive sum.
+        combined = aggregate_addon([short, mid, long])
+        assert combined > 0.0
+        assert combined < (
+            aggregate_addon([short]) + aggregate_addon([mid]) + aggregate_addon([long])
+        )
+
+    def test_margined_ead(self) -> None:
+        t = SACCRTrade(
+            AssetClass.INTEREST_RATE, 100.0, 0.0, 10.0, 1, "USD",
+            margined_mpor=10.0 / 250.0,
+        )
+        res = sa_ccr_ead(
+            [t], net_mtm=5.0, collateral=0.0,
+            margined=True, threshold=10.0, mta=1.0,
+        )
+        # RC = max(5-0, 10+1-0, 0) = 11.
+        assert res.replacement_cost == pytest.approx(11.0)
+        assert res.ead > 0.0
+
+
+class TestTradeValidation:
+    def test_end_before_start(self) -> None:
+        with pytest.raises(ValueError, match="end must be >= start"):
+            SACCRTrade(AssetClass.FX, 100.0, 5.0, 1.0, 1, "EURUSD")
+
+    def test_invalid_direction(self) -> None:
+        with pytest.raises(ValueError, match="direction must be"):
+            SACCRTrade(AssetClass.FX, 100.0, 0.0, 1.0, direction=0, hedging_set="EURUSD")
+
+    def test_option_requires_positive_expiry(self) -> None:
+        with pytest.raises(ValueError, match="positive option_expiry"):
+            SACCRTrade(
+                AssetClass.EQUITY, 100.0, 0.0, 1.0,
+                option_type=OptionType.BOUGHT_CALL, strike=100.0,
+                underlying_price=100.0, option_expiry=0.0,
+            )
+
+    def test_supervisory_factor_ir_and_fx(self) -> None:
+        from creditriskengine.ccr.sa_ccr import _SF_FX, _SF_IR, _supervisory_factor
+
+        ir = SACCRTrade(AssetClass.INTEREST_RATE, 100.0, 0.0, 5.0, 1, "USD")
+        fx = SACCRTrade(AssetClass.FX, 100.0, 0.0, 1.0, 1, "EURUSD")
+        assert _supervisory_factor(ir) == pytest.approx(_SF_IR)
+        assert _supervisory_factor(fx) == pytest.approx(_SF_FX)
+
+
 class TestValidation:
     def test_empty_trades_raises(self) -> None:
         with pytest.raises(ValueError, match="at least one trade"):

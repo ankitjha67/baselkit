@@ -13,6 +13,8 @@ Covers:
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -131,6 +133,41 @@ class TestProductConfig:
         with pytest.raises(AttributeError):
             cfg.default_behavioral_life_months = 99  # type: ignore[misc]
 
+    def test_missing_yaml_returns_empty(self, tmp_path: Path) -> None:
+        from creditriskengine.ecl.ifrs9.revolving.product_config import (
+            load_revolving_product_configs,
+        )
+
+        missing = tmp_path / "does_not_exist.yml"
+        configs = load_revolving_product_configs(missing)
+        assert configs == {}
+
+    def test_unknown_product_type_skipped(self, tmp_path: Path) -> None:
+        from creditriskengine.ecl.ifrs9.revolving.product_config import (
+            load_revolving_product_configs,
+        )
+
+        yaml_path = tmp_path / "products.yml"
+        yaml_path.write_text(
+            "products:\n"
+            "  not_a_real_product:\n"
+            "    default_behavioral_life_months: 24\n"
+            "  credit_card:\n"
+            "    default_behavioral_life_months: 36\n"
+        )
+        configs = load_revolving_product_configs(yaml_path)
+        assert RevolvingProductType.CREDIT_CARD in configs
+        assert len(configs) == 1
+
+    def test_get_product_config_unknown_raises(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from creditriskengine.ecl.ifrs9.revolving import product_config
+
+        monkeypatch.setattr(product_config, "PRODUCT_CONFIGS", {})
+        with pytest.raises(KeyError, match="No configuration for product type"):
+            product_config.get_product_config(RevolvingProductType.CREDIT_CARD)
+
 
 # =====================================================================
 # 3. Behavioral Life Tests
@@ -199,6 +236,15 @@ class TestBehavioralLife:
     def test_effective_life_non_draw_product(self) -> None:
         life = effective_life_months(RevolvingProductType.CREDIT_CARD)
         assert life == 36
+
+    def test_effective_life_missing_config_raises(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from creditriskengine.ecl.ifrs9.revolving import behavioral_life
+
+        monkeypatch.setattr(behavioral_life, "PRODUCT_CONFIGS", {})
+        with pytest.raises(KeyError, match="No config for product type"):
+            effective_life_months(RevolvingProductType.CREDIT_CARD)
 
 
 # =====================================================================
@@ -301,6 +347,14 @@ class TestCCF:
         with pytest.raises(ValueError):
             behavioral_ccf(np.array([]), np.array([]), np.array([]))
 
+    def test_behavioral_ccf_shape_mismatch_raises(self) -> None:
+        with pytest.raises(ValueError, match="same length"):
+            behavioral_ccf(
+                np.array([9000.0, 8000.0]),
+                np.array([6000.0]),
+                np.array([4000.0]),
+            )
+
     # --- EADF ---
     def test_eadf_basic(self) -> None:
         ead = np.array([8000.0, 9000.0])
@@ -311,6 +365,18 @@ class TestCCF:
     def test_eadf_clipped(self) -> None:
         ccf = eadf_ccf(np.array([12000.0]), np.array([10000.0]))
         assert ccf == 1.0
+
+    def test_eadf_shape_mismatch_raises(self) -> None:
+        with pytest.raises(ValueError, match="same length"):
+            eadf_ccf(np.array([8000.0, 9000.0]), np.array([10000.0]))
+
+    def test_eadf_empty_raises(self) -> None:
+        with pytest.raises(ValueError, match="not be empty"):
+            eadf_ccf(np.array([]), np.array([]))
+
+    def test_eadf_all_zero_limit(self) -> None:
+        ccf = eadf_ccf(np.array([5000.0]), np.array([0.0]))
+        assert ccf == 0.0
 
     # --- PIT adjustment ---
     def test_pit_adjustment_neutral(self) -> None:
@@ -379,6 +445,10 @@ class TestEADProfile:
     def test_negative_inputs_raise(self) -> None:
         with pytest.raises(ValueError):
             revolving_ead_term_structure(-1, 4000, 0.80, 12)
+
+    def test_zero_periods_raise(self) -> None:
+        with pytest.raises(ValueError, match="n_periods must be at least 1"):
+            revolving_ead_term_structure(6000, 4000, 0.80, 0)
 
     def test_split_flat(self) -> None:
         drawn_arr, undrawn_arr = ead_drawn_undrawn_split(
@@ -500,6 +570,26 @@ class TestRevolvingECL:
             behavioral_life_months=3,
             lgd_curve=lgd_curve,
         )
+        assert result.total_ecl > 0
+
+    def test_short_curves_are_padded(self) -> None:
+        """Curves shorter than the horizon are padded to n_periods."""
+        result = calculate_revolving_ecl(
+            stage=IFRS9Stage.STAGE_2,
+            drawn=6000.0,
+            undrawn=4000.0,
+            ccf=0.80,
+            pd_12m=0.03,
+            lgd=0.85,
+            eir=0.18,
+            behavioral_life_months=5,
+            marginal_pds=np.array([0.03, 0.025, 0.02]),
+            lgd_curve=np.array([0.85, 0.80, 0.75]),
+            ead_drawn_curve=np.array([6000.0, 5500.0, 5000.0]),
+            ead_undrawn_curve=np.array([4000.0, 3500.0, 3000.0]),
+        )
+        # Horizon is 5 but every curve has length 3 → padded to 5.
+        assert len(result.ecl_by_period) == 5
         assert result.total_ecl > 0
 
     def test_ccf_sensitivity(self) -> None:
@@ -641,6 +731,34 @@ class TestProvisionFloors:
     def test_no_floor_for_bcbs(self) -> None:
         floors = get_provision_floors(Jurisdiction.BCBS)
         assert len(floors) == 0
+
+    def test_missing_yaml_returns_empty(self, tmp_path: Path) -> None:
+        from creditriskengine.ecl.ifrs9.revolving.provision_floors import (
+            load_provision_floors,
+        )
+
+        missing = tmp_path / "no_floors.yml"
+        assert load_provision_floors(missing) == []
+
+    def test_unknown_jurisdiction_skipped(self, tmp_path: Path) -> None:
+        from creditriskengine.ecl.ifrs9.revolving.provision_floors import (
+            load_provision_floors,
+        )
+
+        yaml_path = tmp_path / "floors.yml"
+        yaml_path.write_text(
+            "floors:\n"
+            "  - jurisdiction: not_a_real_jurisdiction\n"
+            "    floor_rate: 0.01\n"
+            "    floor_basis: ead\n"
+            "  - jurisdiction: india\n"
+            "    floor_rate: 0.01\n"
+            "    floor_basis: ead\n"
+        )
+        floors = load_provision_floors(yaml_path)
+        # Unknown jurisdiction entry is skipped; only India remains.
+        assert len(floors) == 1
+        assert floors[0].jurisdiction == Jurisdiction.INDIA
 
 
 # =====================================================================
@@ -822,6 +940,78 @@ class TestIntegration:
             is_revolving=True,
         )
         with pytest.raises(ValueError, match="ccf"):
+            revolving_ecl_from_exposure(exposure)
+
+    def test_exposure_missing_stage_raises(self) -> None:
+        """Exposure without an IFRS 9 stage raises ValueError."""
+        from creditriskengine.core.exposure import Exposure
+        from creditriskengine.core.types import CreditRiskApproach
+        from creditriskengine.ecl.ifrs9.revolving.ecl_revolving import (
+            revolving_ecl_from_exposure,
+        )
+
+        exposure = Exposure(
+            exposure_id="CC-003",
+            counterparty_id="CUST-003",
+            ead=9200.0,
+            drawn_amount=6000.0,
+            undrawn_commitment=4000.0,
+            jurisdiction=Jurisdiction.BCBS,
+            approach=CreditRiskApproach.SA,
+            current_pd=0.03,
+            lgd=0.85,
+            ccf=0.80,
+            is_revolving=True,
+        )
+        with pytest.raises(ValueError, match="ifrs9_stage"):
+            revolving_ecl_from_exposure(exposure)
+
+    def test_exposure_missing_pd_raises(self) -> None:
+        """Exposure without pd or current_pd raises ValueError."""
+        from creditriskengine.core.exposure import Exposure
+        from creditriskengine.core.types import CreditRiskApproach
+        from creditriskengine.ecl.ifrs9.revolving.ecl_revolving import (
+            revolving_ecl_from_exposure,
+        )
+
+        exposure = Exposure(
+            exposure_id="CC-004",
+            counterparty_id="CUST-004",
+            ead=9200.0,
+            drawn_amount=6000.0,
+            undrawn_commitment=4000.0,
+            jurisdiction=Jurisdiction.BCBS,
+            approach=CreditRiskApproach.SA,
+            ifrs9_stage=IFRS9Stage.STAGE_1,
+            lgd=0.85,
+            ccf=0.80,
+            is_revolving=True,
+        )
+        with pytest.raises(ValueError, match="pd or current_pd"):
+            revolving_ecl_from_exposure(exposure)
+
+    def test_exposure_missing_lgd_raises(self) -> None:
+        """Exposure without lgd raises ValueError."""
+        from creditriskengine.core.exposure import Exposure
+        from creditriskengine.core.types import CreditRiskApproach
+        from creditriskengine.ecl.ifrs9.revolving.ecl_revolving import (
+            revolving_ecl_from_exposure,
+        )
+
+        exposure = Exposure(
+            exposure_id="CC-005",
+            counterparty_id="CUST-005",
+            ead=9200.0,
+            drawn_amount=6000.0,
+            undrawn_commitment=4000.0,
+            jurisdiction=Jurisdiction.BCBS,
+            approach=CreditRiskApproach.SA,
+            ifrs9_stage=IFRS9Stage.STAGE_1,
+            current_pd=0.03,
+            ccf=0.80,
+            is_revolving=True,
+        )
+        with pytest.raises(ValueError, match="lgd"):
             revolving_ecl_from_exposure(exposure)
 
     def test_parent_package_exports(self) -> None:

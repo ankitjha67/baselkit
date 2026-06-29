@@ -147,6 +147,27 @@ class TestSecSA:
         assert rw <= 12.50
 
 
+class TestSSFAEdgeCases:
+    def test_zero_ka_returns_floor(self) -> None:
+        # SEC-SA with KSA = 0 (and no delinquency): SSFA collapses, the
+        # senior tranche takes the 15% floor.
+        pool = SecuritisationPool(kirb=0.0, ksa=0.0, pool_ead=1_000_000, n_effective=50)
+        tranche = SecuritisationTranche(
+            tranche_id="T", attachment_point=0.10, detachment_point=1.00,
+            notional=900_000, is_senior=True,
+        )
+        assert sec_sa_risk_weight(tranche, pool) == pytest.approx(0.15)
+
+    def test_invalid_delinquency_ratio(self) -> None:
+        pool = SecuritisationPool(kirb=0.05, ksa=0.08, pool_ead=1_000_000, n_effective=50)
+        tranche = SecuritisationTranche(
+            tranche_id="T", attachment_point=0.10, detachment_point=1.00,
+            notional=900_000, is_senior=True,
+        )
+        with pytest.raises(ValueError, match="delinquency_ratio"):
+            sec_sa_risk_weight(tranche, pool, delinquency_ratio=1.5)
+
+
 class TestApproachAssignment:
     """Test approach hierarchy per CRE40.4."""
 

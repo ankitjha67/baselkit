@@ -89,3 +89,24 @@ class TestGranularityAdjustment:
         lgds = np.array([0.45, 0.45, 0.45])
         ga = granularity_adjustment(eads, pds, lgds, rho=0.15)
         assert ga == 0.0
+
+    def test_invalid_rho(self) -> None:
+        eads = np.full(10, 1.0)
+        pds = np.full(10, 0.02)
+        lgds = np.full(10, 0.45)
+        with pytest.raises(ValueError, match="rho must be in"):
+            granularity_adjustment(eads, pds, lgds, rho=1.0)
+
+    def test_zero_correlation_gives_zero_ga(self) -> None:
+        # rho = 0 -> no systematic factor -> mu'(x) = 0 -> GA = 0.
+        eads = np.full(10, 1.0)
+        pds = np.full(10, 0.02)
+        lgds = np.full(10, 0.45)
+        assert granularity_adjustment(eads, pds, lgds, rho=0.0) == pytest.approx(0.0)
+
+    def test_confidence_one_returns_zero(self) -> None:
+        # confidence -> 1 pushes the stress state to -inf, h(x_q) -> 0.
+        eads = np.full(10, 1.0)
+        pds = np.full(10, 0.02)
+        lgds = np.full(10, 0.45)
+        assert granularity_adjustment(eads, pds, lgds, rho=0.15, confidence=1.0) == 0.0

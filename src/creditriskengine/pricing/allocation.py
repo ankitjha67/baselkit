@@ -125,6 +125,6 @@ def expected_shortfall_contributions(
     var = np.quantile(total_loss, confidence_level)
 
     tail_mask = total_loss >= var
-    if not np.any(tail_mask):
+    if not np.any(tail_mask):  # pragma: no cover - quantile always has >=1 value at/above it
         return np.zeros(loss_scenarios.shape[1])
     return loss_scenarios[tail_mask].mean(axis=0)

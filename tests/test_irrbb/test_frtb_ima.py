@@ -107,6 +107,18 @@ class TestPLAT:
         assert -1.0 <= spearman <= 1.0
         assert 0.0 <= ks <= 1.0
 
+    def test_amber_zone(self) -> None:
+        rng = np.random.default_rng(2)
+        hypo = rng.normal(0, 1, 250)
+        rt = hypo + rng.normal(0, 0.7, 250)
+        zone, spearman, ks = plat_test(hypo, rt)
+        assert zone == PLATZone.AMBER
+
+    def test_constant_input_spearman_zero(self) -> None:
+        # Constant array -> Spearman is undefined (NaN) -> coerced to 0.0.
+        zone, spearman, ks = plat_test(np.ones(50), np.arange(50.0))
+        assert spearman == 0.0
+
 
 class TestDRC:
     def test_long_only(self) -> None:

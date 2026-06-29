@@ -68,6 +68,38 @@ class TestApplyOverlays:
         result = apply_overlays(100.0, overlays, floor=0.0)
         assert result.overlay_ecl == pytest.approx(0.0)
 
+    def test_absolute_overlay_skipped_only_in_pass_two(self) -> None:
+        """An absolute overlay effective in pass 1 but not pass 2 is skipped.
+
+        Pass 1 defers absolute overlays (``continue`` before skip-tracking),
+        so an overlay that becomes ineffective by pass 2 is recorded as
+        skipped there rather than double-counted.
+        """
+
+        class _TogglingOverlay:
+            """Effective on first effectiveness check, inactive thereafter."""
+
+            name = "Toggling absolute overlay"
+            adjustment_amount = 50.0
+            adjustment_rate = 0.0
+            effective_date = None
+            expiry_date = None
+
+            def __init__(self) -> None:
+                self._checks = 0
+
+            @property
+            def is_active(self) -> bool:
+                self._checks += 1
+                return self._checks == 1
+
+        overlay = _TogglingOverlay()
+        result = apply_overlays(100.0, [overlay])  # type: ignore[list-item]
+        # Effective in pass 1 (absolute → deferred), ineffective in pass 2.
+        assert result.overlay_ecl == pytest.approx(100.0)
+        assert overlay in result.skipped_overlays
+        assert len(result.applied_overlays) == 0
+
     def test_inactive_overlay_skipped(self) -> None:
         overlays = [
             ManagementOverlay(

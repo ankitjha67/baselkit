@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/creditriskengine)](https://pypi.org/project/creditriskengine/)
 [![Python](https://img.shields.io/pypi/pyversions/creditriskengine)](https://pypi.org/project/creditriskengine/)
 [![CI](https://github.com/ankitjha67/baselkit/actions/workflows/ci.yml/badge.svg)](https://github.com/ankitjha67/baselkit/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)]()
 [![License](https://img.shields.io/pypi/l/creditriskengine)](https://github.com/ankitjha67/baselkit/blob/main/LICENSE)
 [![FINOS - Incubating](https://cdn.jsdelivr.net/gh/finos/contrib-toolbox@master/images/badge-incubating.svg)](https://community.finos.org/)
 
@@ -369,7 +369,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,571 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,667 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

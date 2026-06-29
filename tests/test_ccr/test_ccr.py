@@ -79,6 +79,20 @@ class TestExposureProfiles:
         epe_u = expected_positive_exposure(paths)
         assert epe_w == pytest.approx(epe_u)
 
+    def test_eepe_uniform_weights_match_unweighted(self) -> None:
+        paths = self._paths()
+        weights = np.array([1.0, 1.0, 1.0])
+        assert effective_epe(paths, weights) == pytest.approx(
+            effective_epe(paths)
+        )
+
+    def test_eepe_non_uniform_weights(self) -> None:
+        paths = self._paths()
+        weights = np.array([1.0, 2.0, 3.0])
+        eee = effective_expected_exposure(paths)
+        expected = float(np.sum(eee * weights) / np.sum(weights))
+        assert effective_epe(paths, weights) == pytest.approx(expected)
+
 
 class TestNettingSet:
     def test_netting_reduces_exposure(self) -> None:

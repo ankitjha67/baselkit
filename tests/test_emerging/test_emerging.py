@@ -44,6 +44,10 @@ class TestNFRAClassification:
         # Low DPD but ECL 60% → Doubtful (worst of the two)
         assert classify_nfra_five_tier(10, ecl_ratio=0.60) == NFRAFiveTier.DOUBTFUL
 
+    def test_ecl_drives_substandard(self) -> None:
+        # Low DPD but ECL between 40% and 50% → Substandard (ECL tier)
+        assert classify_nfra_five_tier(0, ecl_ratio=0.45) == NFRAFiveTier.SUBSTANDARD
+
     def test_ecl_drives_loss(self) -> None:
         assert classify_nfra_five_tier(10, ecl_ratio=0.95) == NFRAFiveTier.LOSS
 
