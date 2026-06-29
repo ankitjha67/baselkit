@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.0] - 2026-06-29
+
+### Added — MREL (BRRD2 / SRMR2)
+
+New `rwa/mrel.py` implementing the EU resolution Minimum Requirement for
+own funds and Eligible Liabilities — the EU analogue of TLAC.
+
+- `mrel_trea_requirement` / `mrel_tem_requirement` — the Loss Absorption +
+  Recapitalisation Amount calibration (Pillar 1 + P2R, plus a market-
+  confidence charge on the TREA recapitalisation amount), floored at the
+  18% / 6.75% TLAC minimums for G-SII resolution entities.
+- `assess_mrel` — compares eligible MREL against the higher of the TREA and
+  TEM (leverage) requirements, reporting both ratios, the binding
+  constraint, shortfalls, and a compliance flag (`MRELResult`).
+
 ## [0.22.0] - 2026-06-29
 
 ### Added — Equity investments in funds (CRE60)
