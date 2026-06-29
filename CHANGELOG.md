@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.0] - 2026-06-29
+
+### Added — SFT minimum haircut floors (CRE56)
+
+New `rwa/sft_haircut_floors.py` implementing the minimum haircut floors for
+non-centrally-cleared securities financing transactions.
+
+- `minimum_haircut_floor(collateral_type, residual_maturity)` — the CRE56.2
+  floor table (corporate/other debt 0.5-4%, securitisations 1-7% by
+  maturity, main-index equity 6%, other assets 10%; cash and government
+  debt out of scope).
+- `sft_haircut` / `assess_sft_floor` — a single SFT's collateral haircut
+  and whether it meets its floor (collateral is not recognised below the
+  floor, per CRE56.4).
+- `portfolio_floor_compliant` — the netting-agreement portfolio floor test
+  (CRE56.5): portfolio haircut vs the exposure-weighted average floor.
+
 ## [0.23.0] - 2026-06-29
 
 ### Added — MREL (BRRD2 / SRMR2)
