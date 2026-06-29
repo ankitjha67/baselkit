@@ -213,6 +213,15 @@ class TestSatelliteModelPredict:
         with pytest.raises(ValueError, match="Unknown link function"):
             satellite_model_predict(config, {"gdp": np.array([0.01])})
 
+    def test_no_forecast_data_raises(self) -> None:
+        """n_periods inference fails when no forecast matches a variable."""
+        config = SatelliteModelConfig(
+            variable_names=["gdp"],
+            coefficients=[-2.0],
+        )
+        with pytest.raises(ValueError, match="No forecast data"):
+            satellite_model_predict(config, {})
+
 
 class TestMeanReversionWeights:
     def test_within_forecast(self) -> None:
@@ -259,6 +268,18 @@ class TestApplyFLIWithReversion:
             forecast_horizon=1, reversion_periods=0, floor=0.0001,
         )
         assert adjusted[0] == pytest.approx(0.0001)
+
+    def test_array_long_run_pds(self) -> None:
+        """long_run_pds may be passed as a per-period array."""
+        base_pds = np.array([0.02, 0.02, 0.02])
+        fli_factors = np.array([1.0, 1.0, 1.0])
+        long_run = np.array([0.01, 0.015, 0.02])
+        adjusted = apply_fli_with_reversion(
+            base_pds, fli_factors, long_run,
+            forecast_horizon=0, reversion_periods=0,
+        )
+        # forecast_horizon=0 → weights all 0 → fully reverted to long_run
+        np.testing.assert_allclose(adjusted, long_run)
 
 
 class TestLGDMacroOverlay:

@@ -72,6 +72,16 @@ class TestPlutoTascheMultiGrade:
         with pytest.raises(ValueError, match="equal length"):
             pluto_tasche_multi_grade([100, 50], [0])
 
+    def test_monotonicity_enforced_on_violation(self) -> None:
+        # Defaults concentrated in the middle grade make the raw pooled
+        # bound for grade 1 exceed grade 2 → monotonicity clamp applies.
+        obligors = [100, 100, 100]
+        defaults = [0, 5, 0]
+        pds = pluto_tasche_multi_grade(obligors, defaults, 0.90)
+        # The single forward clamp pass fires on grade 1 (its raw pooled
+        # bound exceeds grade 2), pulling it down to the worst grade.
+        assert pds[1] == pytest.approx(pds[2])
+
 
 # ============================================================================
 # CDS-implied PD
@@ -119,6 +129,17 @@ class TestCDSImplied:
         pd_q = 0.05
         pd_p = risk_neutral_to_real_world(pd_q, sharpe_ratio=0.0)
         assert pd_p == pytest.approx(pd_q)
+
+    def test_q_to_p_degenerate_pd_passthrough(self) -> None:
+        # pd_q outside (0, 1) is clamped and returned directly.
+        assert risk_neutral_to_real_world(0.0) == pytest.approx(0.0)
+        assert risk_neutral_to_real_world(1.0) == pytest.approx(1.0)
+        assert risk_neutral_to_real_world(1.5) == pytest.approx(1.0)
+        assert risk_neutral_to_real_world(-0.2) == pytest.approx(0.0)
+
+    def test_q_to_p_invalid_correlation(self) -> None:
+        with pytest.raises(ValueError, match="asset_correlation must be in"):
+            risk_neutral_to_real_world(0.05, asset_correlation=1.0)
 
 
 # ============================================================================

@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.16.1] - 2026-06-29
+
+### Tests — 100% line coverage restored
+
+Added targeted unit tests across the codebase to bring line coverage from
+98% back to 100% (2,667 tests total). Coverage was driven up across CECL
+Q-factor governance, the full SA-CCR engine, the DRC engine, SEC-ERBA /
+securitisation, the granularity adjustment, the revolving-credit ECL
+sub-engine, the RBI ECL 2026 modules, and the advanced PD/LGD models.
+
+Two genuinely-unreachable defensive branches (a tail-mask guard after a
+quantile in `pricing/allocation.py` and the equivalent in `frtb_ima.py`'s
+expected-shortfall) are marked `# pragma: no cover` rather than tested,
+since a quantile always has at least one observation at or beyond it.
+
+No API or behavioural changes.
+
 ## [0.16.0] - 2026-06-29
 
 ### Changed — Replace remaining simplified calculations with full implementations

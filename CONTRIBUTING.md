@@ -41,7 +41,7 @@ Requires **Python 3.11+**.
 All three must pass before submitting a PR:
 
 ```bash
-pytest                       # Tests (98%+ line coverage required)
+pytest                       # Tests (100% line coverage required)
 ruff check src/ tests/       # Linting
 mypy src/creditriskengine/   # Type checking (strict mode)
 ```
@@ -49,7 +49,7 @@ mypy src/creditriskengine/   # Type checking (strict mode)
 ## Contribution Process
 
 1. Fork the repo and create a feature branch from `main`.
-2. Make your changes. Add or update tests to maintain high (98%+) coverage.
+2. Make your changes. Add or update tests to maintain 100% coverage.
 3. Ensure `pytest`, `ruff check`, and `mypy` all pass locally.
 4. Sign off every commit (`git commit -s`).
 5. Write a clear commit message describing **why** the change is needed.

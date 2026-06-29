@@ -92,7 +92,7 @@ def expected_shortfall(
     # VaR at the loss tail: the (1 - cl) quantile of P&L
     var_quantile = np.quantile(pnl, 1.0 - confidence_level)
     tail = pnl[pnl <= var_quantile]
-    if len(tail) == 0:
+    if len(tail) == 0:  # pragma: no cover - a quantile always has >=1 value at/below it
         return float(-var_quantile)
     return float(-np.mean(tail))
 

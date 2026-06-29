@@ -8,7 +8,10 @@ from creditriskengine.ecl.cecl.methods import dcf_method, vintage_analysis, warm
 from creditriskengine.ecl.cecl.qualitative import (
     QualitativeFactor,
     apply_q_factors,
+    apply_q_factors_with_caps,
+    q_factor_summary,
     total_q_factor_adjustment,
+    validate_q_factors,
 )
 
 
@@ -120,3 +123,102 @@ class TestQualitativeFactors:
         factors = [QualitativeFactor(name="negative", adjustment_bps=-200)]
         adjusted = apply_q_factors(0.01, factors, floor=0.005)
         assert adjusted == pytest.approx(0.005)
+
+
+class TestQFactorCaps:
+    def test_within_cap_no_warning(self) -> None:
+        factors = [QualitativeFactor(name="e", adjustment_bps=50, category="economic_conditions")]
+        adjusted, warnings = apply_q_factors_with_caps(0.01, factors)
+        assert adjusted == pytest.approx(0.01 + 50 / 10_000)
+        assert warnings == []
+
+    def test_positive_cap_applied(self) -> None:
+        # economic_conditions cap = 150 bps; raw 300 -> capped to 150.
+        factors = [
+            QualitativeFactor(name="a", adjustment_bps=200, category="economic_conditions"),
+            QualitativeFactor(name="b", adjustment_bps=100, category="economic_conditions"),
+        ]
+        adjusted, warnings = apply_q_factors_with_caps(0.01, factors)
+        assert adjusted == pytest.approx(0.01 + 150 / 10_000)
+        assert len(warnings) == 1 and "capped" in warnings[0]
+
+    def test_negative_cap_applied(self) -> None:
+        factors = [QualitativeFactor(name="a", adjustment_bps=-300, category="staff_experience")]
+        # staff_experience cap = 50 -> -50 bps.
+        adjusted, warnings = apply_q_factors_with_caps(0.05, factors)
+        assert adjusted == pytest.approx(0.05 - 50 / 10_000)
+        assert len(warnings) == 1
+
+    def test_inactive_factor_skipped(self) -> None:
+        factors = [
+            QualitativeFactor(name="a", adjustment_bps=100, category="economic_conditions"),
+            QualitativeFactor(
+                name="b", adjustment_bps=999, category="economic_conditions", is_active=False
+            ),
+        ]
+        adjusted, warnings = apply_q_factors_with_caps(0.0, factors)
+        assert adjusted == pytest.approx(100 / 10_000)
+        assert warnings == []
+
+    def test_custom_caps_and_floor(self) -> None:
+        factors = [QualitativeFactor(name="a", adjustment_bps=-500, category="general")]
+        adjusted, _ = apply_q_factors_with_caps(
+            0.01, factors, category_caps_bps={"general": 30.0}, floor=0.002
+        )
+        # -30 bps -> 0.01 - 0.003 = 0.007 (above floor)
+        assert adjusted == pytest.approx(0.007)
+
+    def test_unknown_category_uses_200_fallback(self) -> None:
+        # Non-empty caps without a "general" key -> 200 bps hard fallback.
+        factors = [QualitativeFactor(name="a", adjustment_bps=500, category="weird")]
+        adjusted, warnings = apply_q_factors_with_caps(
+            0.0, factors, category_caps_bps={"economic_conditions": 50.0}
+        )
+        assert adjusted == pytest.approx(200 / 10_000)
+        assert len(warnings) == 1
+
+
+class TestValidateQFactors:
+    def test_complete_factor_only_category_warning(self) -> None:
+        from datetime import datetime
+
+        factors = [
+            QualitativeFactor(
+                name="econ", adjustment_bps=25, category="economic_conditions",
+                rationale="r", approved_by="ALLL", approval_date=datetime(2026, 1, 1),
+            )
+        ]
+        warnings = validate_q_factors(factors)
+        # Only the "categories not addressed" warning remains.
+        assert any("Categories not addressed" in w for w in warnings)
+        assert not any("missing" in w for w in warnings)
+
+    def test_governance_gaps_flagged(self) -> None:
+        factors = [QualitativeFactor(name="bad", adjustment_bps=0.0, category="weird")]
+        warnings = validate_q_factors(factors)
+        joined = " ".join(warnings)
+        assert "missing rationale" in joined
+        assert "missing approval authority" in joined
+        assert "missing approval date" in joined
+        assert "zero adjustment" in joined
+        assert "non-standard category" in joined
+
+    def test_inactive_factor_not_validated(self) -> None:
+        factors = [QualitativeFactor(name="x", is_active=False)]
+        warnings = validate_q_factors(factors)
+        assert not any("Q-factor 'x'" in w for w in warnings)
+
+
+class TestQFactorSummary:
+    def test_summary_fields(self) -> None:
+        factors = [
+            QualitativeFactor(name="a", adjustment_bps=30, category="economic_conditions"),
+            QualitativeFactor(name="b", adjustment_bps=20, category="portfolio_trends"),
+            QualitativeFactor(name="c", adjustment_bps=99, is_active=False),
+        ]
+        summary = q_factor_summary(factors, base_loss_rate=0.01)
+        assert summary["n_active_factors"] == 2
+        assert summary["n_inactive_factors"] == 1
+        assert summary["total_adjustment_bps"] == pytest.approx(50.0)
+        assert summary["adjusted_loss_rate"] == pytest.approx(0.01 + 50 / 10_000)
+        assert "economic_conditions" in str(summary["adjustment_by_category"])

@@ -37,6 +37,60 @@ class TestParameterSelfCheck:
         assert issubclass(RBIParameterMismatch, AssertionError)
 
 
+class TestParameterMismatchRaises:
+    """Trip each raise path by perturbing the live constants via monkeypatch.
+
+    We never edit the source constants; we patch the names as referenced
+    in the ``parameter_assertions`` module namespace so the published-value
+    guard fails as designed.
+    """
+
+    def test_close_assert_raises_on_pd_floor(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from creditriskengine.ecl.ind_as109 import parameter_assertions as pa
+        monkeypatch.setattr(pa, "RBI_PD_FLOOR", 0.99)
+        with pytest.raises(RBIParameterMismatch, match="PD floor"):
+            assert_rbi_2026_parameters_match_published()
+
+    def test_effective_date_mismatch_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from datetime import date
+
+        from creditriskengine.ecl.ind_as109 import parameter_assertions as pa
+        monkeypatch.setattr(pa, "RBI_ECL_EFFECTIVE_DATE", date(2099, 1, 1))
+        with pytest.raises(RBIParameterMismatch, match="Effective date"):
+            assert_rbi_2026_parameters_match_published()
+
+    def test_eir_deadline_mismatch_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from datetime import date
+
+        from creditriskengine.ecl.ind_as109 import parameter_assertions as pa
+        monkeypatch.setattr(pa, "RBI_EIR_MIGRATION_DEADLINE", date(2099, 1, 1))
+        with pytest.raises(RBIParameterMismatch, match="EIR deadline"):
+            assert_rbi_2026_parameters_match_published()
+
+    def test_capital_add_back_mismatch_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from creditriskengine.ecl.ind_as109 import parameter_assertions as pa
+        monkeypatch.setattr(pa, "CAPITAL_ADD_BACK_SCHEDULE", {2028: 0.0})
+        with pytest.raises(RBIParameterMismatch, match="Capital add-back"):
+            assert_rbi_2026_parameters_match_published()
+
+    def test_stage3_floor_mismatch_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from creditriskengine.ecl.ind_as109 import parameter_assertions as pa
+        bad_samples = [(RBIExposureCategory.CORPORATE, 0.5, True, 0.99)]
+        monkeypatch.setattr(pa, "PUBLISHED_STAGE3_SAMPLES", bad_samples)
+        with pytest.raises(RBIParameterMismatch, match="Stage 3 floor"):
+            assert_rbi_2026_parameters_match_published()
+
+    def test_regulatory_self_check_mismatch_branch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from creditriskengine.ecl.ind_as109 import parameter_assertions as pa
+        monkeypatch.setattr(pa, "RBI_PD_FLOOR", 0.99)
+        report = regulatory_self_check()
+        assert report["status"] == "mismatch"
+        assert "PD floor" in report["message"]
+        assert "RBI/DOR/2026-27/398" in report["reference"]
+
+
 # ----------------------------------------------------------------------
 # Parallel run
 # ----------------------------------------------------------------------

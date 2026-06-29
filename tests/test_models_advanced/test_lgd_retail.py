@@ -193,3 +193,63 @@ class TestRollRate:
         matrix = roll_rate_matrix(flows)
         # Bucket 2 had no flows → stays
         assert matrix[2, 2] == 1.0
+
+
+# ============================================================================
+# Coverage edge cases
+# ============================================================================
+
+
+class TestRecoveryCurveCdfFamilies:
+    def test_cumulative_fraction_lognormal(self) -> None:
+        rng = np.random.default_rng(7)
+        times = rng.lognormal(0.5, 0.5, 500)
+        fit = fit_recovery_curve(times, RecoveryCurveType.LOGNORMAL)
+        f = cumulative_recovery_fraction(fit, 2.0)
+        assert 0.0 <= f <= 1.0
+
+    def test_cumulative_fraction_gamma(self) -> None:
+        rng = np.random.default_rng(7)
+        times = rng.gamma(2.0, 1.0, 500)
+        fit = fit_recovery_curve(times, RecoveryCurveType.GAMMA)
+        f = cumulative_recovery_fraction(fit, 2.0)
+        assert 0.0 <= f <= 1.0
+
+
+class TestBetaLGDEdgeCases:
+    def test_fit_degenerate_zero_variance(self) -> None:
+        # All identical observations → variance 0 → concentration fallback
+        alpha, beta = fit_beta_lgd(np.array([0.4, 0.4, 0.4, 0.4]))
+        # Mean reproduced as alpha / (alpha + beta)
+        assert beta_lgd_mean(alpha, beta) == pytest.approx(0.4)
+        assert alpha == pytest.approx(0.4 * 100.0)
+        assert beta == pytest.approx(0.6 * 100.0)
+
+    def test_fit_single_observation(self) -> None:
+        # len == 1 → variance defaults to 0 → fallback branch
+        alpha, beta = fit_beta_lgd(np.array([0.25]))
+        assert beta_lgd_mean(alpha, beta) == pytest.approx(0.25)
+
+    def test_downturn_quantile_invalid_confidence(self) -> None:
+        with pytest.raises(ValueError, match="confidence_level must be in"):
+            downturn_lgd_quantile(2.0, 3.0, confidence_level=1.5)
+
+
+class TestProjectChargeOffShapeValidation:
+    @staticmethod
+    def _sample_matrix() -> np.ndarray:
+        flows = np.zeros((N_BUCKETS, N_BUCKETS))
+        for i in range(N_BUCKETS):
+            flows[i, i] = 100.0
+        return roll_rate_matrix(flows)
+
+    def test_wrong_initial_balances_shape(self) -> None:
+        matrix = self._sample_matrix()
+        with pytest.raises(ValueError, match="initial_balances must be"):
+            project_charge_off(np.zeros(3), matrix, n_periods=3)
+
+    def test_wrong_transition_matrix_shape(self) -> None:
+        initial = np.zeros(N_BUCKETS)
+        initial[0] = 1000.0
+        with pytest.raises(ValueError, match="transition_matrix must be"):
+            project_charge_off(initial, np.zeros((3, 3)), n_periods=3)

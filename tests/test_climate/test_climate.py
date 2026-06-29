@@ -89,6 +89,10 @@ class TestPhysicalRisk:
         with pytest.raises(ValueError, match="Unknown hazard/severity"):
             physical_risk_lgd_haircut(PhysicalHazard.FLOOD, "extreme")
 
+    def test_pd_multiplier_invalid_severity_raises(self) -> None:
+        with pytest.raises(ValueError, match="Unknown hazard/severity"):
+            physical_risk_pd_multiplier(PhysicalHazard.FLOOD, "extreme")
+
     def test_pd_multiplier_no_impact_at_low(self) -> None:
         assert physical_risk_pd_multiplier(PhysicalHazard.FLOOD, "low") == 1.0
 

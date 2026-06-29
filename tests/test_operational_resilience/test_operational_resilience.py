@@ -142,6 +142,12 @@ class TestThirdPartyConcentration:
         low = third_party_concentration({str(i): 10.0 for i in range(20)})
         assert low["concentration_level"] == "low"
 
+    def test_moderate_concentration(self) -> None:
+        # 5 equal providers -> HHI = 5 * 0.2^2 = 0.20, in [0.15, 0.25)
+        result = third_party_concentration({str(i): 10.0 for i in range(5)})
+        assert result["hhi"] == pytest.approx(0.20)
+        assert result["concentration_level"] == "moderate"
+
     def test_empty(self) -> None:
         result = third_party_concentration({})
         assert result["hhi"] == 0.0

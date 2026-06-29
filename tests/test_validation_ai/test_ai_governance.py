@@ -44,6 +44,12 @@ class TestDisparateImpact:
         sens = np.array([1, 1, 1])  # No unprivileged
         assert disparate_impact_ratio(y_pred, sens) == 1.0
 
+    def test_zero_privileged_rate_returns_0(self) -> None:
+        # Privileged group has zero favorable predictions -> ratio 0.0
+        y_pred = np.array([0, 0, 1, 1])
+        sens = np.array([1, 1, 0, 0])
+        assert disparate_impact_ratio(y_pred, sens) == 0.0
+
 
 class TestDemographicParity:
     def test_perfect_parity(self) -> None:
@@ -64,6 +70,11 @@ class TestDemographicParity:
         sens = np.array([1, 1, 1, 1, 0, 0, 0, 0])
         dpd = demographic_parity_difference(y_pred, sens)
         assert -0.30 <= dpd <= 0.30
+
+    def test_empty_group_returns_zero(self) -> None:
+        y_pred = np.array([1, 0, 1])
+        sens = np.array([1, 1, 1])  # No unprivileged
+        assert demographic_parity_difference(y_pred, sens) == 0.0
 
 
 class TestEqualOpportunity:
@@ -87,6 +98,15 @@ class TestEqualOpportunity:
         y_pred = np.array([1, 0, 1])
         sens = np.array([0, 0, 0])
         assert equal_opportunity_difference(y_true, y_pred, sens) == 0.0
+
+    def test_group_without_actual_positives_tpr_zero(self) -> None:
+        # Unprivileged group has no truly-favorable individuals, so its TPR
+        # falls back to 0.0; privileged TPR = 1.0 -> EOD = 0.0 - 1.0 = -1.0
+        y_true = np.array([1, 1, 0, 0])
+        y_pred = np.array([1, 1, 1, 0])
+        sens = np.array([1, 1, 0, 0])
+        eod = equal_opportunity_difference(y_true, y_pred, sens)
+        assert eod == pytest.approx(-1.0)
 
 
 # ============================================================================
