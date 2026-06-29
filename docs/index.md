@@ -22,7 +22,7 @@ through regulatory reporting.
 | **Counterparty Risk** | EPE/EEPE/PFE exposure, wrong-way risk |
 | **IRRBB** | EVE/NII sensitivity, supervisory outlier test |
 | **Risk-Based Pricing** | RAROC/EVA, Euler/ES capital allocation |
-| **Climate & ESG** | NGFS scenarios, PCAF financed emissions, GAR, ESG ratings adapter |
+| **Climate & ESG** | NGFS scenarios, PCAF financed emissions, GAR, ESG ratings adapter, EBA/GL/2025/01 materiality assessment + transition-plan monitoring |
 | **Jurisdictions** | 17 supported: BCBS, EU, UK, US, India, Singapore, + 11 more |
 
 ## Quick Start
