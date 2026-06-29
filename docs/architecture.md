@@ -1,7 +1,7 @@
 # Architecture
 
-CreditRiskEngine is organized into six major subsystems, each mapping to
-a distinct regulatory or analytical domain.
+CreditRiskEngine is organized into fourteen top-level packages, each
+mapping to a distinct regulatory or analytical domain.
 
 ## Package Layout
 
@@ -19,6 +19,14 @@ creditriskengine/
 │   │   └── credit_risk_sa.py   # CRE20 SA risk weights (all exposure classes)
 │   ├── irb/
 │   │   └── formulas.py         # CRE31 IRB: correlations, K, maturity adj, RW
+│   ├── securitisation.py       # SEC-IRBA/SEC-SA/SEC-ERBA (CRE42-44)
+│   ├── cva.py                  # BA-CVA / SA-CVA (CVA25-26)
+│   ├── market_risk.py          # FRTB SA: SbM, DRC, RRAO (MAR21-23)
+│   ├── frtb_ima.py             # FRTB IMA: ES, PLAT, DRC, NMRF (MAR33)
+│   ├── crm.py                  # Credit risk mitigation (CRE22)
+│   ├── capital_buffers.py      # CConB/CCyB/G-SIB/D-SIB, MDA
+│   ├── leverage_ratio.py       # Leverage ratio exposure (CRE80)
+│   ├── operational_risk.py     # SMA (OPE25)
 │   └── output_floor.py         # RBC25 output floor with multi-jurisdiction phase-in
 │
 ├── ecl/                # Expected Credit Loss engines
@@ -47,7 +55,37 @@ creditriskengine/
 │   ├── ead/
 │   │   └── ead_model.py    # EAD calculation, CCF estimation, supervisory CCFs
 │   └── concentration/
-│       └── concentration.py # Single-name HHI, sector concentration, GA
+│       └── concentration.py # Single-name HHI, sector concentration, Gordy GA
+│
+├── ccr/                # Counterparty credit risk
+│   ├── sa_ccr.py          # Full SA-CCR EAD engine (CRE52)
+│   ├── exposure.py        # EPE/EEPE/PFE profiles, netting
+│   └── wwr.py             # Wrong-way risk (general + specific)
+│
+├── irrbb/              # Interest rate risk in the banking book
+│   ├── eve.py             # Economic Value of Equity sensitivity
+│   ├── nii.py             # Net Interest Income sensitivity
+│   └── outlier_test.py    # Supervisory Outlier Test (EBA RTS/2022/09)
+│
+├── pricing/            # Risk-based pricing & capital allocation
+│   ├── raroc.py           # RAROC, EVA, break-even spread
+│   └── allocation.py      # Marginal / Euler / ES capital allocation
+│
+├── climate/            # Climate & crypto risk
+│   ├── ngfs_scenarios.py  # NGFS scenario library
+│   ├── physical_risk.py   # Physical hazard PD/LGD adjustments
+│   ├── transition_risk.py # Transition PD multipliers, CBAM
+│   ├── financed_emissions.py # PCAF financed emissions
+│   ├── green_asset_ratio.py  # EU GAR / BTAR
+│   └── crypto.py          # BCBS SCO60 crypto-asset capital
+│
+├── esg/                # ESG ratings & risk management
+│   ├── ratings.py         # Vendor-agnostic ESG rating -> PD overlay
+│   └── risk_management.py # EBA/GL/2025/01 materiality + transition plans
+│
+├── operational_resilience/  # DORA / operational resilience
+│   ├── dora.py            # ICT incident classification (Reg 2022/2554)
+│   └── resilience.py      # Impact tolerances, third-party concentration
 │
 ├── validation/         # Model validation toolkit
 │   ├── discrimination.py   # AUROC, Gini, KS, CAP, IV, Somers' D
@@ -74,7 +112,11 @@ creditriskengine/
 │   └── ...                 # + 12 more jurisdictions
 │
 └── reporting/          # Regulatory reporting
-    └── reports.py          # COREP summary, Pillar 3 disclosure, model inventory
+    ├── corep.py           # COREP templates
+    ├── pillar3.py         # Pillar 3 disclosures (CR1/CR3/CR4/CR6)
+    ├── fr_y14.py          # FR Y-14 (CCAR)
+    ├── fr2052a/           # FR 2052a liquidity monitoring
+    └── model_doc.py       # Model inventory / documentation
 ```
 
 ## Design Principles
