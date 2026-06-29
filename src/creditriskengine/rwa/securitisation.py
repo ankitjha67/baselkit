@@ -119,36 +119,30 @@ _SA_P_FACTOR: Final[float] = 1.0
 # SEC-ERBA lookup tables — CRE43, Table 3
 # ============================================================
 
-SEC_ERBA_SENIOR_RW: Final[dict[int, float]] = {
-    1: 0.15, 2: 0.15, 3: 0.25, 4: 0.30, 5: 0.40,
-    6: 0.50, 7: 0.65, 8: 0.85, 9: 1.05, 10: 1.25,
-    11: 1.70, 12: 2.50, 13: 3.50, 14: 5.00, 15: 6.50,
-    16: 8.00, 17: 10.00,
+# CRE43 Table 2 — long-term external ratings. Each entry is the risk
+# weight at tranche maturity MT = 1 year and MT = 5 years; intermediate
+# maturities are linearly interpolated (CRE43.5). CQS 1 = AAA ... 17 = CCC;
+# anything below CCC- (or an unmapped CQS) takes the 1250 % cap.
+SEC_ERBA_SENIOR_RW: Final[dict[int, tuple[float, float]]] = {
+    1: (0.15, 0.20), 2: (0.15, 0.30), 3: (0.25, 0.40), 4: (0.30, 0.45),
+    5: (0.40, 0.50), 6: (0.50, 0.65), 7: (0.60, 0.70), 8: (0.75, 0.90),
+    9: (0.90, 1.05), 10: (1.20, 1.40), 11: (1.40, 1.60), 12: (1.60, 1.80),
+    13: (2.00, 2.25), 14: (2.50, 2.80), 15: (3.10, 3.40), 16: (3.80, 4.20),
+    17: (4.60, 5.05),
 }
 
-SEC_ERBA_NON_SENIOR_RW: Final[dict[int, float]] = {
-    1: 0.15, 2: 0.25, 3: 0.35, 4: 0.45, 5: 0.60,
-    6: 0.80, 7: 1.00, 8: 1.20, 9: 1.40, 10: 1.70,
-    11: 2.10, 12: 3.00, 13: 4.00, 14: 5.50, 15: 7.50,
-    16: 9.50, 17: 12.50,
+# Non-senior table — these are the thin-tranche (T -> 0) values; thicker
+# non-senior tranches are reduced by the CRE43.6 thickness adjustment.
+SEC_ERBA_NON_SENIOR_RW: Final[dict[int, tuple[float, float]]] = {
+    1: (0.15, 0.70), 2: (0.15, 0.90), 3: (0.30, 1.20), 4: (0.40, 1.40),
+    5: (0.60, 1.60), 6: (0.80, 1.80), 7: (1.20, 2.10), 8: (1.70, 2.60),
+    9: (2.20, 3.10), 10: (3.30, 4.20), 11: (4.70, 5.80), 12: (6.20, 7.60),
+    13: (7.50, 8.60), 14: (9.00, 9.50), 15: (10.50, 10.50),
+    16: (11.30, 11.30), 17: (12.50, 12.50),
 }
 
-SEC_ERBA_NON_SENIOR_THIN_RW: Final[dict[int, float]] = {
-    1: 0.25, 2: 0.35, 3: 0.50, 4: 0.65, 5: 0.85,
-    6: 1.00, 7: 1.25, 8: 1.55, 9: 1.85, 10: 2.20,
-    11: 2.80, 12: 3.50, 13: 4.50, 14: 6.50, 15: 8.50,
-    16: 10.50, 17: 12.50,
-}
-
-# Thin tranche threshold (CRE43.4): D - A < 0.03
-_THIN_TRANCHE_THRESHOLD: Final[float] = 0.03
-
-# ERBA maturity adjustment coefficients (CRE43.5)
-_ERBA_MATURITY_ADJ: Final[dict[int, tuple[float, float, float]]] = {
-    # CQS: (a, b, c) where adjustment = a + b * MT + c * MT^2
-    # Simplified: only the linear maturity factor from CRE43
-    # Base RW * (1 + 0.4 * (MT - 1)) for non-senior short-term
-}
+# Risk-weight floor for SEC-ERBA (CRE43.6).
+_ERBA_RW_FLOOR: Final[float] = 0.15
 
 
 # ============================================================
@@ -417,22 +411,24 @@ def sec_sa_risk_weight(
 def sec_erba_risk_weight(tranche: SecuritisationTranche) -> float:
     """SEC-ERBA risk weight per CRE43.
 
-    Risk weights are looked up from tables keyed by:
-    - Credit quality step (external rating)
-    - Seniority (senior vs non-senior)
-    - Tranche thickness (thin vs thick)
+    Full implementation of CRE43.4-43.8:
 
-    Maturity adjustment (CRE43.5): for tranches with maturity != 5 years,
-    the base RW is interpolated between the 1-year and 5-year RWs.
-    Simplified here as::
+    1. Look up the (1-year, 5-year) risk weights for the tranche's credit
+       quality step and seniority from CRE43 Table 2.
+    2. **Maturity adjustment** (CRE43.5): linearly interpolate between the
+       1-year and 5-year risk weights for the tranche maturity MT (bounded
+       to [1, 5] years)::
 
-        RW_adjusted = RW_base * (1 + 0.4 * max(MT - 1, 0))
+           RW = RW_1y + (RW_5y - RW_1y) * (MT - 1) / (5 - 1)
 
-    capped at 5 years.
+    3. **Thickness adjustment** (CRE43.6), non-senior only: the table holds
+       the thin-tranche values, so thicker tranches are reduced::
 
-    Re-securitisation positions receive a 2x multiplier (CRE43.8).
+           RW = RW * (1 - min(D - A, 0.5))
 
-    Reference: BCBS CRE43.1-43.8, Table 3.
+    4. Floor at 15 % (CRE43.6), re-securitisation x2 (CRE43.8), 1250 % cap.
+
+    Reference: BCBS CRE43.4-43.8, Table 2.
 
     Args:
         tranche: Tranche parameters (must have ``external_rating`` set).
@@ -452,46 +448,41 @@ def sec_erba_risk_weight(tranche: SecuritisationTranche) -> float:
     cqs = tranche.external_rating
     thickness = tranche.detachment_point - tranche.attachment_point
 
-    # Select lookup table
-    if tranche.is_senior:
-        table = SEC_ERBA_SENIOR_RW
-    elif thickness < _THIN_TRANCHE_THRESHOLD:
-        table = SEC_ERBA_NON_SENIOR_THIN_RW
-    else:
-        table = SEC_ERBA_NON_SENIOR_RW
-
-    base_rw = table.get(cqs)
-    if base_rw is None:
+    table = SEC_ERBA_SENIOR_RW if tranche.is_senior else SEC_ERBA_NON_SENIOR_RW
+    entry = table.get(cqs)
+    if entry is None:
         logger.warning(
             "CQS %d not found in SEC-ERBA table for tranche '%s'; "
             "applying 1250%% cap",
-            cqs,
-            tranche.tranche_id,
+            cqs, tranche.tranche_id,
         )
         return _RW_CAP
 
-    # Maturity adjustment — CRE43.5
-    # Linear interpolation between 1-year and 5-year base RW
-    mt = min(max(tranche.maturity_years, 1.0), 5.0)
-    rw = base_rw * (1.0 + 0.4 * (mt - 1.0))
+    rw_1y, rw_5y = entry
 
-    # Re-securitisation multiplier — CRE43.8
+    # Maturity adjustment — CRE43.5 (linear interpolation over [1, 5] years).
+    mt = min(max(tranche.maturity_years, 1.0), 5.0)
+    rw = rw_1y + (rw_5y - rw_1y) * (mt - 1.0) / 4.0
+
+    # Thickness adjustment for non-senior tranches — CRE43.6.
+    if not tranche.is_senior:
+        rw *= 1.0 - min(thickness, 0.5)
+
+    # Floor (CRE43.6).
+    rw = max(rw, _ERBA_RW_FLOOR)
+
+    # Re-securitisation multiplier — CRE43.8.
     if tranche.is_resecuritisation:
         rw *= 2.0
 
-    # Cap
+    # 1250 % cap.
     rw = min(rw, _RW_CAP)
 
     logger.debug(
         "SEC-ERBA tranche '%s': CQS=%d, senior=%s, thickness=%.4f, "
-        "MT=%.1f, base_rw=%.4f, final_rw=%.4f",
-        tranche.tranche_id,
-        cqs,
-        tranche.is_senior,
-        thickness,
-        mt,
-        base_rw,
-        rw,
+        "MT=%.1f, RW_1y=%.4f, RW_5y=%.4f, final_rw=%.4f",
+        tranche.tranche_id, cqs, tranche.is_senior, thickness, mt,
+        rw_1y, rw_5y, rw,
     )
     return rw
 

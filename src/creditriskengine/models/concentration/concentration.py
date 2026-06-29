@@ -11,6 +11,7 @@ References:
 """
 
 import logging
+import math
 
 import numpy as np
 
@@ -96,25 +97,41 @@ def granularity_adjustment(
     pds: np.ndarray,
     lgds: np.ndarray,
     rho: float,
+    confidence: float = 0.999,
 ) -> float:
-    """Gordy (2003) Granularity Adjustment.
+    """Martin-Wilde / Gordy (2003) granularity adjustment for the ASRF model.
 
-    GA = (1/2) × C_3 × HHI_adj
+    Computes the undiversified idiosyncratic risk add-on to the ASRF VaR
+    using the Martin & Wilde (2002) second-order expansion:
 
-    Where C_3 captures the curvature of the loss distribution
-    and HHI_adj is the EAD-weighted HHI of PD×LGD contributions.
+        GA = -(1/2) * (1 / h(x_q)) * d/dx[ h(x) * sigma^2(x) / mu'(x) ]_{x = x_q}
 
-    Simplified single-factor version for Pillar 2 add-on estimation.
+    where, under the single-factor Vasicek model with systematic factor
+    X ~ N(0, 1) and common asset correlation ``rho``:
+
+        p_i(x) = Phi( (Phi^{-1}(PD_i) - sqrt(rho) * x) / sqrt(1 - rho) )
+        mu(x)  = sum_i s_i * LGD_i * p_i(x)            (conditional EL rate)
+        sigma^2(x) = sum_i s_i^2 * LGD_i^2 * p_i(x) * (1 - p_i(x))
+        h(x)   = standard normal density of X
+        x_q    = Phi^{-1}(1 - confidence)             (stress state)
+        s_i    = EAD_i / sum(EAD)
+
+    The portfolio variance term ``sigma^2`` scales like 1/n for a
+    homogeneous portfolio, so the GA vanishes as the book becomes
+    infinitely granular and grows with name concentration.
 
     Args:
         eads: EAD per obligor.
-        pds: PD per obligor.
-        lgds: LGD per obligor.
-        rho: Common asset correlation.
+        pds: PD per obligor (decimals in (0, 1)).
+        lgds: LGD per obligor (decimals).
+        rho: Common asset correlation in [0, 1).
+        confidence: VaR confidence level (default 0.999, Basel IRB).
 
     Returns:
-        Granularity adjustment as a fraction of total EAD.
+        Granularity adjustment as a fraction of total EAD (non-negative).
     """
+    from scipy.stats import norm
+
     eads = np.asarray(eads, dtype=np.float64)
     pds = np.asarray(pds, dtype=np.float64)
     lgds = np.asarray(lgds, dtype=np.float64)
@@ -122,20 +139,44 @@ def granularity_adjustment(
     total_ead = float(np.sum(eads))
     if total_ead <= 0:
         return 0.0
+    if not 0.0 <= rho < 1.0:
+        raise ValueError("rho must be in [0, 1)")
 
-    # EAD-weighted expected loss contributions
-    el_contributions = eads * pds * lgds
-    total_el = float(np.sum(el_contributions))
-    if total_el <= 0:
+    # No default risk in the book -> no idiosyncratic add-on.
+    if float(np.sum(eads * pds * lgds)) <= 0.0:
         return 0.0
 
-    # HHI of loss contributions
-    shares = el_contributions / total_el
-    hhi = float(np.sum(shares ** 2))
+    shares = eads / total_ead
+    # Guard PDs away from {0, 1} so the inverse-normal is finite.
+    pd_clip = np.clip(pds, 1e-9, 1.0 - 1e-9)
+    inv_pd = norm.ppf(pd_clip)
+    sqrt_rho = math.sqrt(rho)
+    sqrt_1mrho = math.sqrt(1.0 - rho) if rho < 1.0 else 1e-12
 
-    # Simplified GA: proportional to HHI and variance
-    # Higher correlation → less idiosyncratic risk → smaller GA
-    idiosyncratic_factor = (1.0 - rho)
-    ga = 0.5 * hhi * idiosyncratic_factor * total_el / total_ead
+    def conditional_pd(x: float) -> np.ndarray:
+        return norm.cdf((inv_pd - sqrt_rho * x) / sqrt_1mrho)
 
-    return ga
+    def mu_prime(x: float) -> float:
+        g = (inv_pd - sqrt_rho * x) / sqrt_1mrho
+        dp_dx = norm.pdf(g) * (-sqrt_rho / sqrt_1mrho)
+        return float(np.sum(shares * lgds * dp_dx))
+
+    def numerator(x: float) -> float:
+        # F(x) = h(x) * sigma^2(x) / mu'(x)
+        p = conditional_pd(x)
+        var = float(np.sum(shares**2 * lgds**2 * p * (1.0 - p)))
+        mp = mu_prime(x)
+        if abs(mp) < 1e-15:
+            return 0.0
+        return float(norm.pdf(x)) * var / mp
+
+    x_q = float(norm.ppf(1.0 - confidence))
+    h_xq = float(norm.pdf(x_q))
+    if h_xq < 1e-300:
+        return 0.0
+
+    # Central finite difference for the outer derivative.
+    step = 1e-4
+    derivative = (numerator(x_q + step) - numerator(x_q - step)) / (2.0 * step)
+    ga = -0.5 * derivative / h_xq
+    return max(ga, 0.0)

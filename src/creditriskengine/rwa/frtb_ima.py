@@ -18,6 +18,7 @@ Implements the IMA capital components:
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
@@ -197,17 +198,117 @@ def plat_test(
     return zone, spearman, ks
 
 
+# MAR22.24 default risk weights by credit-quality grade.
+DRC_DEFAULT_RISK_WEIGHTS: Final[dict[str, float]] = {
+    "AAA": 0.005,
+    "AA": 0.02,
+    "A": 0.03,
+    "BBB": 0.06,
+    "BB": 0.15,
+    "B": 0.30,
+    "CCC": 0.50,
+    "DEFAULT": 1.00,
+    "UNRATED": 0.15,
+}
+
+
+def drc_default_risk_weight(rating: str) -> float:
+    """Default risk weight for a credit-quality grade (MAR22.24)."""
+    return DRC_DEFAULT_RISK_WEIGHTS.get(rating.upper(), DRC_DEFAULT_RISK_WEIGHTS["UNRATED"])
+
+
+@dataclass(frozen=True)
+class DRCPosition:
+    """A default-risk position for the DRC.
+
+    Attributes:
+        obligor: Issuer/obligor identifier (JTD nets within an obligor).
+        jtd: Signed jump-to-default loss — positive for long (loses on
+            the obligor's default), negative for short (gains on default).
+        risk_weight: Default risk weight for the obligor (MAR22.24).
+        bucket: DRC bucket — "corporates", "sovereigns" or "local_gov".
+            JTD offsetting and the hedge-benefit ratio apply within a
+            bucket; there is no cross-bucket diversification (MAR22.30-31).
+    """
+
+    obligor: str
+    jtd: float
+    risk_weight: float
+    bucket: str = "corporates"
+
+
+def default_risk_charge(positions: Sequence[DRCPosition]) -> float:
+    """Full Default Risk Charge per MAR22.18-22.33.
+
+    Implements the standardised DRC methodology (also used by the IMA at
+    99.9 % one-year, MAR33):
+
+    1. Net the signed JTD of positions sharing an obligor.
+    2. Within each bucket, split obligors into net-long and net-short.
+    3. Apply a book-wide hedge-benefit ratio (WtS) recognising partial
+       offset of short hedges (MAR22.30)::
+
+           WtS = sum(net long JTD) / (sum(net long JTD) + sum(net short JTD))
+
+    4. Per bucket (MAR22.31)::
+
+           DRC_b = max(sum(RW * net long JTD) - WtS * sum(RW * net short JTD), 0)
+
+    5. Total DRC is the simple sum across buckets (no cross-bucket
+       diversification).
+
+    Args:
+        positions: Default-risk positions.
+
+    Returns:
+        Total Default Risk Charge (non-negative).
+    """
+    if not positions:
+        return 0.0
+
+    # 1. Net JTD per (bucket, obligor); keep the obligor's risk weight.
+    net_jtd: dict[tuple[str, str], float] = {}
+    obligor_rw: dict[tuple[str, str], float] = {}
+    for pos in positions:
+        key = (pos.bucket, pos.obligor)
+        net_jtd[key] = net_jtd.get(key, 0.0) + pos.jtd
+        obligor_rw[key] = pos.risk_weight
+
+    # 2-3. Book-wide WtS from net long/short JTD (notional basis).
+    gross_long = sum(j for j in net_jtd.values() if j > 0.0)
+    gross_short = -sum(j for j in net_jtd.values() if j < 0.0)
+    if gross_long + gross_short == 0.0:
+        return 0.0
+    wts = gross_long / (gross_long + gross_short)
+
+    # 4. Per-bucket DRC with the WtS-scaled short offset.
+    bucket_long: dict[str, float] = {}
+    bucket_short: dict[str, float] = {}
+    for (bucket, _obligor), jtd in net_jtd.items():
+        rw = obligor_rw[(bucket, _obligor)]
+        if jtd > 0.0:
+            bucket_long[bucket] = bucket_long.get(bucket, 0.0) + rw * jtd
+        else:
+            bucket_short[bucket] = bucket_short.get(bucket, 0.0) + rw * (-jtd)
+
+    total = 0.0
+    for bucket in set(bucket_long) | set(bucket_short):
+        long_rw = bucket_long.get(bucket, 0.0)
+        short_rw = bucket_short.get(bucket, 0.0)
+        total += max(long_rw - wts * short_rw, 0.0)
+    return total
+
+
 def default_risk_charge_ima(
     jtd_long: np.ndarray,
     jtd_short: np.ndarray,
 ) -> float:
     """Internal DRC via net jump-to-default at 99.9% one-year.
 
-    Net JTD = sum(long JTD) - sum(short JTD), with a hedge benefit
-    ratio (WtS) applied. Simplified single-bucket form:
-        DRC = max(net long JTD - WtS * net short JTD, 0)
-
-    where WtS = sum(long) / (sum(long) + sum(short)).
+    Convenience wrapper over :func:`default_risk_charge` for a single
+    bucket of unit-risk-weight positions, where each array element is a
+    distinct obligor. Long elements are positive JTD, short elements are
+    positive magnitudes converted to negative JTD.
 
     Args:
         jtd_long: Jump-to-default amounts for long positions.
@@ -220,12 +321,12 @@ def default_risk_charge_ima(
     Reference:
         BCBS d457 MAR22 (DRC), MAR33 (IMA DRC at 99.9%).
     """
-    long_sum = float(np.sum(np.maximum(jtd_long, 0.0)))
-    short_sum = float(np.sum(np.maximum(jtd_short, 0.0)))
-    if long_sum + short_sum == 0:
-        return 0.0
-    wts = long_sum / (long_sum + short_sum)
-    return max(long_sum - wts * short_sum, 0.0)
+    positions: list[DRCPosition] = []
+    for i, jtd in enumerate(np.atleast_1d(jtd_long)):
+        positions.append(DRCPosition(f"L{i}", float(jtd), 1.0))
+    for i, jtd in enumerate(np.atleast_1d(jtd_short)):
+        positions.append(DRCPosition(f"S{i}", -float(jtd), 1.0))
+    return default_risk_charge(positions)
 
 
 @dataclass(frozen=True)

@@ -129,6 +129,59 @@ class TestDRC:
         assert drc == 0.0
 
 
+class TestFullDRC:
+    def test_risk_weight_table(self) -> None:
+        from creditriskengine.rwa.frtb_ima import drc_default_risk_weight
+
+        assert drc_default_risk_weight("BBB") == pytest.approx(0.06)
+        assert drc_default_risk_weight("CCC") == pytest.approx(0.50)
+        assert drc_default_risk_weight("DEFAULT") == pytest.approx(1.00)
+        # Unknown grade -> unrated 15%
+        assert drc_default_risk_weight("ZZZ") == pytest.approx(0.15)
+
+    def test_obligor_netting(self) -> None:
+        from creditriskengine.rwa.frtb_ima import DRCPosition, default_risk_charge
+
+        # Long 100 and short 40 on the SAME obligor net to 60 long.
+        positions = [
+            DRCPosition("X", 100.0, 0.06),
+            DRCPosition("X", -40.0, 0.06),
+        ]
+        # No shorts remain -> WtS=1, DRC = 0.06 * 60 = 3.6
+        assert default_risk_charge(positions) == pytest.approx(3.6)
+
+    def test_hedge_benefit_with_risk_weights(self) -> None:
+        from creditriskengine.rwa.frtb_ima import DRCPosition, default_risk_charge
+
+        # Long obligor A (RW 6%), short obligor B (RW 6%), both 100.
+        # WtS = 100/200 = 0.5; DRC = 0.06*100 - 0.5*0.06*100 = 6 - 3 = 3.
+        positions = [
+            DRCPosition("A", 100.0, 0.06),
+            DRCPosition("B", -100.0, 0.06),
+        ]
+        assert default_risk_charge(positions) == pytest.approx(3.0)
+
+    def test_no_cross_bucket_offset(self) -> None:
+        from creditriskengine.rwa.frtb_ima import DRCPosition, default_risk_charge
+
+        # Long in corporates, short in sovereigns: the short cannot hedge
+        # the long across buckets. WtS = 100/200 = 0.5 (book-wide), but
+        # the sovereign bucket has no long, so its DRC floors at 0, while
+        # the corporate bucket keeps its full long charge.
+        positions = [
+            DRCPosition("A", 100.0, 0.06, bucket="corporates"),
+            DRCPosition("B", -100.0, 0.02, bucket="sovereigns"),
+        ]
+        # corporates: max(0.06*100 - 0.5*0, 0) = 6
+        # sovereigns: max(0 - 0.5*0.02*100, 0) = 0
+        assert default_risk_charge(positions) == pytest.approx(6.0)
+
+    def test_empty_positions(self) -> None:
+        from creditriskengine.rwa.frtb_ima import default_risk_charge
+
+        assert default_risk_charge([]) == 0.0
+
+
 class TestNMRF:
     def test_returns_charge(self) -> None:
         result = nmrf_stress_charge(

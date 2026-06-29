@@ -21,13 +21,13 @@ Production-grade open-source credit risk analytics library.
 - **Retail Loss Forecasting** -- Delinquency-bucket Markov roll-rate matrices and multi-period charge-off projection
 - **Model Validation** -- Discrimination (AUROC, Gini, KS, IV), calibration (binomial, Hosmer-Lemeshow, traffic-light), stability (PSI, CSI, migration)
 - **Portfolio Risk** -- Vasicek ASRF, Gaussian copula Monte Carlo, parametric VaR, economic capital, and stress testing (including reverse stress)
-- **Concentration Risk** -- Single-name, sector-level, and granularity adjustment analytics
+- **Concentration Risk** -- Single-name and sector-level (HHI) analytics, plus the Martin-Wilde/Gordy granularity adjustment for the ASRF model (single-factor Vasicek, second-order idiosyncratic add-on at the 99.9% quantile)
 - **Counterparty Credit Risk** -- Full SA-CCR EAD engine (CRE52): trade-level adjusted notionals with supervisory duration, supervisory deltas (incl. Black-Scholes option and CDO-tranche deltas), maturity factors, asset-class add-ons with the correct hedging-set aggregation (IR maturity buckets, FX pairs, single-factor systematic credit/equity/commodity), the PFE multiplier, and unmargined/margined replacement cost. Plus EPE/EEPE/PFE exposure profiles from simulated paths, netting-set aggregation, IMM EAD (alpha=1.4), and wrong-way risk (general alpha adjustment + specific WWR flagging) per CRE52/53
 - **Risk-Based Pricing & Capital Allocation** -- RAROC, Economic Value Added (EVA), break-even spread, all-in risk-based loan rate, and portfolio capital allocation (marginal, Euler/VaR, Expected-Shortfall contributions per Tasche 2008)
 - **Capital Adequacy** -- Capital buffers (CConB, CCyB, G-SIB/D-SIB), leverage ratio (CRE80), and MDA framework
 - **CVA Risk** -- BA-CVA (CVA25) and SA-CVA delta risk charge (CVA26) with supervisory parameters
 - **Market Risk** -- FRTB Standardised Approach: credit spread SbM (MAR21), Default Risk Charge (MAR22), and RRAO (MAR23)
-- **FRTB Internal Models Approach** -- Expected Shortfall at 97.5% (MAR33.4), liquidity-horizon scaling (10/20/40/60/120 days), stressed-ES capital charge, P&L Attribution Test (Spearman + KS traffic light), internal DRC (99.9%), and Non-Modellable Risk Factor stress charge
+- **FRTB Internal Models Approach** -- Expected Shortfall at 97.5% (MAR33.4), liquidity-horizon scaling (10/20/40/60/120 days), stressed-ES capital charge, P&L Attribution Test (Spearman + KS traffic light), full bucketed Default Risk Charge (MAR22: obligor JTD netting, default risk-weight table, book-wide hedge-benefit ratio, per-bucket aggregation) at 99.9%, and Non-Modellable Risk Factor stress charge
 - **IRRBB** -- Economic Value of Equity sensitivity to the six BCBS d368 shock scenarios, Net Interest Income sensitivity, and the Supervisory Outlier Test (15% Tier 1 EVE / 2.5% NII per EBA RTS/2022/09, CRR3 Art. 84)
 - **Operational Resilience** -- EU DORA ICT incident classification (Reg 2022/2554, RTS 2024/1772), impact tolerances for Important Business Services (BCBS d516, PRA SS1/21), and third-party (ICT provider) concentration via HHI
 - **Securitisation** -- SEC-SA, SEC-ERBA, and SEC-IRBA per CRE40-45
@@ -369,7 +369,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,564 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,571 tests across all modules with **98%+ line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 
