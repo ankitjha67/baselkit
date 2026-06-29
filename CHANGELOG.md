@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.0] - 2026-06-29
+
+### Added — Large Exposures framework (BCBS LEX)
+
+New `rwa/large_exposures.py` implementing the supervisory framework for
+measuring and controlling large exposures (BCBS d283 / LEX).
+
+- `exposure_value(...)` — pre-risk-weight exposure value: on-balance +
+  CCF × off-balance + derivative EAD + SFT exposure, net of eligible CRM.
+- `aggregate_connected_group(...)` — sums exposures across connected
+  counterparties (control / economic interdependence) per LEX10.
+- `assess_large_exposure(...)` — tests an exposure against the 25%-of-
+  Tier-1 limit (15% for G-SIB-to-G-SIB), the 10% reporting threshold, and
+  reports the ratio, breach flag and headroom (`LargeExposureResult`).
+- `large_exposures_report(...)` — portfolio-level LEX30 report listing
+  reportable exposures (sorted) and limit breaches (`LargeExposureReport`).
+
 ## [0.17.0] - 2026-06-29
 
 ### Added — Climate scenario analysis (EBA/GL/2025/02)

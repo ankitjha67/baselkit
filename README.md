@@ -25,6 +25,7 @@ Production-grade open-source credit risk analytics library.
 - **Counterparty Credit Risk** -- Full SA-CCR EAD engine (CRE52): trade-level adjusted notionals with supervisory duration, supervisory deltas (incl. Black-Scholes option and CDO-tranche deltas), maturity factors, asset-class add-ons with the correct hedging-set aggregation (IR maturity buckets, FX pairs, single-factor systematic credit/equity/commodity), the PFE multiplier, and unmargined/margined replacement cost. Plus EPE/EEPE/PFE exposure profiles from simulated paths, netting-set aggregation, IMM EAD (alpha=1.4), and wrong-way risk (general alpha adjustment + specific WWR flagging) per CRE52/53
 - **Risk-Based Pricing & Capital Allocation** -- RAROC, Economic Value Added (EVA), break-even spread, all-in risk-based loan rate, and portfolio capital allocation (marginal, Euler/VaR, Expected-Shortfall contributions per Tasche 2008)
 - **Capital Adequacy** -- Capital buffers (CConB, CCyB, G-SIB/D-SIB), leverage ratio (CRE80), and MDA framework
+- **Large Exposures (BCBS LEX)** -- Pre-risk-weight exposure-value measurement (on/off-balance with CCF, derivative EAD, SFTs, net of eligible CRM), connected-counterparty grouping, the 25%-of-Tier-1 limit (15% G-SIB-to-G-SIB), 10% reporting threshold, and a portfolio breach/headroom report
 - **CVA Risk** -- BA-CVA (CVA25) and SA-CVA delta risk charge (CVA26) with supervisory parameters
 - **Market Risk** -- FRTB Standardised Approach: credit spread SbM (MAR21), Default Risk Charge (MAR22), and RRAO (MAR23)
 - **FRTB Internal Models Approach** -- Expected Shortfall at 97.5% (MAR33.4), liquidity-horizon scaling (10/20/40/60/120 days), stressed-ES capital charge, P&L Attribution Test (Spearman + KS traffic light), full bucketed Default Risk Charge (MAR22: obligor JTD netting, default risk-weight table, book-wide hedge-benefit ratio, per-bucket aggregation) at 99.9%, and Non-Modellable Risk Factor stress charge
@@ -370,7 +371,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,681 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,702 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 
