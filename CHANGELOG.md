@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.0] - 2026-06-29
+
+### Added — Basel III liquidity ratios (LCR & NSFR)
+
+New `liquidity/` package implementing the two Basel III liquidity metrics.
+
+- **`liquidity/lcr.py`** — Liquidity Coverage Ratio (BCBS d238):
+  `stock_of_hqla` applies the 15%/50% Level 2A/2B haircuts and the
+  closed-form Level 2 (40% of HQLA) and Level 2B (15% of HQLA) caps;
+  `net_cash_outflows` applies the 75% inflow cap;
+  `liquidity_coverage_ratio` returns the ratio and compliance flag.
+- **`liquidity/nsfr.py`** — Net Stable Funding Ratio (BCBS d295):
+  ASF and RSF factor tables (`ASFCategory`/`RSFCategory`),
+  `available_stable_funding` / `required_stable_funding`, and
+  `net_stable_funding_ratio` with the 100% compliance check.
+
 ## [0.18.0] - 2026-06-29
 
 ### Added — Large Exposures framework (BCBS LEX)

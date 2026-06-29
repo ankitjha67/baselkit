@@ -1,6 +1,6 @@
 # Architecture
 
-CreditRiskEngine is organized into fourteen top-level packages, each
+CreditRiskEngine is organized into fifteen top-level packages, each
 mapping to a distinct regulatory or analytical domain.
 
 ## Package Layout
@@ -88,6 +88,10 @@ creditriskengine/
 ├── operational_resilience/  # DORA / operational resilience
 │   ├── dora.py            # ICT incident classification (Reg 2022/2554)
 │   └── resilience.py      # Impact tolerances, third-party concentration
+│
+├── liquidity/          # Basel III liquidity ratios
+│   ├── lcr.py             # Liquidity Coverage Ratio (BCBS d238)
+│   └── nsfr.py            # Net Stable Funding Ratio (BCBS d295)
 │
 ├── validation/         # Model validation toolkit
 │   ├── discrimination.py   # AUROC, Gini, KS, CAP, IV, Somers' D
