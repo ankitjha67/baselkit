@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.0] - 2026-06-29
+
+### Added — Equity investments in funds (CRE60)
+
+New `rwa/equity_in_funds.py` implementing the CRE60 hierarchy:
+
+- `fund_average_risk_weight` / `fund_leverage` — the fund's average risk
+  weight (underlying RWA / total assets) and leverage (assets / equity).
+- `look_through_rwa` / `mandate_based_rwa` — RWA = min(avg_RW × leverage,
+  1250%) × investment, for the Look-Through and Mandate-Based approaches.
+- `fall_back_rwa` — the 1250% Fall-Back Approach.
+
+Each returns a `FundRWAResult` with the effective risk weight, RWA, and a
+cap-binding flag.
+
 ## [0.21.0] - 2026-06-29
 
 ### Added — Settlement / failed-trade risk capital (CRE70)
