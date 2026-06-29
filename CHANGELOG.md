@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.0] - 2026-06-29
+
+### Added — ESG risk management per EBA/GL/2025/01
+
+Implements the two quantitative centrepieces of the EBA Guidelines on
+the management of ESG risks (EBA/GL/2025/01, applicable from 11 January
+2026), sitting above the existing climate (NGFS, PCAF, GAR) and
+ESG-ratings modules.
+
+- **`esg/risk_management.py`**:
+  - `assess_esg_materiality(drivers, total_exposure, horizon,
+    materiality_threshold=0.10)` — exposure-weighted likelihood × impact
+    materiality score in [0, 1] with a material / not-material verdict and
+    a per-factor breakdown (environmental physical/transition, social,
+    governance). Returns `MaterialityResult`.
+  - `recommended_method(horizon)` — encodes the EBA Title 4 mapping of
+    assessment method to time horizon: short → exposure-based, medium →
+    sector/portfolio-alignment, long → scenario-based.
+  - `transition_plan_alignment(current, base, target, base_year,
+    target_year, current_year)` — monitors a portfolio metric (e.g.
+    financed-emissions intensity, or a GAR-uplift target) against its
+    intermediate target on a straight-line pathway, per CRD Art. 76(2)
+    and Art. 87a. Infers reduction vs growth direction, reports the
+    expected-by-now value, gap, on-track flag, alignment %, and required
+    annual change. Returns `TransitionPlanStatus`.
+
 ## [0.13.0] - 2026-06-29
 
 ### Added — Contractual EAD amortisation schedules
