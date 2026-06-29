@@ -6,9 +6,11 @@ import pytest
 from creditriskengine.models.ead.ead_model import (
     CCF_FLOOR_AIRB,
     EADModel,
+    amortising_balance_schedule,
     apply_ccf_floor,
     calculate_ead,
     ead_term_structure,
+    ead_term_structure_from_schedule,
     estimate_ccf,
     get_supervisory_ccf,
 )
@@ -89,6 +91,81 @@ class TestEADTermStructure:
         # Fully amortized with large rate
         ts = ead_term_structure(100.0, 0.0, ccf=0.0, n_periods=5, amortization_rate=0.99)
         assert all(t >= 0.0 for t in ts)
+
+
+class TestAmortisingBalanceSchedule:
+    def test_zero_rate_straight_line(self) -> None:
+        # 0% rate, fully amortising over 4 periods → 75, 50, 25, 0
+        sched = amortising_balance_schedule(100.0, 0.0, 4)
+        np.testing.assert_allclose(sched, [75.0, 50.0, 25.0, 0.0])
+
+    def test_fully_amortising_ends_at_zero(self) -> None:
+        sched = amortising_balance_schedule(1000.0, 0.06, 10)
+        assert sched[-1] == pytest.approx(0.0, abs=1e-6)
+
+    def test_monotonic_non_increasing(self) -> None:
+        sched = amortising_balance_schedule(1000.0, 0.08, 12, periods_per_year=12)
+        assert np.all(np.diff(sched) <= 1e-9)
+
+    def test_annuity_balance_known_value(self) -> None:
+        # Annual annuity: P=1000, i=10%, n=3.
+        # Instalment = 1000 * 0.1 / (1 - 1.1^-3) = 402.1148...
+        # End-of-period 1 balance = 1000*1.1 - 402.1148 = 697.885
+        sched = amortising_balance_schedule(1000.0, 0.10, 3)
+        assert sched[0] == pytest.approx(697.8852, abs=1e-3)
+        assert sched[-1] == pytest.approx(0.0, abs=1e-6)
+
+    def test_bullet_holds_then_repays(self) -> None:
+        # Pure bullet: balance held until maturity, repaid at the end.
+        sched = amortising_balance_schedule(1000.0, 0.05, 5, balloon_fraction=1.0)
+        np.testing.assert_allclose(sched[:-1], [1000.0, 1000.0, 1000.0, 1000.0])
+        assert sched[-1] == pytest.approx(0.0)
+
+    def test_balloon_partial(self) -> None:
+        # 50% balloon: amortises down toward the balloon, never below it
+        # until the final maturity repayment.
+        sched = amortising_balance_schedule(1000.0, 0.06, 5, balloon_fraction=0.5)
+        assert all(sched[:-1] >= 500.0 - 1e-6)
+        assert sched[-1] == pytest.approx(0.0)
+
+    def test_zero_principal(self) -> None:
+        sched = amortising_balance_schedule(0.0, 0.05, 4)
+        np.testing.assert_allclose(sched, np.zeros(4))
+
+    def test_invalid_inputs(self) -> None:
+        with pytest.raises(ValueError, match="principal must be"):
+            amortising_balance_schedule(-1.0, 0.05, 4)
+        with pytest.raises(ValueError, match="n_periods must be"):
+            amortising_balance_schedule(100.0, 0.05, 0)
+        with pytest.raises(ValueError, match="balloon_fraction"):
+            amortising_balance_schedule(100.0, 0.05, 4, balloon_fraction=1.5)
+
+
+class TestEADTermStructureFromSchedule:
+    def test_drawn_only_matches_balance_schedule(self) -> None:
+        sched = amortising_balance_schedule(1000.0, 0.06, 5)
+        ead = ead_term_structure_from_schedule(1000.0, 0.06, 5)
+        np.testing.assert_allclose(ead, sched)
+
+    def test_adds_undrawn_ccf(self) -> None:
+        ead = ead_term_structure_from_schedule(
+            1000.0, 0.06, 5, undrawn_commitment=400.0, ccf=0.5
+        )
+        sched = amortising_balance_schedule(1000.0, 0.06, 5)
+        np.testing.assert_allclose(ead, sched + 0.5 * 400.0)
+
+    def test_feeds_ecl_lifetime(self) -> None:
+        # End-to-end: a Stage 2 amortising loan whose EAD declines over life.
+        from creditriskengine.ecl.ifrs9.ecl_calc import ecl_lifetime
+
+        ead_curve = ead_term_structure_from_schedule(100_000.0, 0.07, 5)
+        marginal_pds = np.full(5, 0.02)
+        ecl_amort = ecl_lifetime(marginal_pds, lgds=0.45, eads=ead_curve, eir=0.07)
+        ecl_flat = ecl_lifetime(marginal_pds, lgds=0.45, eads=100_000.0, eir=0.07)
+        # Amortising EAD must give a strictly smaller lifetime ECL than
+        # holding today's balance flat.
+        assert ecl_amort < ecl_flat
+        assert ecl_amort > 0
 
 
 class TestEADModel:

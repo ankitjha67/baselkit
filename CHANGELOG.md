@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0] - 2026-06-29
+
+### Added — Contractual EAD amortisation schedules
+
+Auto-derive the IFRS 9 EAD term structure from a loan's contractual
+repayment terms, so lifetime ECL no longer requires a hand-supplied EAD
+profile for non-revolving (amortising) exposures.
+
+- **`models/ead/ead_model.py`**:
+  - `amortising_balance_schedule(principal, annual_rate, n_periods,
+    periods_per_year=1, balloon_fraction=0.0)` — end-of-period
+    outstanding-balance path for an annuity (equal-instalment) loan.
+    Handles straight-line (0% rate), monthly/quarterly compounding,
+    pure bullet (`balloon_fraction=1.0`), and partial balloon
+    structures; the amortising portion never drops below the balloon
+    until the final maturity repayment.
+  - `ead_term_structure_from_schedule(principal, annual_rate,
+    n_periods, undrawn_commitment=0.0, ccf=0.0, periods_per_year=1,
+    balloon_fraction=0.0)` — combines the contractual drawn-balance
+    path with `CCF × undrawn` to yield a period-by-period EAD curve
+    that feeds directly into `ecl_lifetime`.
+
+This makes the EAD curve fully automated from loan terms rather than
+assuming `EAD = current outstanding balance` flat across the lifetime
+horizon.
+
 ## [0.7.0] - 2026-05-27
 
 ### Bug fixes (full-repo audit)
