@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.0] - 2026-06-29
+
+### Added — Settlement / failed-trade risk capital (CRE70)
+
+New `rwa/settlement_risk.py`.
+
+- `dvp_settlement_multiplier` / `dvp_settlement_capital` — DvP unsettled-
+  transaction capital charge on the positive current exposure, scaled by
+  the CRE70.5 business-days multiplier (8% at 5-15 days, 50% at 16-30,
+  75% at 31-45, 100% at 46+), with the RWA equivalent.
+- `non_dvp_risk_weight` — free-delivery treatment: counterparty risk
+  weight until 4 business days after the second leg, then 1250% (CRE70.7).
+
 ## [0.20.0] - 2026-06-29
 
 ### Added — Total Loss-Absorbing Capacity (TLAC)
