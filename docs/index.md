@@ -13,11 +13,16 @@ through regulatory reporting.
 |--------|-------------|
 | **RWA Calculation** | SA (CRE20), F-IRB, A-IRB (CRE31-32), output floor (RBC25), CRM (CRE22) |
 | **ECL Engines** | IFRS 9 (staging, SICR, lifetime PD, **revolving credit with drawn/undrawn split**), CECL (ASC 326), Ind AS 109 |
-| **PD/LGD/EAD** | Scorecard, calibration, master scale, workout/downturn LGD, CCF |
+| **PD/LGD/EAD** | Scorecard, calibration, master scale, workout/downturn LGD, CCF, contractual EAD amortisation schedules |
 | **Model Validation** | AUROC, Gini, KS, PSI, binomial test, Hosmer-Lemeshow, traffic light |
+| **AI/ML Governance** | Fairness metrics, PSI/population drift monitoring |
 | **Portfolio Risk** | Vasicek ASRF, copula Monte Carlo, Credit VaR, stress testing |
-| **Operational Risk** | Basel III SMA (OPE25) |
-| **Market Risk** | FRTB integration point (MAR) |
+| **Operational Risk** | Basel III SMA (OPE25), operational resilience (DORA) |
+| **Market Risk** | FRTB IMA — expected shortfall (97.5%), PLAT, DRC, NMRF (MAR) |
+| **Counterparty Risk** | EPE/EEPE/PFE exposure, wrong-way risk |
+| **IRRBB** | EVE/NII sensitivity, supervisory outlier test |
+| **Risk-Based Pricing** | RAROC/EVA, Euler/ES capital allocation |
+| **Climate & ESG** | NGFS scenarios, PCAF financed emissions, GAR, ESG ratings adapter |
 | **Jurisdictions** | 17 supported: BCBS, EU, UK, US, India, Singapore, + 11 more |
 
 ## Quick Start
