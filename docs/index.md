@@ -18,6 +18,8 @@ through regulatory reporting.
 | **AI/ML Governance** | Fairness metrics, PSI/population drift monitoring |
 | **Portfolio Risk** | Vasicek ASRF, copula Monte Carlo, Credit VaR, stress testing |
 | **Operational Risk** | Basel III SMA (OPE25), operational resilience (DORA) |
+| **Liquidity** | LCR (HQLA caps, inflow cap) and NSFR (ASF/RSF factors) per BCBS d238/d295 |
+| **Large Exposures** | BCBS LEX single/connected-counterparty limits (25% / 15% G-SIB) |
 | **Market Risk** | FRTB IMA — expected shortfall (97.5%), PLAT, DRC, NMRF (MAR) |
 | **Counterparty Risk** | EPE/EEPE/PFE exposure, wrong-way risk |
 | **IRRBB** | EVE/NII sensitivity, supervisory outlier test |
