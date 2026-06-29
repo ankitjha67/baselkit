@@ -25,6 +25,7 @@ Production-grade open-source credit risk analytics library.
 - **Counterparty Credit Risk** -- Full SA-CCR EAD engine (CRE52): trade-level adjusted notionals with supervisory duration, supervisory deltas (incl. Black-Scholes option and CDO-tranche deltas), maturity factors, asset-class add-ons with the correct hedging-set aggregation (IR maturity buckets, FX pairs, single-factor systematic credit/equity/commodity), the PFE multiplier, and unmargined/margined replacement cost. Plus EPE/EEPE/PFE exposure profiles from simulated paths, netting-set aggregation, IMM EAD (alpha=1.4), and wrong-way risk (general alpha adjustment + specific WWR flagging) per CRE52/53
 - **Risk-Based Pricing & Capital Allocation** -- RAROC, Economic Value Added (EVA), break-even spread, all-in risk-based loan rate, and portfolio capital allocation (marginal, Euler/VaR, Expected-Shortfall contributions per Tasche 2008)
 - **Capital Adequacy** -- Capital buffers (CConB, CCyB, G-SIB/D-SIB), leverage ratio (CRE80), and MDA framework
+- **TLAC (FSB)** -- Total Loss-Absorbing Capacity for G-SIBs: available TLAC net of buffer CET1, the higher-of 18%-RWA / 6.75%-leverage minimums (16%/6% conformance period), binding-constraint identification, and shortfall reporting
 - **Large Exposures (BCBS LEX)** -- Pre-risk-weight exposure-value measurement (on/off-balance with CCF, derivative EAD, SFTs, net of eligible CRM), connected-counterparty grouping, the 25%-of-Tier-1 limit (15% G-SIB-to-G-SIB), 10% reporting threshold, and a portfolio breach/headroom report
 - **Liquidity Ratios (BCBS LCR / NSFR)** -- Liquidity Coverage Ratio with tiered HQLA haircuts and the Level 2 (40%) / Level 2B (15%) caps plus the 75% inflow cap, and the Net Stable Funding Ratio with the full ASF/RSF factor tables — each with compliance flags against the 100% minimum
 - **CVA Risk** -- BA-CVA (CVA25) and SA-CVA delta risk charge (CVA26) with supervisory parameters
@@ -372,7 +373,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,721 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,734 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

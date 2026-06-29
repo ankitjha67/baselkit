@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.20.0] - 2026-06-29
+
+### Added — Total Loss-Absorbing Capacity (TLAC)
+
+New `rwa/tlac.py` implementing the FSB TLAC standard for G-SIBs.
+
+- `available_tlac(...)` — regulatory capital + eligible TLAC debt, less the
+  CET1 used to meet the combined buffer requirement (buffers sit on top of
+  TLAC, no double-counting).
+- `tlac_ratios(...)` — assesses TLAC against the higher of the 18%-of-RWA
+  and 6.75%-of-leverage-exposure minimums (16% / 6% during the 2019-2021
+  conformance period), reporting both ratios, the binding constraint, the
+  RWA and leverage shortfalls, and a compliance flag (`TLACResult`).
+
 ## [0.19.0] - 2026-06-29
 
 ### Added — Basel III liquidity ratios (LCR & NSFR)
