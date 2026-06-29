@@ -37,6 +37,7 @@ Production-grade open-source credit risk analytics library.
 - **Operational Risk** -- Standardised Measurement Approach (SMA) per OPE25
 - **Credit Risk Mitigation** -- Comprehensive and simple approaches, haircut framework per CRE22
 - **Settlement Risk (CRE70)** -- DvP failed-trade capital charge by business-days-unsettled multiplier (8/50/75/100%) and the non-DvP free-delivery treatment (counterparty RW, then 1250% at 5+ days)
+- **Equity Investments in Funds (CRE60)** -- Look-Through, Mandate-Based, and Fall-Back (1250%) approaches with the fund average-risk-weight × leverage calculation, capped at 1250%
 - **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI (full IRAC norms plus the **RBI ECL Master Direction 2026** (RBI/DOR/2026-27/398) — 20-category provisioning floor table, Stage 3 duration-dependent floors, PD 0.03% / LGD 65%-70%-30% backstops, borrower-level Stage 3 contagion, DCCO project finance provisioning, capital add-back phase-in, effective April 1, 2027), Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
 - **Emerging-Market Asset Classification** -- China NFRA five-tier risk classification (DPD + ECL-ratio triggers, CAS 22 staging, Feb 2023 Measures) and Indonesia OJK five-tier collectability with minimum provisioning (1/5/15/50/100% per POJK 40/2019, net of eligible collateral)
 - **ESG Ratings Integration** -- Vendor-agnostic adapter normalising MSCI (AAA-CCC), Sustainalytics (0-40+ risk score), and S&P Global ESG ratings to a common [0,1] risk score, with a bounded PD multiplier overlay per EBA (2023) guidance
@@ -374,7 +375,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,748 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,761 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

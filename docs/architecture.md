@@ -30,6 +30,7 @@ creditriskengine/
 │   ├── large_exposures.py      # Large Exposures framework (BCBS LEX)
 │   ├── tlac.py                 # Total Loss-Absorbing Capacity (FSB)
 │   ├── settlement_risk.py      # Settlement / failed-trade capital (CRE70)
+│   ├── equity_in_funds.py      # Equity investments in funds (CRE60)
 │   └── output_floor.py         # RBC25 output floor with multi-jurisdiction phase-in
 │
 ├── ecl/                # Expected Credit Loss engines
