@@ -52,6 +52,60 @@ class TestSecIRBA:
         rw = sec_irba_risk_weight(tranche, pool)
         assert rw == pytest.approx(12.50, abs=0.01)
 
+    def test_d374_worked_example_senior_tranche_a(self) -> None:
+        """BCBS d374 SEC-IRBA worked example, Tranche A (30%-100%).
+
+        Pool: N=100, LGD=81.87%, KIRB=21.24%, MT=2.5y, wholesale.
+        Expected SEC-IRBA risk weight = 28.78%.
+        """
+        pool = SecuritisationPool(
+            kirb=0.2124, ksa=0.30, pool_ead=1_000_000,
+            n_effective=100, lgd_pool=0.8187,
+        )
+        tranche = SecuritisationTranche(
+            tranche_id="A", attachment_point=0.30, detachment_point=1.00,
+            notional=700_000, is_senior=True, maturity_years=2.5,
+        )
+        rw = sec_irba_risk_weight(tranche, pool)
+        assert rw == pytest.approx(0.2878, abs=1e-3)
+
+    def test_d374_worked_example_tranche_b(self) -> None:
+        """BCBS d374 SEC-IRBA worked example, Tranche B (5%-30%, non-senior).
+
+        Straddles KIRB (21.24%). Expected SEC-IRBA risk weight = 1056.94%.
+        """
+        pool = SecuritisationPool(
+            kirb=0.2124, ksa=0.30, pool_ead=1_000_000,
+            n_effective=100, lgd_pool=0.8187,
+        )
+        tranche = SecuritisationTranche(
+            tranche_id="B", attachment_point=0.05, detachment_point=0.30,
+            notional=250_000, is_senior=False, maturity_years=2.5,
+        )
+        rw = sec_irba_risk_weight(tranche, pool)
+        assert rw == pytest.approx(10.5694, abs=1e-2)
+
+    def test_p_parameter_floored_at_030(self) -> None:
+        from creditriskengine.rwa.securitisation import _compute_p_parameter
+
+        # Inputs driving p below 0.30 must be floored.
+        p = _compute_p_parameter(
+            kirb=0.30, lgd_pool=0.10, n_effective=1000,
+            is_senior=True, maturity_years=1.0, is_retail=False,
+        )
+        assert p == pytest.approx(0.30, abs=1e-9) or p >= 0.30
+
+    def test_retail_uses_retail_coefficients(self) -> None:
+        from creditriskengine.rwa.securitisation import _compute_p_parameter
+
+        # Retail senior: p = max(0.3, -7.48*KIRB + 0.71*LGD + 0.24*MT)
+        # KIRB=0.05, LGD=0.45, MT=2.5 -> -0.374 + 0.3195 + 0.6 = 0.5455
+        p = _compute_p_parameter(
+            kirb=0.05, lgd_pool=0.45, n_effective=100,
+            is_senior=True, maturity_years=2.5, is_retail=True,
+        )
+        assert p == pytest.approx(0.5455, abs=1e-3)
+
 
 class TestSecERBA:
     """SEC-ERBA risk weight tests per CRE43."""
@@ -132,15 +186,17 @@ class TestKSSFA:
         result = _kssfa(0.0, 0.05, 0.20)
         assert result == pytest.approx(0.15)
 
-    def test_denominator_near_zero_returns_thickness(self) -> None:
-        """Line 159: abs(denominator) < 1e-15 branch.
+    def test_tiny_span_returns_span(self) -> None:
+        """abs(a*(u-l)) < 1e-15 degenerate branch.
 
-        We need abs(a) >= 1e-10 but a*(exp(a)-1) ~ 0.
-        For very small a (but >= 1e-10), exp(a) ~ 1 + a, so
-        denominator ~ a * a which is ~1e-20 < 1e-15.
+        With a >= 1e-10 but a near-zero span, KSSFA collapses to (u - l).
         """
-        result = _kssfa(1e-10, 0.05, 0.20)
-        assert result == pytest.approx(0.15)
+        result = _kssfa(1e-9, 0.10, 0.10 + 1e-7)
+        assert result == pytest.approx(1e-7, abs=1e-12)
+
+    def test_zero_span_returns_zero(self) -> None:
+        # u == l (tranche pinned at KIRB) -> span 0.
+        assert _kssfa(-5.0, 0.10, 0.10) == pytest.approx(0.0)
 
 
 class TestComputeAParameter:

@@ -56,6 +56,8 @@ class SecuritisationPool:
         n_effective: Effective number of exposures in the pool.
         lgd_pool: Exposure-weighted average LGD of the pool.
         is_sts: EU STS (Simple, Transparent, Standardised) flag.
+        is_retail: True for retail underlying pools (drives the SEC-IRBA
+            supervisory parameter ``p`` per CRE44.13).
     """
 
     kirb: float
@@ -64,17 +66,42 @@ class SecuritisationPool:
     n_effective: float
     lgd_pool: float = 0.50
     is_sts: bool = False
+    is_retail: bool = False
 
 
 # ============================================================
 # Supervisory parameters — CRE41.3 / CRE42.3
 # ============================================================
 
-# p parameter for KSSFA supervisory formula (CRE41.3, Table 1)
+# SEC-SA fixed p parameter (CRE42.3): 0.5 senior, 1.0 non-senior.
 _P_SENIOR_WHOLESALE: Final[float] = 0.5
 _P_NON_SENIOR_WHOLESALE: Final[float] = 1.0
 _P_SENIOR_RETAIL: Final[float] = 0.5
 _P_NON_SENIOR_RETAIL: Final[float] = 1.0
+
+# SEC-IRBA supervisory parameter p (CRE44.13):
+#   p = max(0.3, A + B/N + C*KIRB + D*LGD + E*MT)
+# Coefficients keyed by (is_retail, is_senior, is_granular). Granularity
+# (N >= 25) only differentiates wholesale rows; retail rows ignore it.
+_P_IRBA_FLOOR: Final[float] = 0.30
+_P_IRBA_GRANULARITY_THRESHOLD: Final[float] = 25.0
+# (A, B, C, D, E)
+_P_IRBA_COEFFS: Final[dict[tuple[bool, bool, bool], tuple[float, float, float, float, float]]] = {
+    # Wholesale, senior, granular (N >= 25)
+    (False, True, True): (0.0, 3.56, -1.85, 0.55, 0.07),
+    # Wholesale, senior, non-granular (N < 25)
+    (False, True, False): (0.11, 2.61, -2.91, 0.68, 0.07),
+    # Wholesale, non-senior, granular
+    (False, False, True): (0.16, 2.87, -1.03, 0.21, 0.07),
+    # Wholesale, non-senior, non-granular
+    (False, False, False): (0.22, 2.35, -2.46, 0.48, 0.07),
+    # Retail, senior (granularity not applicable)
+    (True, True, True): (0.0, 0.0, -7.48, 0.71, 0.24),
+    (True, True, False): (0.0, 0.0, -7.48, 0.71, 0.24),
+    # Retail, non-senior
+    (True, False, True): (0.0, 0.0, -5.78, 0.55, 0.27),
+    (True, False, False): (0.0, 0.0, -5.78, 0.55, 0.27),
+}
 
 # Floor risk weight for SEC-IRBA and SEC-SA — CRE41.6
 _RW_FLOOR: Final[float] = 0.15  # 15 %
@@ -128,38 +155,33 @@ _ERBA_MATURITY_ADJ: Final[dict[int, tuple[float, float, float]]] = {
 # Supervisory formula — KSSFA
 # ============================================================
 
-def _kssfa(a: float, attachment: float, detachment: float) -> float:
-    """Supervisory formula KSSFA(a) per CRE41.2.
+def _kssfa(a: float, lower: float, u: float) -> float:
+    """Supervisory formula KSSFA per CRE44.14.
 
-    KSSFA is the capital requirement for a tranche, computed as::
+        KSSFA(KIRB) = (exp(a * u) - exp(a * l)) / (a * (u - l))
 
-        KSSFA(a) = (exp(a * u) - exp(a * l)) / (a * (exp(a) - 1))
+    where, per CRE44.14:
+        a = -1 / (p * KIRB)
+        u = D - KIRB
+        l = max(A - KIRB, 0)
 
-    where *l* and *u* are the attachment and detachment points
-    adjusted for the capital requirement (``a`` parameter encodes
-    the supervisory scaling).
-
-    For the degenerate case where ``a`` is close to zero, the formula
-    simplifies to ``(u - l)`` (linear interpolation).
+    For the degenerate case where ``a`` or ``(u - l)`` is close to zero
+    the formula collapses to ``(u - l)`` (linear interpolation).
 
     Args:
-        a: Supervisory scaling parameter.
-        attachment: Lower bound of tranche loss allocation (0-1).
-        detachment: Upper bound of tranche loss allocation (0-1).
+        a: Supervisory scaling parameter -1/(p*K).
+        lower: Lower KIRB-adjusted bound l = max(A - KIRB, 0).
+        u: Upper KIRB-adjusted bound D - KIRB.
 
     Returns:
-        Capital requirement fraction for the tranche.
+        Capital requirement per unit of securitisation exposure.
     """
-    if abs(a) < 1e-10:
-        return detachment - attachment
+    span = u - lower
+    if abs(a) < 1e-10 or abs(a * span) < 1e-15:
+        return span
 
-    exp_a = math.exp(a)
-    denominator = a * (exp_a - 1.0)
-    if abs(denominator) < 1e-15:
-        return detachment - attachment
-
-    numerator = math.exp(a * detachment) - math.exp(a * attachment)
-    return numerator / denominator
+    numerator = math.exp(a * u) - math.exp(a * lower)
+    return numerator / (a * span)
 
 
 def _compute_p_parameter(
@@ -167,40 +189,39 @@ def _compute_p_parameter(
     lgd_pool: float,
     n_effective: float,
     is_senior: bool,
+    maturity_years: float,
+    is_retail: bool,
 ) -> float:
-    """Compute supervisory parameter *p* for SEC-IRBA per CRE41.3.
+    """Compute supervisory parameter *p* for SEC-IRBA per CRE44.13.
 
-    For SEC-IRBA::
+    Full five-coefficient formula::
 
         p = max(0.3, A + B * (1/N) + C * KIRB + D * LGD + E * MT)
 
-    Simplified to the key structural form::
-
-        p = max(0.3, 0.7 * is_senior_flag + (1 - is_senior_flag))
-
-    The full formula uses:
-        A = -(1 / (p * KIRB))
-
-    Here we use the standard supervisory p values and adjust
-    for pool granularity.
+    where the coefficients (A, B, C, D, E) are read from the CRE44.13
+    table keyed on exposure type (retail/wholesale), seniority, and — for
+    wholesale only — granularity (granular when N >= 25).
 
     Args:
-        kirb: Pool-level IRB capital requirement.
-        lgd_pool: Exposure-weighted average LGD.
-        n_effective: Effective number of exposures.
-        is_senior: Whether tranche is most senior.
+        kirb: Pool-level IRB capital requirement (decimal).
+        lgd_pool: Exposure-weighted average pool LGD (decimal).
+        n_effective: Effective number of exposures N.
+        is_senior: Whether the tranche is the most senior.
+        maturity_years: Tranche maturity MT in years (1-5 per CRE44.16).
+        is_retail: Whether the underlying pool is retail.
 
     Returns:
-        Supervisory parameter p.
+        Supervisory parameter p, floored at 0.30.
     """
-    p = _P_SENIOR_WHOLESALE if is_senior else _P_NON_SENIOR_WHOLESALE
+    is_granular = n_effective >= _P_IRBA_GRANULARITY_THRESHOLD
+    a, b, c, d, e = _P_IRBA_COEFFS[(is_retail, is_senior, is_granular)]
 
-    # Granularity adjustment — CRE41.3 footnote
-    if n_effective > 0:
-        granularity_adj = 1.0 / n_effective
-        p = max(0.3, p * (1.0 - granularity_adj) + granularity_adj)
+    # MT is bounded to [1, 5] years per CRE44.16.
+    mt = min(max(maturity_years, 1.0), 5.0)
+    n_term = b / n_effective if n_effective > 0 else 0.0
 
-    return p
+    p = a + n_term + c * kirb + d * lgd_pool + e * mt
+    return max(_P_IRBA_FLOOR, p)
 
 
 def _compute_a_parameter(
@@ -232,6 +253,56 @@ def _compute_a_parameter(
     return -1.0 / (p * capital_req)
 
 
+def _ssfa_risk_weight(
+    attachment: float,
+    detachment: float,
+    ka: float,
+    p: float,
+    floor: float,
+) -> float:
+    """Supervisory-formula risk weight per CRE44.14-44.15.
+
+    Shared by SEC-IRBA (ka = KIRB) and SEC-SA (ka = KA). Implements the
+    full three-region assembly:
+
+    * ``D <= KA`` -> 1250 % (tranche fully below the capital requirement).
+    * ``A >= KA`` -> ``RW = 12.5 * KSSFA`` (tranche fully above KA).
+    * ``A < KA < D`` -> exposure-weighted blend of 1250 % on the
+      below-KA slice and ``12.5 * KSSFA`` on the above-KA slice.
+
+    Args:
+        attachment: Tranche attachment point A (0-1).
+        detachment: Tranche detachment point D (0-1).
+        ka: Pool capital requirement KIRB (SEC-IRBA) or KA (SEC-SA).
+        p: Supervisory parameter p.
+        floor: Applicable risk-weight floor (decimal).
+
+    Returns:
+        Risk weight as a decimal multiple (e.g. 0.15 = 15 %, 12.5 = 1250 %).
+    """
+    if detachment <= ka:
+        return _RW_CAP
+    if ka <= 0.0 or p <= 0.0:
+        # Pool carries no capital requirement: the SSFA collapses and the
+        # tranche takes the floor.
+        return min(max(floor, floor), _RW_CAP)
+
+    a_param = _compute_a_parameter(p, ka, attachment, detachment)
+    u = detachment - ka
+    lower = max(attachment - ka, 0.0)
+    kssfa = _kssfa(a_param, lower, u)
+
+    if attachment >= ka:
+        rw = 12.5 * kssfa
+    else:
+        thickness = detachment - attachment
+        below_share = (ka - attachment) / thickness
+        above_share = (detachment - ka) / thickness
+        rw = below_share * _RW_CAP + above_share * 12.5 * kssfa
+
+    return min(max(rw, floor), _RW_CAP)
+
+
 # ============================================================
 # SEC-IRBA — CRE41
 # ============================================================
@@ -240,20 +311,18 @@ def sec_irba_risk_weight(
     tranche: SecuritisationTranche,
     pool: SecuritisationPool,
 ) -> float:
-    """SEC-IRBA risk weight per CRE41.
+    """SEC-IRBA risk weight per CRE44.
 
-    Formula::
+    Uses the full supervisory formula (SSFA), with:
+    - ``p`` from the CRE44.13 five-coefficient table
+      ``p = max(0.3, A + B/N + C*KIRB + D*LGD + E*MT)``;
+    - ``KSSFA = (e^{a*u} - e^{a*l}) / (a*(u-l))`` with
+      ``a = -1/(p*KIRB)``, ``u = D - KIRB``, ``l = max(A - KIRB, 0)``;
+    - the three-region risk-weight assembly (CRE44.15): 1250 % below
+      KIRB, ``12.5 * KSSFA`` above KIRB, exposure-weighted when the
+      tranche straddles KIRB.
 
-        RW = max(floor, 12.5 * KSSFA(KIRB) / max(D - A, 1e-10))
-
-    where:
-    - KSSFA uses the supervisory formula with ``a = -(1 / (p * KIRB))``
-    - Supervisory parameter ``p`` depends on seniority and pool type
-    - If ``A >= KIRB``: tranche absorbs no expected loss, formula applies
-    - If ``D <= KIRB``: tranche is fully below capital requirement,
-      RW = 1250 %
-
-    Reference: BCBS CRE41.1-41.6.
+    Reference: BCBS CRE44.13-44.16.
 
     Args:
         tranche: Tranche parameters.
@@ -266,55 +335,22 @@ def sec_irba_risk_weight(
     d_point = tranche.detachment_point
     kirb = pool.kirb
 
-    # Tranche entirely below KIRB — CRE41.4
-    if d_point <= kirb:
-        logger.debug(
-            "Tranche '%s': D (%.4f) <= KIRB (%.4f) -> RW = 1250%%",
-            tranche.tranche_id,
-            d_point,
-            kirb,
-        )
-        return _RW_CAP
-
-    # Tranche straddles KIRB — adjust attachment to KIRB
-    effective_a = max(a_point, kirb)
-
-    # Compute supervisory parameter p
+    # Supervisory parameter p per CRE44.13.
     p = _compute_p_parameter(
         kirb=kirb,
         lgd_pool=pool.lgd_pool,
         n_effective=pool.n_effective,
         is_senior=tranche.is_senior,
+        maturity_years=tranche.maturity_years,
+        is_retail=pool.is_retail,
     )
 
-    # Compute ``a`` parameter for KSSFA
-    a_param = _compute_a_parameter(p, kirb, effective_a, d_point)
-
-    # KSSFA capital
-    k_tranche = _kssfa(a_param, effective_a, d_point)
-
-    # Risk weight
-    tranche_thickness = max(d_point - a_point, 1e-10)
-    rw = 12.5 * k_tranche / tranche_thickness
-
-    # Apply floor
     floor = _RW_FLOOR_STS if pool.is_sts else _RW_FLOOR
-    rw = max(rw, floor)
-
-    # Apply cap
-    rw = min(rw, _RW_CAP)
+    rw = _ssfa_risk_weight(a_point, d_point, kirb, p, floor)
 
     logger.debug(
-        "SEC-IRBA tranche '%s': A=%.4f, D=%.4f, KIRB=%.4f, p=%.2f, "
-        "a=%.4f, k=%.6f, RW=%.4f",
-        tranche.tranche_id,
-        a_point,
-        d_point,
-        kirb,
-        p,
-        a_param,
-        k_tranche,
-        rw,
+        "SEC-IRBA tranche '%s': A=%.4f, D=%.4f, KIRB=%.4f, p=%.4f, RW=%.4f",
+        tranche.tranche_id, a_point, d_point, kirb, p, rw,
     )
     return rw
 
@@ -326,78 +362,50 @@ def sec_irba_risk_weight(
 def sec_sa_risk_weight(
     tranche: SecuritisationTranche,
     pool: SecuritisationPool,
+    delinquency_ratio: float = 0.0,
 ) -> float:
     """SEC-SA risk weight per CRE42.
 
-    Uses the same KSSFA supervisory formula but with KSA instead of KIRB.
-
-    The ``p`` parameter for SEC-SA is fixed:
-    - ``p = 1.0`` for non-senior tranches
-    - ``p = 0.5`` for senior tranches
-
-    An additional delinquency parameter ``W`` increases KA::
+    Uses the same SSFA supervisory formula but on ``KA`` (derived from
+    KSA) instead of KIRB. The ``p`` parameter is fixed at 0.5 (senior) or
+    1.0 (non-senior). The delinquency adjustment (CRE42.2) raises the
+    capital requirement::
 
         KA = (1 - W) * KSA + W * 0.5
 
-    where W is the ratio of delinquent underlying exposures.
+    where W is the share of underlying exposures 90+ days past due, in
+    bankruptcy/foreclosure, or otherwise delinquent.
 
     Reference: BCBS CRE42.1-42.5.
 
     Args:
         tranche: Tranche parameters.
         pool: Underlying pool parameters.
+        delinquency_ratio: W, the share of delinquent underlying
+            exposures, in [0, 1] (default 0.0).
 
     Returns:
         Risk weight as a decimal (e.g. 0.15 for 15 %).
+
+    Raises:
+        ValueError: If ``delinquency_ratio`` is outside [0, 1].
     """
+    if not 0.0 <= delinquency_ratio <= 1.0:
+        raise ValueError("delinquency_ratio (W) must be in [0, 1]")
+
     a_point = tranche.attachment_point
     d_point = tranche.detachment_point
-    ksa = pool.ksa
 
-    # Adjusted KA for delinquencies
-    # W defaults to 0 — caller should adjust pool.ksa if delinquencies exist
-    ka = ksa
+    # KA with the CRE42.2 delinquency adjustment.
+    ka = (1.0 - delinquency_ratio) * pool.ksa + delinquency_ratio * 0.5
 
-    # Tranche entirely below KA
-    if d_point <= ka:
-        logger.debug(
-            "SEC-SA tranche '%s': D (%.4f) <= KSA (%.4f) -> RW = 1250%%",
-            tranche.tranche_id,
-            d_point,
-            ka,
-        )
-        return _RW_CAP
-
-    effective_a = max(a_point, ka)
-
-    # p parameter
     p = 0.5 if tranche.is_senior else 1.0
-
-    # Compute ``a`` parameter for KSSFA
-    a_param = _compute_a_parameter(p, ka, effective_a, d_point)
-
-    # KSSFA capital
-    k_tranche = _kssfa(a_param, effective_a, d_point)
-
-    # Risk weight
-    tranche_thickness = max(d_point - a_point, 1e-10)
-    rw = 12.5 * k_tranche / tranche_thickness
-
-    # Apply floor
     floor = _RW_FLOOR_STS if pool.is_sts else _RW_FLOOR
-    rw = max(rw, floor)
-
-    # Apply cap
-    rw = min(rw, _RW_CAP)
+    rw = _ssfa_risk_weight(a_point, d_point, ka, p, floor)
 
     logger.debug(
-        "SEC-SA tranche '%s': A=%.4f, D=%.4f, KSA=%.4f, p=%.2f, RW=%.4f",
-        tranche.tranche_id,
-        a_point,
-        d_point,
-        ksa,
-        p,
-        rw,
+        "SEC-SA tranche '%s': A=%.4f, D=%.4f, KA=%.4f (W=%.4f), p=%.2f, RW=%.4f",
+        tranche.tranche_id, a_point, d_point, ka, delinquency_ratio, p, rw,
     )
     return rw
 
