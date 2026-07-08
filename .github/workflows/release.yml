@@ -1,17 +1,56 @@
 name: Release to PyPI
 
+# Auto-release: whenever a new version lands on main (i.e. the `version`
+# in pyproject.toml is one that has not yet been tagged), run the checks,
+# create the git tag + GitHub Release, and publish to PyPI via trusted
+# publishing. No manual GitHub Release or PyPI upload is required.
+#
+# `workflow_dispatch` allows a manual re-run from the Actions tab.
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create tags and GitHub Releases
+  id-token: write   # PyPI trusted publishing (OIDC)
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.detect.outputs.version }}
+      new: ${{ steps.detect.outputs.new }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect version and whether it is already released
+        id: detect
+        run: |
+          VERSION=$(grep -m1 '^version = ' pyproject.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if git ls-remote --tags --exit-code origin "refs/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION already released; nothing to do."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "v$VERSION is new; will release."
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
   test:
+    needs: check
+    if: needs.check.outputs.new == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -24,19 +63,32 @@ jobs:
         run: pytest
 
   publish:
-    needs: test
+    needs: [check, test]
+    if: needs.check.outputs.new == 'true'
     runs-on: ubuntu-latest
     environment: pypi
-    permissions:
-      id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install build tools
-        run: python -m pip install --upgrade pip build
+          python-version: "3.12"
       - name: Build package
-        run: python -m build
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: Create tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          # Release notes = this version's CHANGELOG section (fallback if absent).
+          notes=$(awk "/^## \[$VERSION\]/{f=1;next} /^## \[/{if(f)exit} f" CHANGELOG.md)
+          [ -z "$notes" ] && notes="Release v$VERSION"
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --notes "$notes" \
+            --target "$GITHUB_SHA"
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
