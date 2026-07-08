@@ -11,7 +11,7 @@ Modules:
     reporting: Regulatory reporting
 """
 
-__version__ = "0.24.0"
+__version__ = "0.25.0"
 
 # Public API — convenient top-level imports
 from creditriskengine.core.exposure import Collateral, Exposure

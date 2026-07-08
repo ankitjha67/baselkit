@@ -137,7 +137,7 @@ class TestAdvancedIRBCalculator:
         calc = AdvancedIRBCalculator()
         exp = _make_exposure(pd=0.0001, lgd=0.35, drawn_amount=1_000_000, undrawn_commitment=0)
         result = calc.calculate(exp)
-        assert result.details["pd"] == pytest.approx(0.0003, abs=1e-6)
+        assert result.details["pd"] == pytest.approx(0.0005, abs=1e-6)
 
     def test_lgd_floor_applied(self) -> None:
         calc = AdvancedIRBCalculator()

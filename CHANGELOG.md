@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.25.0] - 2026-06-29
+
+### Fixed — IRB PD input floor raised to the Basel III finalisation value
+
+The IRB PD input floor was hardcoded at the Basel II value of **0.03%
+(3 bps)**; the Basel III finalisation (BCBS CRE32.13) and CRR3 Art. 160/161
+raise it to **0.05% (5 bps)** for corporate and retail exposures, with a
+higher **0.10% (10 bps)** floor for qualifying revolving retail (QRRE).
+The old value silently under-floored every low-PD IRB risk weight.
+
+- `rwa/irb/formulas.py`: `PD_FLOOR` 0.0003 → 0.0005; new `PD_FLOOR_QRRE`
+  (0.0010) and a `pd_input_floor(asset_class)` helper; `irb_risk_weight`
+  now applies the QRRE floor for `asset_class="qrre"`. `foundation.py` and
+  `advanced.py` inherit the corrected floor.
+- `models/pd/margin_of_conservatism.py`: PD clip floor 0.0003 → 0.0005.
+- `regulatory/eu/crr3.yml`: `pd_floor_bps` 3 → 5.
+
+(The RBI ECL 0.03% backstop is a separate, jurisdiction-specific floor and
+is unchanged.)
+
 ## [0.24.0] - 2026-06-29
 
 ### Added — SFT minimum haircut floors (CRE56)

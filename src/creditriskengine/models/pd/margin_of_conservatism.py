@@ -213,7 +213,7 @@ def calculate_total_moc(
 
     Total additive MoC is the sum of individual component adjustments
     (converted from basis points to absolute PD).  The adjusted PD is
-    capped at 1.0 and floored at the Basel III minimum of 3 bps
+    capped at 1.0 and floored at the Basel III minimum of 5 bps
     (CRE32.13).
 
     Args:
@@ -227,8 +227,8 @@ def calculate_total_moc(
     moc_additive = total_bps / 10_000.0  # bps -> absolute
 
     adjusted_pd = base_pd + moc_additive
-    # Basel III PD floor 3 bps (CRE32.13)
-    adjusted_pd = float(np.clip(adjusted_pd, 0.0003, 1.0))
+    # Basel III PD floor 5 bps (CRE32.13)
+    adjusted_pd = float(np.clip(adjusted_pd, 0.0005, 1.0))
 
     logger.info(
         "Total MoC: base_pd=%.4f, moc=%.4f (%.1f bps), adjusted_pd=%.4f",
@@ -256,15 +256,15 @@ def apply_moc_to_pd_curve(
     """Apply MoC adjustment to entire PD term structure.
 
     Adds the absolute MoC to each tenor point and enforces the Basel III
-    PD floor (3 bps) and ceiling (100 %).
+    PD floor (5 bps) and ceiling (100 %).
 
     Args:
         pd_curve: Array of PD values by tenor.
         moc_result: MoCResult containing the additive MoC.
 
     Returns:
-        Adjusted PD curve, clipped to [0.0003, 1.0].
+        Adjusted PD curve, clipped to [0.0005, 1.0].
     """
     pd_curve = np.asarray(pd_curve, dtype=np.float64)
     adjusted = pd_curve + moc_result.moc_additive
-    return np.clip(adjusted, 0.0003, 1.0)
+    return np.clip(adjusted, 0.0005, 1.0)

@@ -133,8 +133,8 @@ class TestCalculateTotalMoC:
     def test_pd_floor_applied(self) -> None:
         components = []
         result = calculate_total_moc(base_pd=0.0001, components=components)
-        # Basel III PD floor: 0.0003
-        assert result.adjusted_pd == pytest.approx(0.0003, abs=1e-6)
+        # Basel III finalisation PD floor: 0.0005 (5 bps)
+        assert result.adjusted_pd == pytest.approx(0.0005, abs=1e-6)
 
     def test_pd_capped_at_1(self) -> None:
         components = [

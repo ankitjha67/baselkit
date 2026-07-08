@@ -81,7 +81,7 @@ credit_risk:
 
   irb_approach:
     # PD floor per CRE32.13 — 3 basis points (0.03%)
-    pd_floor_bps: 3
+    pd_floor_bps: 5
     lgd_floors:
       # A-IRB LGD floors per CRE32.25 / CRR3 Art. 161(4)
       senior_unsecured: 0.25

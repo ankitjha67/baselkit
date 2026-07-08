@@ -163,7 +163,7 @@ class TestFoundationIRBCalculator:
         calc = FoundationIRBCalculator()
         exp = _make_exposure(pd=0.0001, drawn_amount=1_000_000, undrawn_commitment=0)
         result = calc.calculate(exp)
-        assert result.details["pd"] == pytest.approx(0.0003, abs=1e-6)
+        assert result.details["pd"] == pytest.approx(0.0005, abs=1e-6)
 
     def test_defaulted_exposure_zero_rw(self) -> None:
         calc = FoundationIRBCalculator()

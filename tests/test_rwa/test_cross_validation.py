@@ -40,13 +40,27 @@ class TestMonotonicity:
             assert rws[i] > rws[i - 1]
 
     def test_rw_monotonic_in_pd_qrre(self):
-        """QRRE RW increases with PD."""
+        """QRRE RW increases with PD (above the 10 bps QRRE PD floor)."""
+        # QRRE carries a higher 0.10% PD floor (CRE32.13); use PDs at/above it.
+        qrre_pds = [0.001, 0.005, 0.01, 0.02, 0.05, 0.10, 0.20, 0.30]
         rws = [
             irb_risk_weight(pd=pd, lgd=0.75, asset_class="qrre")
-            for pd in self.PDS
+            for pd in qrre_pds
         ]
         for i in range(1, len(rws)):
             assert rws[i] > rws[i - 1]
+
+    def test_qrre_pd_floor_is_10bps(self):
+        """QRRE PDs below the 10 bps floor give the same RW as a 10 bps PD."""
+        rw_below = irb_risk_weight(pd=0.0002, lgd=0.75, asset_class="qrre")
+        rw_at = irb_risk_weight(pd=0.0010, lgd=0.75, asset_class="qrre")
+        assert rw_below == pytest.approx(rw_at)
+
+    def test_corporate_pd_floor_is_5bps(self):
+        """Corporate PDs below the 5 bps floor give the same RW as a 5 bps PD."""
+        rw_below = irb_risk_weight(pd=0.0001, lgd=0.45, asset_class="corporate")
+        rw_at = irb_risk_weight(pd=0.0005, lgd=0.45, asset_class="corporate")
+        assert rw_below == pytest.approx(rw_at)
 
     def test_rw_monotonic_in_pd_other_retail(self):
         """Other retail RW increases with PD."""

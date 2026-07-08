@@ -17,8 +17,21 @@ from scipy.stats import norm
 
 logger = logging.getLogger(__name__)
 
-# PD floor per BCBS CRE32.13: 0.03% (3 basis points)
-PD_FLOOR: float = 0.0003
+# PD input floor per the Basel III finalisation (BCBS CRE32.13) and
+# CRR3 Art. 160/161: 0.05% (5 bps) for corporate and retail exposures,
+# raised from the Basel II 0.03%. Qualifying revolving retail (QRRE)
+# exposures carry a higher 0.10% (10 bps) floor.
+PD_FLOOR: float = 0.0005
+PD_FLOOR_QRRE: float = 0.0010
+
+
+def pd_input_floor(asset_class: str) -> float:
+    """Applicable PD input floor for an IRB asset class (CRE32.13).
+
+    Returns 0.10% for qualifying revolving retail (QRRE) and 0.05% for all
+    other asset classes.
+    """
+    return PD_FLOOR_QRRE if asset_class == "qrre" else PD_FLOOR
 
 
 # ============================================================
@@ -38,7 +51,7 @@ def asset_correlation_corporate(pd: float) -> float:
     - R -> 0.12 as PD -> 1
 
     Args:
-        pd: Probability of Default (annualized, in [0.0003, 1.0])
+        pd: Probability of Default (annualized, in [0.0005, 1.0])
 
     Returns:
         Asset correlation R in [0.12, 0.24]
@@ -141,7 +154,7 @@ def maturity_adjustment(pd: float, maturity: float) -> float:
     Retail exposures: NO maturity adjustment.
 
     Args:
-        pd: Probability of Default (>= 0.0003)
+        pd: Probability of Default (>= 0.0005)
         maturity: Effective maturity M in years
 
     Returns:
@@ -172,13 +185,13 @@ def irb_capital_requirement_k(
     - N() = standard normal CDF
     - G() = standard normal inverse CDF
     - R = asset correlation
-    - PD = probability of default (floored at 0.03%)
+    - PD = probability of default (floored at 0.05%)
     - LGD = loss given default
 
     The 0.999 confidence level = 99.9th percentile.
 
     Args:
-        pd: Probability of Default (>= 0.0003 floor applied)
+        pd: Probability of Default (>= 0.0005 floor applied)
         lgd: Loss Given Default (in [0, 1])
         correlation: Asset correlation R
 
@@ -220,7 +233,7 @@ def irb_risk_weight(
     The 12.5 multiplier converts K to risk weight because
     Capital = 8% * RWA = K * EAD, so RW = K * 12.5.
 
-    PD Floor (CRE32.13): 0.03% for all non-defaulted exposures.
+    PD Floor (CRE32.13): 0.05% for all non-defaulted (0.10% QRRE) exposures.
 
     Args:
         pd: Probability of Default
@@ -235,7 +248,7 @@ def irb_risk_weight(
     Returns:
         Risk weight as a percentage (e.g., 75.0 means 75%)
     """
-    pd_floored = max(pd, PD_FLOOR)
+    pd_floored = max(pd, pd_input_floor(asset_class))
 
     # Defaulted exposures: K = max(0, LGD - EL_BE)
     if pd >= 1.0:
@@ -308,7 +321,7 @@ def double_default_rw(
         4. Apply maturity adjustment for non-retail asset classes
         5. RW = K * 12.5
 
-    The guarantor PD is floored at 0.03% per CRE32.13.
+    The guarantor PD is floored at 0.05% per CRE32.13.
 
     Args:
         pd_obligor: Probability of Default of the original obligor.

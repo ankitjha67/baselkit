@@ -169,9 +169,9 @@ class TestCRR3YAMLFixes:
         with open(yaml_path) as f:
             return yaml.safe_load(f)
 
-    def test_pd_floor_is_3_bps(self, crr3_config: dict) -> None:
-        """Gap 4: PD floor should be 3 bps per CRE32.13."""
-        assert crr3_config["credit_risk"]["irb_approach"]["pd_floor_bps"] == 3
+    def test_pd_floor_is_5_bps(self, crr3_config: dict) -> None:
+        """PD input floor is 5 bps per the Basel III finalisation (CRE32.13)."""
+        assert crr3_config["credit_risk"]["irb_approach"]["pd_floor_bps"] == 5
 
     def test_lgd_supervisory_secured_values(self, crr3_config: dict) -> None:
         """Gap 5: LGD supervisory values for secured should be 0.10/0.15."""
