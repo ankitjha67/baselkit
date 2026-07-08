@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.26.0] - 2026-06-29
+
+### Fixed — APAC jurisdiction-config correctness (2023-2025 updates)
+
+Data-correctness fixes surfaced by the multi-jurisdiction research pass:
+
+- **China `nfra.yml`**: five-tier DPD buckets corrected to the NFRA Measures
+  2023 thresholds — substandard **>90**, doubtful **>270**, loss **>360**
+  days (were the repealed 90-360 / 360-720 / >720; `ecl/emerging/china.py`
+  was already correct — this removes a config/code contradiction).
+- **Hong Kong `hkma.yml`**: HK countercyclical buffer **1.0% → 0.5%**
+  (HKMA, effective 1 January 2025).
+- **Singapore `mas_637.yml`**: output-floor final 72.5% now reached on
+  **1 January 2029** (revised MAS Notice 637, effective 1 Jul 2024) — one
+  year earlier than the Basel/EU 2030 endpoint.
+
+Added `test_regulatory/test_config_corrections.py` regression tests.
+
 ## [0.25.0] - 2026-06-29
 
 ### Fixed — IRB PD input floor raised to the Basel III finalisation value

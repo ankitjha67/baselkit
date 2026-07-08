@@ -65,16 +65,19 @@ credit_risk:
     scaling_factor: 1.06
 
 output_floor:
+  # Revised MAS Notice 637 (effective 1 Jul 2024). The output floor reaches
+  # its final 72.5% on 1 Jan 2029 — one year earlier than the Basel/EU 2030
+  # endpoint.
   enabled: true
   final_pct: 0.725
-  phase_in_start: "2025-01-01"
+  phase_in_start: "2024-07-01"
   phase_in:
-    "2025-01-01": 0.50
-    "2026-01-01": 0.55
-    "2027-01-01": 0.60
-    "2028-01-01": 0.65
-    "2029-01-01": 0.70
-    "2030-01-01": 0.725
+    "2024-07-01": 0.50
+    "2025-01-01": 0.55
+    "2026-01-01": 0.60
+    "2027-01-01": 0.65
+    "2028-01-01": 0.70
+    "2029-01-01": 0.725
 
 default_definition:
   dpd_threshold: 90

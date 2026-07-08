@@ -94,9 +94,9 @@ default_definition:
   five_tier_classification:
     pass: "Normal performance"
     special_mention: "Potential issues, DPD 1-90"
-    substandard: "DPD 90-360 or impaired"
-    doubtful: "DPD 360-720 or severe impairment"
-    loss: "DPD >720 or unrecoverable"
+    substandard: "DPD >90 or impaired"
+    doubtful: "DPD >270 or severe impairment"
+    loss: "DPD >360 or unrecoverable"
   cure_period_months: 6
 
 capital_requirements:

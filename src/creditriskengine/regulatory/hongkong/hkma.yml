@@ -93,7 +93,7 @@ capital_requirements:
   capital_conservation_buffer_pct: 0.025
   countercyclical_buffer:
     jurisdictional_reciprocity: true
-    current_hk_rate_pct: 0.01
+    current_hk_rate_pct: 0.005
     max_pct: 0.025
   higher_loss_absorbency:
     enabled: true
