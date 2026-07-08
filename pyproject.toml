@@ -79,7 +79,10 @@ ignore = ["ANN201"]
 "tests/**" = ["ANN"]
 
 [tool.mypy]
-python_version = "3.11"
+# 3.12 analysis target: numpy's type stubs use PEP 695 `type` statements
+# (3.12+), which mypy rejects under an earlier target. Runtime support for
+# Python 3.11 is unchanged and verified by the pytest matrix.
+python_version = "3.12"
 strict = true
 warn_return_any = false
 warn_unused_configs = true
