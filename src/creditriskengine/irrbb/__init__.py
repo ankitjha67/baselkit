@@ -22,6 +22,18 @@ from creditriskengine.irrbb.outlier_test import (
     OutlierTestResult,
     supervisory_outlier_test,
 )
+from creditriskengine.irrbb.shocks import (
+    D368_BASELINE,
+    LONG_CAP_BPS,
+    PARALLEL_CAP_BPS,
+    SHORT_CAP_BPS,
+    CurrencyShocks,
+    apply_post_shock_floor,
+    get_currency_shocks,
+    is_valid_shock_rounding,
+    post_shock_floor,
+    register_currency_shocks,
+)
 
 __all__ = [
     "InterestRateShock",
@@ -31,4 +43,14 @@ __all__ = [
     "nii_sensitivity",
     "OutlierTestResult",
     "supervisory_outlier_test",
+    "CurrencyShocks",
+    "D368_BASELINE",
+    "PARALLEL_CAP_BPS",
+    "SHORT_CAP_BPS",
+    "LONG_CAP_BPS",
+    "get_currency_shocks",
+    "register_currency_shocks",
+    "is_valid_shock_rounding",
+    "post_shock_floor",
+    "apply_post_shock_floor",
 ]

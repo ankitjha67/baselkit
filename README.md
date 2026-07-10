@@ -32,7 +32,7 @@ Production-grade open-source credit risk analytics library.
 - **CVA Risk** -- BA-CVA (CVA25) and SA-CVA delta risk charge (CVA26) with supervisory parameters
 - **Market Risk** -- FRTB Standardised Approach: credit spread SbM (MAR21), Default Risk Charge (MAR22), and RRAO (MAR23)
 - **FRTB Internal Models Approach** -- Expected Shortfall at 97.5% (MAR33.4), liquidity-horizon scaling (10/20/40/60/120 days), stressed-ES capital charge, P&L Attribution Test (Spearman + KS traffic light), full bucketed Default Risk Charge (MAR22: obligor JTD netting, default risk-weight table, book-wide hedge-benefit ratio, per-bucket aggregation) at 99.9%, and Non-Modellable Risk Factor stress charge
-- **IRRBB** -- Economic Value of Equity sensitivity to the six BCBS d368 shock scenarios, Net Interest Income sensitivity, and the Supervisory Outlier Test (15% Tier 1 EVE / 2.5% NII per EBA RTS/2022/09, CRR3 Art. 84)
+- **IRRBB** -- Economic Value of Equity sensitivity to the six BCBS shock scenarios with the d578 (July 2024) per-currency recalibration (shock caps 400/500/300 bps, 25 bps rounding, post-shock floor -100bps +5bps/yr), Net Interest Income sensitivity, and the Supervisory Outlier Test (15% Tier 1 EVE / 2.5% NII per EBA RTS/2022/09, CRR3 Art. 84)
 - **Operational Resilience** -- EU DORA ICT incident classification (Reg 2022/2554, RTS 2024/1772), impact tolerances for Important Business Services (BCBS d516, PRA SS1/21), and third-party (ICT provider) concentration via HHI
 - **Securitisation** -- SEC-SA, SEC-ERBA, and SEC-IRBA per CRE40-45
 - **Operational Risk** -- Standardised Measurement Approach (SMA) per OPE25
@@ -377,7 +377,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,839 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,858 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

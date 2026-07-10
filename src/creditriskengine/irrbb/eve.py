@@ -110,6 +110,8 @@ def eve_sensitivity(
     parallel_bps: float = 200.0,
     short_bps: float = 250.0,
     long_bps: float = 100.0,
+    currency: str | None = None,
+    apply_floor: bool = False,
 ) -> dict[InterestRateShock, float]:
     """Compute Delta-EVE for all six standardised shocks.
 
@@ -120,16 +122,29 @@ def eve_sensitivity(
         cashflows: Net banking-book cash flow per tenor bucket.
         tenors_years: Tenor (years) per bucket.
         base_rates: Base discount rates per bucket.
-        parallel_bps: Parallel shock size (default 200bps, BCBS generic).
+        parallel_bps: Parallel shock size (default 200bps, d368 generic).
         short_bps: Short-rate shock size (default 250bps).
         long_bps: Long-rate shock size (default 100bps).
+        currency: If supplied, the per-currency d578 (July 2024,
+            applicable 1 Jan 2026) shock calibration overrides the three
+            ``*_bps`` arguments — see ``irrbb.shocks``.
+        apply_floor: If True, apply the post-shock interest-rate floor
+            (-100 bps at overnight, +5 bps/year) to each shocked curve.
 
     Returns:
         Mapping of each shock scenario to its Delta-EVE.
 
     Reference:
-        BCBS d368 Annex 2.
+        BCBS d368 Annex 2; BCBS d578 (per-currency recalibration).
     """
+    if currency is not None:
+        from creditriskengine.irrbb.shocks import get_currency_shocks
+
+        shocks = get_currency_shocks(currency)
+        parallel_bps = shocks.parallel_bps
+        short_bps = shocks.short_bps
+        long_bps = shocks.long_bps
+
     base_pv = repricing_gap(cashflows, tenors_years, base_rates)
     cashflows = np.asarray(cashflows, dtype=np.float64)
     tenors_years = np.asarray(tenors_years, dtype=np.float64)
@@ -139,6 +154,10 @@ def eve_sensitivity(
         shocked_rates = _shocked_curve(
             base_rates, tenors_years, shock, parallel_bps, short_bps, long_bps
         )
+        if apply_floor:
+            from creditriskengine.irrbb.shocks import apply_post_shock_floor
+
+            shocked_rates = apply_post_shock_floor(shocked_rates, tenors_years)
         dfs = 1.0 / (1.0 + shocked_rates) ** tenors_years
         shocked_pv = float(np.sum(cashflows * dfs))
         result[shock] = shocked_pv - base_pv

@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.29.0] - 2026-06-29
+
+### Added — IRRBB d578 shock recalibration (July 2024, effective 2026)
+
+New `irrbb/shocks.py` implementing the BCBS d578 recalibration framework:
+
+- Per-currency shock calibrations (`CurrencyShocks`, `get_currency_shocks`,
+  `register_currency_shocks`) with the d578 caps enforced (parallel 400 /
+  short 500 / long 300 bps) and the 25 bps rounding check. Ships verified
+  EUR (225/350/200) and USD (200/300/225) values — reproduced from the
+  d578 annex via secondary sources; confirm against the primary text for
+  supervisory use — with the d368 baseline (200/250/100) as fallback and
+  full override support for supervisor-published tables.
+- Post-shock interest-rate floor: -100 bps at the overnight tenor rising
+  5 bps/year to 0% at 20 years (`post_shock_floor`,
+  `apply_post_shock_floor`).
+- `eve_sensitivity` gains `currency=` (per-currency d578 calibration) and
+  `apply_floor=` parameters.
+
 ## [0.28.0] - 2026-06-29
 
 ### Added — RBI Project Finance & Gold Loan Directions 2025
