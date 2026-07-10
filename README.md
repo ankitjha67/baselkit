@@ -377,7 +377,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,858 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,884 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

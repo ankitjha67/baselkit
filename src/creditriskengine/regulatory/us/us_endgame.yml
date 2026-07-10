@@ -1,18 +1,25 @@
-# US Basel III Endgame
-# Federal Reserve, OCC, FDIC joint rulemaking (re-proposed)
+# US Basel III Endgame — PROPOSED, NOT FINAL LAW.
+# 2023 NPR: 88 FR 64028 (18 Sep 2023; FRB R-1813 / OCC-2023-0008 /
+# FDIC RIN 3064-AF29). Re-proposed 19 March 2026 (FR docs 2026-05959/60/61,
+# comments closed 18 June 2026). Effective date: "two calendar quarters
+# after adoption of a final rule" — no fixed date yet.
 
 jurisdiction: US
 regulator: Federal Reserve / OCC / FDIC
-framework: Basel III Endgame (US proposal)
-effective_date: "2026-07-01"
-document_reference: NPR July 2023, re-proposal September 2024
+framework: Basel III Endgame (US proposal — see rwa/standardized/us_erba.py)
+effective_date: null  # not final; 2023 NPR proposed 2025-07-01
+document_reference: 88 FR 64028 (2023 NPR); FR 2026-05959/60/61 (2026 reproposal)
 
 credit_risk:
-  approaches_permitted: [SA-Expanded, SA-Erisk]
-  note: "US Endgame eliminates IRB for most banks; dual-stack requirement"
+  approaches_permitted: [Standardized, ERBA]
+  note: >-
+    2023 NPR: dual-stack (higher-of Standardized vs Expanded RWA) for all
+    Category I-IV. 2026 reproposal: single stack — ERBA only for
+    Category I/II (>= $700bn), revised Standardized for all others.
+    IRB eliminated in both.
   applicability:
-    threshold_total_assets_usd: 100000000000  # $100B
-    applies_to: "Category I-IV banking organizations"
+    npr_2023_threshold_total_assets_usd: 100000000000   # $100B (Cat I-IV)
+    reproposal_2026_erba_threshold_usd: 700000000000    # $700B (Cat I/II)
   standardised_approach:
     risk_weights:
       sovereigns:
@@ -33,12 +40,18 @@ credit_risk:
         speculative_grade: 1.00
         unrated_general: 1.00
       retail:
-        regulatory_retail: 0.75
-        residential_mortgage_lte_80_ltv:
-          category_1: 0.20
-          category_2: 0.40
-        residential_mortgage_gt_80_lte_90: 0.25
-        residential_mortgage_gt_90_lte_100: 0.30
+        # ERBA (2023 NPR s.__.111(g)): transactor 55%, regulatory retail
+        # (non-transactor) 85%, other retail 110%.
+        transactor: 0.55
+        regulatory_retail: 0.85
+        other_retail: 1.10
+      residential_mortgage:
+        # ERBA Tables 5/6 (88 FR 64190-91), NOT cash-flow dependent:
+        # <=50%: 40; <=60%: 45; <=80%: 50; <=90%: 60; <=100%: 70; >100%: 90.
+        # Cash-flow dependent: 50/55/65/80/95/125.
+        # See rwa/standardized/us_erba.py for the operative tables.
+        approach: ltv_graduated_erba
+        currency_mismatch_multiplier: 1.5
       commercial_real_estate:
         income_producing_lte_60_ltv: 0.70
         income_producing_gt_60_lte_80_ltv: 0.90
@@ -48,16 +61,21 @@ credit_risk:
     permitted: false
     note: "A-IRB and F-IRB removed for credit risk under US Endgame"
 
+# The US did NOT adopt the Basel 72.5% credit-risk output floor. The 2023
+# NPR used the dual-stack higher-of mechanism instead (with a narrow 72.5%
+# floor applying ONLY to internally-modelled market risk inside the
+# expanded stack), and phased the expanded RWA in at 80/85/90/100%
+# (Table 9 — no 95% step). The 2026 reproposal removes the dual-stack.
 output_floor:
-  enabled: true
-  final_pct: 0.725
-  note: "Dual-stack: binding capital = higher of SA-expanded and SA-erisk"
-  phase_in:
-    "2026-07-01": 0.55
-    "2027-07-01": 0.60
-    "2028-07-01": 0.65
-    "2029-07-01": 0.70
-    "2030-07-01": 0.725
+  enabled: false
+  note: >-
+    No economy-wide output floor; see dual_stack_binding_rwa /
+    single_stack_rwa in rwa/standardized/us_erba.py.
+  npr_2023_expanded_rwa_transition:
+    "2025-07-01": 0.80
+    "2026-07-01": 0.85
+    "2027-07-01": 0.90
+    "2028-07-01": 1.00
 
 default_definition:
   dpd_threshold: 90
@@ -104,5 +122,10 @@ reporting:
 
 operational_risk:
   approach: Standardised (BIC-based)
-  internal_loss_multiplier: true
+  # 2023 NPR: loss-sensitive ILM floored at 1 (10-year loss history,
+  # USD 20,000 materiality). 2026 reproposal: ILM neutralised to 1.
+  internal_loss_multiplier_npr_2023: floored_at_one
+  internal_loss_multiplier_reproposal_2026: fixed_at_one
   loss_data_years: 10
+  bi_thresholds_usd: [1000000000, 30000000000]  # $1bn / $30bn buckets
+  bi_marginal_coefficients: [0.12, 0.15, 0.18]

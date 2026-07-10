@@ -16,7 +16,8 @@ creditriskengine/
 │
 ├── rwa/                # Risk-Weighted Assets
 │   ├── standardized/
-│   │   └── credit_risk_sa.py   # CRE20 SA risk weights (all exposure classes)
+│   │   ├── credit_risk_sa.py   # CRE20 SA risk weights (all exposure classes)
+│   │   └── us_erba.py          # US Endgame ERBA tables (PROPOSED, 2023 NPR + 2026 reproposal)
 │   ├── irb/
 │   │   └── formulas.py         # CRE31 IRB: correlations, K, maturity adj, RW
 │   ├── securitisation.py       # SEC-IRBA/SEC-SA/SEC-ERBA (CRE42-44)

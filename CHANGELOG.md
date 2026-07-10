@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0] - 2026-06-29
+
+### Added — US Basel III Endgame ERBA (PROPOSED framework)
+
+New `rwa/standardized/us_erba.py` implementing the US Expanded Risk-Based
+Approach as a clearly-labelled PROPOSED framework — the 2023 NPR figures
+were extracted from the operative Federal Register text (88 FR 64028),
+with the March 2026 reproposal's structural changes as explicit options.
+Nothing in the module is final US law.
+
+- Residential mortgages: the LTV-graduated Tables 5/6 grids (40-90%
+  not-cashflow-dependent, 50-125% dependent), non-regulatory 100/150%,
+  defaulted treatment, and the 1.5x currency-mismatch multiplier.
+- Retail 55/85/110% (transactor / regulatory / other); corporate
+  IG+public-security 65%, base 100%, subordinated 150%, pre-operational
+  project finance 130%; bank Grades A/B/C 40/75/150% (short-term 20/50);
+  equity ladder 0/20/100/250/400/1250%; CCFs 10/20/40/50/100%.
+- Framework structure: `dual_stack_binding_rwa` (2023 NPR higher-of) and
+  `single_stack_rwa` (2026 reproposal: ERBA only >= $700bn, revised SA
+  otherwise).
+- Transitions: expanded-RWA phase-in 80/85/90/100% (Table 9 — no 95%
+  step), the 2023 AOCI opt-out run-off 75/50/25/0% (Table 10), and the
+  2026 reproposal's 20%/year AOCI phase-in from 2027.
+
+### Fixed — `regulatory/us/us_endgame.yml`
+
+The YAML previously modelled the dual-stack as a Basel-style 72.5% output
+floor (the US adopted no such credit-risk floor) and carried residential
+mortgage weights contradicting the NPR tables. Rewritten to the primary-
+sourced state with proposed-vs-final status clearly labelled.
+
 ## [0.29.0] - 2026-06-29
 
 ### Added — IRRBB d578 shock recalibration (July 2024, effective 2026)
