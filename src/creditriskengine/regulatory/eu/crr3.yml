@@ -32,9 +32,17 @@ credit_risk:
         bb_plus_to_b_minus: 1.00
         below_b_minus: 1.50
         unrated: 1.00
+        # Art. 465(3) transitional: unrated corporates with estimated
+        # PD <= 0.5% receive 65% until 31 Dec 2032.
+        unrated_low_pd_transitional: 0.65
+        unrated_low_pd_ceiling: 0.005
+        unrated_transitional_end: "2033-01-01"
         sme_supporting_factor_eligible: true
       retail:
         regulatory_retail: 0.75
+        # Art. 123a: unhedged currency-mismatched retail/RRE to individuals
+        currency_mismatch_multiplier: 1.5
+        currency_mismatch_cap: 1.50
 
       # Residential RE — whole-loan approach (CRR3 Art. 125)
       # NOT dependent on cashflows from property — Table 12 equivalent
@@ -80,7 +88,7 @@ credit_risk:
       infrastructure_supporting_factor: 0.75  # Art. 501a
 
   irb_approach:
-    # PD floor per CRE32.13 — 3 basis points (0.03%)
+    # PD floor per Basel III finalisation CRE32.13 / CRR3 Art. 160 — 5 bps
     pd_floor_bps: 5
     lgd_floors:
       # A-IRB LGD floors per CRE32.25 / CRR3 Art. 161(4)

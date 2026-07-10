@@ -6,6 +6,7 @@ Supports jurisdiction-specific overrides via YAML config.
 """
 
 import logging
+from datetime import date
 from typing import Any
 
 from creditriskengine.core.types import (
@@ -193,28 +194,109 @@ def get_bank_risk_weight(
     return 50.0
 
 
+# CRR3 Art. 501 — SME supporting factor tiers.
+EU_SME_FACTOR_LOW: float = 0.7619  # portion of total exposure <= EUR 2.5m
+EU_SME_FACTOR_HIGH: float = 0.85  # portion above EUR 2.5m
+EU_SME_THRESHOLD_EUR: float = 2_500_000.0
+
+# CRR3 Art. 501a — infrastructure supporting factor.
+EU_INFRASTRUCTURE_FACTOR: float = 0.75
+
+# CRR3 Art. 465(3) — unrated-corporate transitional: 65% RW where the
+# institution estimates the obligor's PD <= 0.5%, until 31 December 2032.
+EU_UNRATED_CORPORATE_TRANSITIONAL_RW: float = 65.0
+EU_UNRATED_CORPORATE_PD_CEILING: float = 0.005
+EU_UNRATED_CORPORATE_TRANSITIONAL_END = date(2033, 1, 1)
+
+
+def eu_sme_supporting_factor(total_exposure_eur: float) -> float:
+    """Blended SME supporting factor per CRR3 Art. 501.
+
+    The factor applies in tiers over the obligor's TOTAL exposure (not per
+    facility): 0.7619 on the portion up to EUR 2.5m and 0.85 on the excess.
+    The blended multiplier is the exposure-weighted average of the two.
+
+    Args:
+        total_exposure_eur: The obligor's total SME exposure in EUR.
+
+    Returns:
+        Blended supporting-factor multiplier in [0.7619, 0.85).
+
+    Raises:
+        ValueError: If ``total_exposure_eur`` is not positive.
+    """
+    if total_exposure_eur <= 0.0:
+        raise ValueError("total_exposure_eur must be positive")
+    if total_exposure_eur <= EU_SME_THRESHOLD_EUR:
+        return EU_SME_FACTOR_LOW
+    low_part = EU_SME_THRESHOLD_EUR
+    high_part = total_exposure_eur - EU_SME_THRESHOLD_EUR
+    return (
+        EU_SME_FACTOR_LOW * low_part + EU_SME_FACTOR_HIGH * high_part
+    ) / total_exposure_eur
+
+
+def currency_mismatch_multiplier(risk_weight: float) -> float:
+    """Currency-mismatch multiplier (BCBS CRE20.92 / CRR3 Art. 123a).
+
+    Unhedged retail and residential-real-estate exposures to individuals
+    where the loan currency differs from the obligor's income currency are
+    multiplied by 1.5, with the resulting risk weight capped at 150%.
+
+    Args:
+        risk_weight: Base risk weight as a percentage.
+
+    Returns:
+        Adjusted risk weight as a percentage: ``min(1.5 x RW, 150%)``.
+    """
+    return min(risk_weight * 1.5, 150.0)
+
+
 def get_corporate_risk_weight(
     cqs: CreditQualityStep,
     jurisdiction: Jurisdiction = Jurisdiction.BCBS,
     is_investment_grade: bool | None = None,
     is_sme: bool = False,
+    pd: float | None = None,
+    reporting_date: date | None = None,
+    total_sme_exposure_eur: float | None = None,
+    is_qualifying_infrastructure: bool = False,
 ) -> float:
     """Risk weight for corporate exposures.
 
     Reference: BCBS CRE20.28-20.32, Table 7.
 
-    UK PRA divergence (PS9/24, para 3.17):
+    UK PRA divergence (PS9/24 / PS1/26, para 3.17):
         Unrated investment-grade corporates = 65%.
 
+    EU CRR3 Art. 465(3) — unrated-corporate transitional:
+        Unrated corporates whose institution-estimated PD <= 0.5% receive
+        65% until 31 December 2032 (100% from 2033). Applied when ``pd``
+        is supplied; a None ``reporting_date`` is treated as within the
+        transitional window.
+
     EU CRR3 Art. 501 — SME supporting factor:
-        Exposures <= EUR 2.5M: multiply RW by 0.7619
-        Exposures > EUR 2.5M: 0.7619 for first EUR 2.5M, 0.85 for remainder
+        0.7619 on the portion of the obligor's total exposure <= EUR 2.5m,
+        0.85 on the excess. When ``total_sme_exposure_eur`` is supplied the
+        blended tiered factor applies; otherwise 0.7619 is applied flat
+        (exposure assumed within the threshold).
+
+    EU CRR3 Art. 501a — infrastructure supporting factor:
+        Qualifying infrastructure exposures (the caller asserts the
+        Art. 501a(1) eligibility criteria) receive a 0.75 multiplier.
 
     Args:
         cqs: Credit quality step.
         jurisdiction: Regulatory jurisdiction.
         is_investment_grade: For UK PRA unrated corporate treatment.
         is_sme: If True and jurisdiction supports it, apply SME factor.
+        pd: Institution-estimated obligor PD for the EU unrated-corporate
+            transitional test.
+        reporting_date: Reporting date used to date-gate transitionals.
+        total_sme_exposure_eur: Obligor's total SME exposure in EUR for the
+            tiered Art. 501 factor.
+        is_qualifying_infrastructure: If True (EU), apply the Art. 501a
+            0.75 factor.
 
     Returns:
         Risk weight as percentage.
@@ -222,13 +304,34 @@ def get_corporate_risk_weight(
     if cqs == CreditQualityStep.UNRATED:
         if jurisdiction == Jurisdiction.UK and is_investment_grade:
             return 65.0
-        rw = 100.0
+        # EU CRR3 Art. 465(3) transitional for low-PD unrated corporates.
+        in_window = (
+            reporting_date is None
+            or reporting_date < EU_UNRATED_CORPORATE_TRANSITIONAL_END
+        )
+        if (
+            jurisdiction == Jurisdiction.EU
+            and pd is not None
+            and pd <= EU_UNRATED_CORPORATE_PD_CEILING
+            and in_window
+        ):
+            rw = EU_UNRATED_CORPORATE_TRANSITIONAL_RW
+        else:
+            rw = 100.0
     else:
         rw = CORPORATE_RW.get(cqs.value, 100.0)
 
-    # EU SME supporting factor (CRR3 Art. 501)
+    # EU SME supporting factor (CRR3 Art. 501): tiered when the obligor's
+    # total exposure is known, flat 0.7619 otherwise.
     if is_sme and jurisdiction == Jurisdiction.EU:
-        rw *= 0.7619
+        if total_sme_exposure_eur is not None:
+            rw *= eu_sme_supporting_factor(total_sme_exposure_eur)
+        else:
+            rw *= EU_SME_FACTOR_LOW
+
+    # EU infrastructure supporting factor (CRR3 Art. 501a).
+    if is_qualifying_infrastructure and jurisdiction == Jurisdiction.EU:
+        rw *= EU_INFRASTRUCTURE_FACTOR
 
     return rw
 
@@ -238,17 +341,22 @@ def get_residential_re_risk_weight(
     jurisdiction: Jurisdiction = Jurisdiction.BCBS,
     is_cashflow_dependent: bool = False,
     is_income_producing: bool = False,
+    is_currency_mismatched: bool = False,
 ) -> float:
     """Risk weight for residential real estate exposures.
 
     Reference: BCBS CRE20.71-20.86, Tables 12-13.
-    Whole-loan approach (BCBS/EU CRR3).
+    Whole-loan approach (BCBS/EU CRR3). Currency-mismatch multiplier per
+    CRE20.92 / CRR3 Art. 123a.
 
     Args:
         ltv: Loan-to-value ratio (e.g., 0.75 for 75%).
         jurisdiction: Regulatory jurisdiction.
         is_cashflow_dependent: If True, use cashflow-dependent table.
         is_income_producing: If True, treated as income-producing.
+        is_currency_mismatched: If True, the exposure is an unhedged loan
+            to an individual whose income currency differs from the loan
+            currency — RW x 1.5 capped at 150%.
 
     Returns:
         Risk weight as percentage.
@@ -260,17 +368,23 @@ def get_residential_re_risk_weight(
 
     # India (RBI) specific treatment
     if jurisdiction == Jurisdiction.INDIA:
-        if ltv <= 0.80:
-            return 20.0
-        return 35.0
+        india_rw = 20.0 if ltv <= 0.80 else 35.0
+        if is_currency_mismatched:
+            india_rw = currency_mismatch_multiplier(india_rw)
+        return india_rw
 
-    for ltv_lower, ltv_upper, rw in table:
+    rw: float | None = None
+    for ltv_lower, ltv_upper, band_rw in table:
         if ltv_lower < ltv <= ltv_upper:
-            return rw
-    # LTV exactly 0 case
-    if ltv <= 0:
-        return table[0][2]
-    return table[-1][2]
+            rw = band_rw
+            break
+    if rw is None:
+        # LTV exactly 0 case, or beyond the last band.
+        rw = table[0][2] if ltv <= 0 else table[-1][2]
+
+    if is_currency_mismatched:
+        rw = currency_mismatch_multiplier(rw)
+    return rw
 
 
 def uk_pra_loan_splitting_rre(
@@ -420,18 +534,28 @@ def get_defaulted_risk_weight(
     return 150.0
 
 
-def get_retail_risk_weight(is_regulatory_retail: bool = True) -> float:
+def get_retail_risk_weight(
+    is_regulatory_retail: bool = True,
+    is_currency_mismatched: bool = False,
+) -> float:
     """Risk weight for retail exposures.
 
-    Reference: BCBS CRE20.65.
+    Reference: BCBS CRE20.65; currency-mismatch multiplier per CRE20.92 /
+    CRR3 Art. 123a.
 
     Args:
         is_regulatory_retail: If True, meets regulatory retail criteria.
+        is_currency_mismatched: If True, the exposure is an unhedged loan
+            to an individual whose income currency differs from the loan
+            currency — RW x 1.5 capped at 150%.
 
     Returns:
-        Risk weight as percentage (75% or 100%).
+        Risk weight as percentage.
     """
-    return 75.0 if is_regulatory_retail else 100.0
+    rw = 75.0 if is_regulatory_retail else 100.0
+    if is_currency_mismatched:
+        rw = currency_mismatch_multiplier(rw)
+    return rw
 
 
 def get_equity_risk_weight(

@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.27.0] - 2026-06-29
+
+### Added — EU CRR3 SA credit-risk drivers (Arts. 465(3), 501, 501a, 123a)
+
+Four high-frequency CRR3 Standardised Approach features, verified against
+Regulation (EU) 2024/1623:
+
+- **Unrated-corporate transitional (Art. 465(3))**: unrated EU corporates
+  with institution-estimated PD <= 0.5% receive a 65% risk weight until
+  31 December 2032 (100% from 2033). `get_corporate_risk_weight` gains
+  `pd` and `reporting_date` parameters with the date gate.
+- **Tiered SME supporting factor (Art. 501)**: new
+  `eu_sme_supporting_factor(total_exposure_eur)` applies 0.7619 on the
+  portion of the obligor's total exposure up to EUR 2.5m and 0.85 on the
+  excess (previously a flat 0.7619 regardless of size).
+- **Infrastructure supporting factor (Art. 501a)**: qualifying
+  infrastructure exposures receive a 0.75 multiplier (caller asserts the
+  Art. 501a(1) eligibility criteria); the factor was in the CRR3 YAML but
+  never applied in code. Correctly not applied for the UK.
+- **Currency-mismatch multiplier (Art. 123a / BCBS CRE20.92)**: new
+  `currency_mismatch_multiplier` — unhedged retail and residential-RE
+  exposures to individuals with a loan/income currency mismatch get
+  RW x 1.5 capped at 150%; wired into `get_retail_risk_weight` and
+  `get_residential_re_risk_weight` (including the India RBI branch).
+
+`crr3.yml` updated with the new constants; the stale "3 bps" PD-floor
+comment corrected.
+
 ## [0.26.0] - 2026-06-29
 
 ### Fixed — APAC jurisdiction-config correctness (2023-2025 updates)
