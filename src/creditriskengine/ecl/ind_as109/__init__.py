@@ -13,6 +13,12 @@ from creditriskengine.ecl.ind_as109.collateral_valuation import (
     validate_collateral_revaluation,
 )
 from creditriskengine.ecl.ind_as109.dlg import DLGAdjustment, ecl_with_dlg
+from creditriskengine.ecl.ind_as109.gold_loans import (
+    GOLD_LOAN_LTV_TIERS,
+    GoldLoanLTVResult,
+    assess_gold_loan_ltv,
+    gold_loan_max_ltv,
+)
 from creditriskengine.ecl.ind_as109.ind_as_ecl import (
     RBI_AGRI_SHORT_CROP_DPD,
     RBI_DEFAULT_DPD_THRESHOLD,
@@ -74,6 +80,13 @@ from creditriskengine.ecl.ind_as109.pd_lgd_floors import (
     apply_rbi_lgd_backstop,
     apply_rbi_pd_floor,
 )
+from creditriskengine.ecl.ind_as109.project_finance import (
+    DCCO_MAX_DEFERRAL_YEARS_INFRA,
+    DCCO_MAX_DEFERRAL_YEARS_NON_INFRA,
+    DCCODefermentResult,
+    dcco_deferment_provision,
+    dcco_max_deferral_years,
+)
 from creditriskengine.ecl.ind_as109.provision_floors_2026 import (
     RBI_DCCO_INFRA_QUARTERLY_RATE,
     RBI_DCCO_NON_INFRA_QUARTERLY_RATE,
@@ -120,6 +133,17 @@ __all__ = [
     "RBI_LGD_ELIGIBLE_COLLATERAL",
     "RBI_DCCO_INFRA_QUARTERLY_RATE",
     "RBI_DCCO_NON_INFRA_QUARTERLY_RATE",
+    # Project Finance Directions 2025 — DCCO deferment
+    "DCCO_MAX_DEFERRAL_YEARS_INFRA",
+    "DCCO_MAX_DEFERRAL_YEARS_NON_INFRA",
+    "DCCODefermentResult",
+    "dcco_deferment_provision",
+    "dcco_max_deferral_years",
+    # Gold/Silver Collateral Directions 2025
+    "GOLD_LOAN_LTV_TIERS",
+    "GoldLoanLTVResult",
+    "assess_gold_loan_ltv",
+    "gold_loan_max_ltv",
     "RBI_REVOLVING_SICR_OVERLIMIT_DAYS",
     "RBI_ECL_FLOOR_STAGE_1_2",
     "CAPITAL_ADD_BACK_SCHEDULE",

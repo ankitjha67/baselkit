@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.28.0] - 2026-06-29
+
+### Added — RBI Project Finance & Gold Loan Directions 2025
+
+- **`ecl/ind_as109/project_finance.py`** — DCCO deferment framework per
+  the RBI (Project Finance) Directions, 2025 (effective 1 Oct 2025):
+  `dcco_deferment_provision` computes the cumulative additional provision
+  (0.375%/quarter infrastructure, 0.5625%/quarter non-infrastructure,
+  partial quarters rounded up) on top of the construction-phase standard
+  rate, and enforces the permitted DCCO extension window (3 years
+  infrastructure / 2 years non-infrastructure) — beyond it the exposure
+  loses standard classification.
+- **`ecl/ind_as109/gold_loans.py`** — tiered LTV ceilings per the RBI
+  (Lending Against Gold and Silver Collateral) Directions, 2025
+  (compliance 1 Apr 2026): 85% up to INR 2.5 lakh, 80% to 5 lakh, 75%
+  above; `assess_gold_loan_ltv` returns compliance and the maximum
+  permissible loan for the collateral.
+
 ## [0.27.0] - 2026-06-29
 
 ### Added — EU CRR3 SA credit-risk drivers (Arts. 465(3), 501, 501a, 123a)
