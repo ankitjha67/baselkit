@@ -41,7 +41,7 @@ Production-grade open-source credit risk analytics library.
 - **Equity Investments in Funds (CRE60)** -- Look-Through, Mandate-Based, and Fall-Back (1250%) approaches with the fund average-risk-weight × leverage calculation, capped at 1250%
 - **SFT Haircut Floors (CRE56)** -- Minimum collateral haircut floors by collateral type and residual maturity (corporate/securitised debt, main-index equity, other assets), single-transaction recognition test, and the netting-agreement portfolio floor test
 - **Multi-Jurisdiction** -- EU CRR3, UK PRA, US Basel III Endgame, India RBI (full IRAC norms plus the **RBI ECL Master Direction 2026** (RBI/DOR/2026-27/398) — 20-category provisioning floor table, Stage 3 duration-dependent floors, PD 0.03% / LGD 65%-70%-30% backstops, borrower-level Stage 3 contagion, DCCO project finance provisioning, capital add-back phase-in, effective April 1, 2027), Singapore MAS, Hong Kong HKMA, Japan JFSA, Australia APRA, Canada OSFI, Saudi Arabia SAMA, and BCBS baseline
-- **Emerging-Market Asset Classification** -- China NFRA five-tier risk classification (DPD + ECL-ratio triggers, CAS 22 staging, Feb 2023 Measures) and Indonesia OJK five-tier collectability with minimum provisioning (1/5/15/50/100% per POJK 40/2019, net of eligible collateral)
+- **Emerging-Market Asset Classification** -- China NFRA five-tier risk classification (DPD + ECL-ratio triggers, CAS 22 staging, Feb 2023 Measures), Indonesia OJK five-tier collectability with minimum provisioning (1/5/15/50/100% per POJK 40/2019, net of eligible collateral), and Brazil CMN 4.966 three-stage ECL staging (>30 DPD SICR backstop, >90 DPD default, S3-S5 simplified segments; replaces the repealed Res. 2.682 table from 1 Jan 2025)
 - **ESG Ratings Integration** -- Vendor-agnostic adapter normalising MSCI (AAA-CCC), Sustainalytics (0-40+ risk score), and S&P Global ESG ratings to a common [0,1] risk score, with a bounded PD multiplier overlay per EBA (2023) guidance
 - **ESG Risk Management (EBA/GL/2025/01)** -- Likelihood × impact, exposure-weighted ESG materiality assessment with the EBA time-horizon → method mapping (short → exposure-based, medium → sector/portfolio, long → scenario-based), plus CRD Art. 76(2)/87a transition-plan monitoring against intermediate net-zero / GAR-uplift targets (applicable from 11 January 2026)
 - **Regulatory Reporting** -- COREP, Pillar 3 disclosure templates (CR1/CR3/CR4/CR6), FR Y-14 (CCAR), FR 2052a (Complex Institution Liquidity Monitoring), and model inventory
@@ -377,7 +377,7 @@ pytest -q --no-cov
 pytest tests/test_rwa/ -v
 ```
 
-2,884 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
+2,896 tests across all modules with **100% line coverage**. Type-checked with `mypy --strict` and linted with `ruff`.
 
 ## Performance
 

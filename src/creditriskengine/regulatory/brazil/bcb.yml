@@ -5,7 +5,7 @@ jurisdiction: Brazil
 regulator: Banco Central do Brasil (BCB)
 framework: Basel III (BCB Prudential Regulation)
 effective_date: "2025-01-01"
-document_reference: Resolution CMN 4.958, BCB Resolution 265
+document_reference: Resolucao CMN 4.966/21 (ECL, eff. 2025); CMN 4.958; BCB 265
 
 credit_risk:
   approaches_permitted: [SA, FIRB, AIRB]
@@ -86,6 +86,23 @@ default_definition:
   materiality_threshold_absolute_brl: 100
   materiality_threshold_relative: 0.01
   cure_period_months: 3
+
+# Resolucao CMN 4.966/21 (+ Res. BCB 352-356), effective 1 January 2025:
+# IFRS-9-style three-stage expected-loss model replacing the repealed
+# Res. CMN 2.682/99 rating-grade provisioning table.
+ecl_framework:
+  reference: "Resolucao CMN 4.966/21; Res. BCB 352-356"
+  effective_date: "2025-01-01"
+  model: three_stage_ecl
+  stage_2_sicr_dpd_backstop: 30
+  stage_3_default_dpd: 90
+  simplified_model_segments: [S3, S4, S5]  # BCB simplified approach
+  note: >-
+    See ecl/emerging/brazil.py. The pre-2025 Res. 2.682 AA-H table is
+    retained below for historical reference only.
+
+# REPEALED 1 Jan 2025 (Res. CMN 2.682/99) — historical reference only.
+legacy_res_2682:
   bcb_risk_levels:
     aa: "Lowest risk"
     a: "DPD 0-14"

@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.31.0] - 2026-06-29
+
+### Added / Fixed — Brazil CMN 4.966 three-stage ECL (effective 2025)
+
+Brazil moved from the Res. CMN 2.682/99 rating-grade provisioning table
+to an IFRS-9-aligned three-stage ECL model on **1 January 2025**
+(Resolucao CMN 4.966/21 + Res. BCB 352-356). The repo still presented the
+repealed 2.682 table as current.
+
+- New `ecl/emerging/brazil.py`: `classify_cmn_4966_stage` (Stage 2 at
+  >30 DPD or SICR; Stage 3 at >90 DPD or objective loss evidence) and
+  `uses_simplified_model` (BCB simplified approach for prudential
+  segments S3-S5).
+- `regulatory/brazil/bcb.yml`: new `ecl_framework` block with the 4.966
+  reference/backstops; the repealed 2.682 AA-H table quarantined under
+  `legacy_res_2682` (historical reference only).
+
 ## [0.30.0] - 2026-06-29
 
 ### Added — US Basel III Endgame ERBA (PROPOSED framework)
